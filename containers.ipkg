@@ -5,10 +5,14 @@ brief      = "Basic Tree and Queue data structures"
 version    = 0.6.0
 sourcedir  = "src"
 depends    = base         >= 0.6.0
+           , array
+           , contrib
            , elab-util
+           , log-domain
 
 modules = Data.Map
         , Data.Map.Internal
+        , Data.RRBVector.Internal
         , Data.Set
         , Data.Set.Internal
         , Data.Queue
