@@ -206,15 +206,33 @@ computeSizes sh arr
 
 ||| Turns an array into a tree node by computing the sizes of its subtrees.
 ||| sh is the shift of the resulting tree.
+partial
 computeSizes : Shift -> Array (Tree a) -> Tree a
 computeSizes sh arr =
   case isBalanced of
     True  =>
       Balanced arr
     False =>
-      
-
+      let arrnat = loop sh arr (fill arr.size 0) 0 0
+        in Unbalanced arr (A arr.size arrnat)
   where
+    loop : {n : Nat} -> Shift -> Array (Tree a) -> IArray n Nat -> Nat -> Nat -> IArray n Nat
+    loop sh arr arrnat acc i =
+      case i < arr.size of
+        True  =>
+          let size = case tryNatToFin i of
+                       Nothing =>
+                         assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.loop: can't convert Nat to Fin"
+                       Just i' =>
+                         treeSize (down sh) (at arr.arr i')
+              acc' = plus acc size
+            in case tryNatToFin i of
+                 Nothing =>
+                   assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.loop: can't convert Nat to Fin"
+                 Just i' =>
+                   loop sh arr (setAt i' acc' arrnat) acc' (plus i 1)
+        False =>
+          arrnat
     maxsize : Nat
     maxsize = shiftL 1 sh -- the maximum size of a subtree
     len : Nat
@@ -228,12 +246,12 @@ computeSizes sh arr =
         go i =
           let subtree = case tryNatToFin i of
                           Nothing =>
-                            assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes: can't convert Nat to Fin"
+                            assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.isBalanced: can't convert Nat to Fin"
                           Just i' =>
                             at arr.arr i'
             in case i < lenM1 of
                  True  =>
-                   treeSize (down sh) subtree == maxSize && go (plus i 1)
+                   treeSize (down sh) subtree == maxsize && go (plus i 1)
                  False =>
                    treeBalanced subtree
 
