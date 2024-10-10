@@ -171,39 +171,6 @@ treeSize = go 0
               (down sh)
               (at arr.arr i')--go (acc + i * (1 `unsafeShiftL` sh)) (down sh) (A.index arr i)
 
-{-
-||| Turns an array into a tree node by computing the sizes of its subtrees.
-||| sh is the shift of the resulting tree.
-computeSizes :: Shift -> A.Array (Tree a) -> Tree a
-computeSizes sh arr
-    | isBalanced = Balanced arr
-    | otherwise = runST $ do
-        sizes <- newPrimArray len
-        let loop acc i
-                | i < len =
-                    let size = treeSize (down sh) (A.index arr i)
-                        acc' = acc + size
-                    in writePrimArray sizes i acc' *> loop acc' (i + 1)
-                | otherwise = do
-                    sizes <- unsafeFreezePrimArray sizes -- safe because the mutable @sizes@ isn't used afterwards
-                    pure $ Unbalanced arr sizes
-        loop 0 0
-  where
-    maxSize = 1 `unsafeShiftL` sh -- the maximum size of a subtree
-
-    len = length arr
-
-    lenM1 = len - 1
-
-    isBalanced = go 0
-      where
-        go i
-            | i < lenM1 = treeSize (down sh) subtree == maxSize && go (i + 1)
-            | otherwise = treeBalanced subtree
-          where
-            subtree = A.index arr i
--}
-
 ||| Turns an array into a tree node by computing the sizes of its subtrees.
 ||| sh is the shift of the resulting tree.
 partial
