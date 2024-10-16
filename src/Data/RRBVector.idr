@@ -92,21 +92,21 @@ lookup i (Root size sh tree) =
     lookupTree i sh (Balanced arr)         =
       case tryNatToFin (radixIndex i sh) of
         Nothing =>
-          assert_total $ idris_crash ""
+          assert_total $ idris_crash "Data.RRBVector.lookup: can't convert Nat to Fin"
         Just i' =>
           lookupTree i (down sh) (at arr.arr i')
     lookupTree i sh (Unbalanced arr sizes) =
       let (idx, subidx) = relaxedRadixIndex sizes i sh
         in case tryNatToFin idx of
              Nothing   =>
-               assert_total $ idris_crash ""
+               assert_total $ idris_crash "Data.RRBVector.lookup: can't convert Nat to Fin"
              Just idx' =>
                lookupTree subidx (down sh) (at arr.arr idx')
     lookupTree i _ (Leaf arr)              =
       let i' = the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))
         in case tryNatToFin i' of
              Nothing =>
-               assert_total $ idris_crash ""
+               assert_total $ idris_crash "Data.RRBVector.lookup: can't convert Nat to Fin"
              Just i'' =>
                at arr.arr i''
 
