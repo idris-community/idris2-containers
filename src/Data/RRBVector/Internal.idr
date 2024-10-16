@@ -25,12 +25,12 @@ bitSizeOf : (ty : Type) -> FiniteBits ty => Nat
 bitSizeOf ty = bitSize {a = ty}
 
 ||| Custom shiftL function on Nat.
-private
+export
 shiftL : Nat -> Nat -> Nat
 shiftL n k = n * (pow 2 k)
 
 ||| Custom shiftR function on Nat.
-private
+export
 shiftR : Nat -> Nat -> Nat
 shiftR n k = n `div` pow 2 k
 
@@ -43,30 +43,35 @@ Shift : Type
 Shift = Nat
 
 ||| The number of bits used per level.
-public export
+export
 blockshift : Shift
 blockshift = 4
 
 ||| The maximum size of a block.
-public export
+export
 blocksize : Nat
 blocksize = shiftL 1 blockshift
 
 ||| The mask used to extract the index into the array.
+export
 blockmask : Nat
 blockmask = minus blocksize 1
 
+export
 up : Shift -> Shift
 up sh = plus sh blockshift
 
+export
 down : Shift -> Shift
 down sh = minus sh blockshift
 
+export
 radixIndex : Nat -> Shift -> Nat
 radixIndex i sh = 
   the Nat (cast ((the Int (cast $ shiftR i sh)) .&. (the Int (cast blockmask))))
 
 partial
+export
 relaxedRadixIndex : Array Nat -> Nat -> Shift -> (Nat, Nat)
 relaxedRadixIndex sizes i sh =
   let guess  = radixIndex i sh -- guess <= idx
@@ -101,7 +106,7 @@ relaxedRadixIndex sizes i sh =
 --------------------------------------------------------------------------------
 
 ||| An internal tree representation.
-private
+public export
 data Tree a = Balanced (Array (Tree a))
             | Unbalanced (Array (Tree a)) (Array Nat)
             | Leaf (Array a)
@@ -137,11 +142,13 @@ Show a => Show (Tree a) where
 --          Tree Utilities
 --------------------------------------------------------------------------------
 
+export
 treeToArray : Tree a -> Array (Tree a)
 treeToArray (Balanced arr)     = arr
 treeToArray (Unbalanced arr _) = arr
 treeToArray (Leaf _)           = assert_total $ idris_crash "Data.RRBVector.Internal.treeToArray: leaf"
 
+export
 treeBalanced : Tree a -> Bool
 treeBalanced (Balanced _)     = True
 treeBalanced (Unbalanced _ _) = False
@@ -149,6 +156,7 @@ treeBalanced (Leaf _)         = True
 
 ||| Computes the size of a tree with shift.
 partial
+export
 treeSize : Shift -> Tree a -> Nat
 treeSize = go 0
   where
@@ -175,6 +183,7 @@ treeSize = go 0
 ||| Turns an array into a tree node by computing the sizes of its subtrees.
 ||| sh is the shift of the resulting tree.
 partial
+export
 computeSizes : Shift -> Array (Tree a) -> Tree a
 computeSizes sh arr =
   case isBalanced of
@@ -260,7 +269,9 @@ log2 x =
 ||| A relaxed radix balanced vector (RRB-Vector).
 ||| It supports fast indexing, iteration, concatenation and splitting.
 public export
-data RRBVector a = Root Nat Shift (Tree a)
+data RRBVector a = Root Nat   -- size
+                        Shift -- shift (blockshift * height)
+                        (Tree a)
                  | Empty
 
 {-

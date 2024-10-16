@@ -1,11 +1,12 @@
-||| Finite Maps
-module Data.Map
+||| Relaxed Radix Balanced Vectors (RRB-Vectors)
+module Data.RRBVector
 
-import public Data.Map.Internal
+import public Data.RRBVector.Internal
 
+import Data.Array.Core
+import Data.Array.Index
+import Data.Array.Indexed
 import Data.Bits
-import Data.List
-import Data.List1
 
 %hide Prelude.null
 %hide Prelude.toList
@@ -13,14 +14,55 @@ import Data.List1
 %default total
 
 --------------------------------------------------------------------------------
---          Creating Maps
+--          Creating RRB-Vectors
 --------------------------------------------------------------------------------
 
-||| The empty map. O(1)
+||| The empty vector. O(1)
 export
-empty : Map k v
-empty = Tip
+empty : RRBVector a
+empty = Empty
 
+||| A vector with a single element. O(1)
+singleton : a -> RRBVector a
+singleton x = Root 1 0 (Leaf $ A 1 $ fill 1 x)
+
+||| Creates a vector of length n with every element set to x. O(log n)
+partial
+export
+replicate : Nat -> a -> RRBVector a
+replicate n x =
+  case compare n 0 of
+    LT =>
+      Empty
+    EQ =>
+      Empty
+    GT =>
+      case compare n blocksize of
+        LT =>
+          Root n 0 (Leaf $ A n $ fill n x)
+        EQ =>
+          Root n 0 (Leaf $ A n $ fill n x)
+        GT =>
+          let size' = the Nat (cast ((the Int (cast (minus n 1))) .&. (the Int (cast (plus blockmask 1)))))
+            in iterateNodes blockshift
+                            (Leaf $ A blocksize $ fill blocksize x)
+                            (Leaf $ A size' $ fill size' x)
+  where
+    iterateNodes : Shift -> Tree a -> Tree a -> RRBVector a
+    iterateNodes sh full rest =
+      let subtreesm1  = shiftR (minus n 1) sh
+          restsize    = the Nat (cast ((the Int (cast subtreesm1)) .&. (the Int (cast blockmask))))
+          rest'       = Balanced $ A (plus restsize 1) $ append (fill restsize full) (fill 1 rest)
+        in case compare subtreesm1 blocksize of
+             LT =>
+               Root n sh rest'
+             EQ =>
+               let full' = Balanced (A blocksize $ fill blocksize full)
+                 in iterateNodes (up sh) full' rest'
+             GT =>
+               let full' = Balanced (A blocksize $ fill blocksize full)
+                 in iterateNodes (up sh) full' rest'
+{-
 --------------------------------------------------------------------------------
 --          Folds
 --------------------------------------------------------------------------------
@@ -1395,3 +1437,5 @@ Show k => Show v => Show (List (k, v)) where
 export
 Show (List (k, v)) => Show (Map k v) where
   show m = "fromList " ++ (show $ toList m)
+
+-}
