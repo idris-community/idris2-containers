@@ -111,13 +111,13 @@ data Tree a = Balanced (Array (Tree a))
             | Unbalanced (Array (Tree a)) (Array Nat)
             | Leaf (Array a)
 
-{-
 Eq a => Eq (Tree a) where
   (Balanced x)      == (Balanced y)      = assert_total $ heq x.arr y.arr
   (Unbalanced x x') == (Unbalanced y y') = assert_total $ heq x.arr y.arr && heq x'.arr y'.arr
   (Leaf x)          == (Leaf y)          = heq x.arr y.arr
   _                 == _                 = False
 
+{-
 ||| Unbalanced < Balanced < Leaf
 Ord a => Ord (Tree a) where
   compare (Balanced x)     (Balanced y)     = assert_total $ hcomp x.arr y.arr
@@ -274,13 +274,11 @@ data RRBVector a = Root Nat   -- size
                         (Tree a)
                  | Empty
 
-{-
 export
 Eq a => Eq (Tree a) => Eq (RRBVector a) where
   (Root n s t) == (Root n' s' t') = n == n' && s == s' && t == t'
   Empty        == Empty           = True
   _            == _               = False
--}
 
 export
 Show a => Show (Tree a) => Show (RRBVector a) where

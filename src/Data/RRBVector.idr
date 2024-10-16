@@ -23,6 +23,7 @@ empty : RRBVector a
 empty = Empty
 
 ||| A vector with a single element. O(1)
+export
 singleton : a -> RRBVector a
 singleton x = Root 1 0 (Leaf $ A 1 $ fill 1 x)
 
@@ -62,6 +63,53 @@ replicate n x =
              GT =>
                let full' = Balanced (A blocksize $ fill blocksize full)
                  in iterateNodes (up sh) full' rest'
+
+--------------------------------------------------------------------------------
+--          Indexing
+--------------------------------------------------------------------------------
+
+||| The element at the index or Nothing if the index is out of range. O (log n)
+partial
+export
+lookup : Nat -> RRBVector a -> Maybe a
+lookup _ Empty               = Nothing
+lookup i (Root size sh tree) =
+  case compare i 0 of
+    LT =>
+      Nothing -- index out of range
+    GT =>
+      case compare i size of
+        EQ =>
+          Nothing -- index out of range
+        GT =>
+          Nothing -- index out of range
+        LT =>
+          Just $ lookupTree i sh tree
+    EQ =>
+      Just $ lookupTree i sh tree
+  where
+    lookupTree : Nat -> Nat -> Tree a -> a
+    lookupTree i sh (Balanced arr)         =
+      case tryNatToFin (radixIndex i sh) of
+        Nothing =>
+          assert_total $ idris_crash ""
+        Just i' =>
+          lookupTree i (down sh) (at arr.arr i')
+    lookupTree i sh (Unbalanced arr sizes) =
+      let (idx, subidx) = relaxedRadixIndex sizes i sh
+        in case tryNatToFin idx of
+             Nothing   =>
+               assert_total $ idris_crash ""
+             Just idx' =>
+               lookupTree subidx (down sh) (at arr.arr idx')
+    lookupTree i _ (Leaf arr)              =
+      let i' = the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))
+        in case tryNatToFin i' of
+             Nothing =>
+               assert_total $ idris_crash ""
+             Just i'' =>
+               at arr.arr i''
+
 {-
 --------------------------------------------------------------------------------
 --          Folds
