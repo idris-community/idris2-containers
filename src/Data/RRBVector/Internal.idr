@@ -159,9 +159,9 @@ treeSize = go 0
                   assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds"
                 Just i' =>
                  i'
-        in plus acc (at sizes.arr i) --    acc + indexPrimArray sizes (length arr - 1)
+        in plus acc (at sizes.arr i)
     go acc sh (Balanced arr)         =
-      let i  = minus arr.size 1--length arr - 1
+      let i  = minus arr.size 1
           i' = case tryNatToFin i of
                  Nothing  =>
                    assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds"
@@ -169,7 +169,7 @@ treeSize = go 0
                    i''
         in go (plus acc (mult i (shiftL 1 sh)))
               (down sh)
-              (at arr.arr i')--go (acc + i * (1 `unsafeShiftL` sh)) (down sh) (A.index arr i)
+              (at arr.arr i')
 
 ||| Turns an array into a tree node by computing the sizes of its subtrees.
 ||| sh is the shift of the resulting tree.
