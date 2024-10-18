@@ -143,6 +143,10 @@ Show a => Show (Tree a) where
 --------------------------------------------------------------------------------
 
 export
+singleton : a -> Array a
+singleton x = A 1 $ fill 1 x
+
+export
 treeToArray : Tree a -> Array (Tree a)
 treeToArray (Balanced arr)     = arr
 treeToArray (Unbalanced arr _) = arr

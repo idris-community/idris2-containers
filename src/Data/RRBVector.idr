@@ -317,9 +317,16 @@ take n v@(Root size sh tree) =
         GT =>
           v
 
+--------------------------------------------------------------------------------
+--          Concatenation
+--------------------------------------------------------------------------------
 
-
-
+||| Create a new tree with shift sh.
+partial
+private
+newBranch : a -> Shift -> Tree a
+newBranch x 0  = Leaf (singleton x)
+newBranch x sh = Balanced (singleton $ newBranch x (down sh))
 
 
 {-
