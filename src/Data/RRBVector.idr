@@ -3,6 +3,7 @@ module Data.RRBVector
 
 import public Data.RRBVector.Internal
 
+import Data.Array
 import Data.Array.Core
 import Data.Array.Index
 import Data.Array.Indexed
@@ -318,6 +319,25 @@ take n v@(Root size sh tree) =
           v
 
 --------------------------------------------------------------------------------
+--          Transformation
+--------------------------------------------------------------------------------
+
+||| Apply the function to every element. O(n)
+partial
+export
+map : (a -> b) -> RRBVector a -> RRBVector b
+map _ Empty               = Empty
+map f (Root size sh tree) = Root size sh (mapTree tree)
+  where
+    mapTree : Tree a -> Tree b
+    mapTree (Balanced arr)         =
+      Balanced (map mapTree arr)
+    mapTree (Unbalanced arr sizes) =
+      Unbalanced (map mapTree arr) sizes
+    mapTree (Leaf arr)             =
+      Leaf (map f arr)
+
+--------------------------------------------------------------------------------
 --          Concatenation
 --------------------------------------------------------------------------------
 
@@ -327,6 +347,7 @@ private
 newBranch : a -> Shift -> Tree a
 newBranch x 0  = Leaf (singleton x)
 newBranch x sh = Balanced (singleton $ newBranch x (down sh))
+
 
 
 {-
