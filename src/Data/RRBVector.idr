@@ -269,15 +269,15 @@ partial
 private
 takeTree : Nat -> Shift -> Tree a -> Tree a
 takeTree i sh (Balanced arr) with (radixIndex i sh) | ((plus (radixIndex i sh) 1) <= arr.size) proof eq
-    _ | i' | True  =
-      case tryNatToFin i' of
-        Nothing =>
-          assert_total $ idris_crash "Data.RRBVector.takeTree: can't convert Nat to Fin"
-        Just i'' =>
-          let newarr = force $ take (plus (radixIndex i sh) 1) arr.arr @{lteOpReflectsLTE _ _ eq}
-            in Balanced (A (plus (radixIndex i sh) 1) (updateAt i'' (takeTree i (down sh)) newarr))
-    _ | _  | False =
-      assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
+  _ | i' | True  =
+    case tryNatToFin i' of
+      Nothing =>
+        assert_total $ idris_crash "Data.RRBVector.takeTree: can't convert Nat to Fin"
+      Just i'' =>
+        let newarr = force $ take (plus (radixIndex i sh) 1) arr.arr @{lteOpReflectsLTE _ _ eq}
+          in Balanced (A (plus (radixIndex i sh) 1) (updateAt i'' (takeTree i (down sh)) newarr))
+  _ | _  | False =
+    assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
 takeTree i sh (Unbalanced arr sizes) with (relaxedRadixIndex sizes i sh) | ((plus (fst (relaxedRadixIndex sizes i sh)) 1) <= arr.size) proof eq
   _ | (idx, subidx) | True  =
     case tryNatToFin idx of
