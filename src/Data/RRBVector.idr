@@ -328,8 +328,7 @@ dropTree n _  (Leaf arr) with ((cast ((the Int (cast n)) .&. (the Int (cast bloc
     assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
 
 ||| The first i elements of the vector.
-||| If i is negative, the empty vector is returned.
-||| If the vector contains less than i elements, the whole vector is returned. O(log n)
+||| If the vector contains less than or equal to i elements, the whole vector is returned. O(log n)
 partial
 export
 take : Nat -> RRBVector a -> RRBVector a
@@ -348,6 +347,49 @@ take n v@(Root size sh tree) =
           v
         GT =>
           v
+
+||| The vector without the first i elements.
+||| If the vector contains less than or equal to i elements, the empty vector is returned. O(log n)
+partial
+export
+drop : Nat  -> RRBVector a -> RRBVector a
+drop _ Empty                 = Empty
+drop n v@(Root size sh tree) =
+  case compare n 0 of
+    LT =>
+      v
+    EQ =>
+      v
+    GT =>
+      case compare n size of
+        LT =>
+          normalize $ Root (minus size n) sh (dropTree n sh tree)
+        EQ =>
+          empty
+        GT =>
+          empty
+
+||| Split the vector at the given index. O(log n)
+partial
+export
+splitAt : Nat -> RRBVector a -> (RRBVector a, RRBVector a)
+splitAt _ Empty                 = (Empty, Empty)
+splitAt n v@(Root size sh tree) =
+  case compare n 0 of
+    LT =>
+      (empty, v)
+    EQ =>
+      (empty, v)
+    GT =>
+      case compare n size of
+        LT =>
+          let left  = normalize $ Root n sh (takeTree (minus n 1) sh tree)
+              right = normalize $ Root (minus size n) sh (dropTree n sh tree)
+            in (left, right)
+        EQ =>
+          (v, empty)
+        GT =>
+          (v, empty)
 
 --------------------------------------------------------------------------------
 --          Transformation
