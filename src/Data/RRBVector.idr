@@ -392,6 +392,39 @@ splitAt n v@(Root size sh tree) =
           (v, empty)
 
 --------------------------------------------------------------------------------
+--          Deconstruction
+--------------------------------------------------------------------------------
+
+||| The first element and the vector without the first element, or 'Nothing' if the vector is empty. O(log n)
+partial
+export
+viewl : RRBVector a -> Maybe (a, RRBVector a)
+viewl Empty             = Nothing
+viewl v@(Root _ _ tree) =
+  let tail = drop 1 v
+    in Just (headTree tree, tail)
+  where
+    headTree : Tree a -> a
+    headTree (Balanced arr)     =
+      case tryNatToFin 0 of
+        Nothing   =>
+          assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin"
+        Just zero =>
+          headTree (at arr.arr zero)
+    headTree (Unbalanced arr _) =
+      case tryNatToFin 0 of
+        Nothing   =>
+          assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin"
+        Just zero =>
+          headTree (at arr.arr zero)
+    headTree (Leaf arr)         =
+      case tryNatToFin 0 of
+        Nothing   =>
+          assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin"
+        Just zero =>
+          at arr.arr zero
+
+--------------------------------------------------------------------------------
 --          Transformation
 --------------------------------------------------------------------------------
 
