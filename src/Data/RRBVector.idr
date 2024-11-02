@@ -9,6 +9,7 @@ import Data.Array.Index
 import Data.Array.Indexed
 import Data.Bits
 import Data.Maybe
+--import Data.Vect
 
 %hide Prelude.null
 %hide Prelude.toList
@@ -90,9 +91,9 @@ lookup i (Root size sh tree) =
     EQ =>
       case compare i size of
         EQ =>
-          Nothing
+          Nothing -- index out of range
         GT =>
-          Nothing
+          Nothing -- index out of range
         LT =>
           Just $ lookupTree i sh tree
   where
@@ -158,9 +159,9 @@ update i x v@(Root size sh tree) =
     EQ =>
       case compare i size of
         EQ =>
-          v
+          v -- index out of range
         GT =>
-          v
+          v -- index out of range
         LT =>
           Root size sh (updateTree i sh tree)
   where
@@ -207,9 +208,9 @@ adjust i f v@(Root size sh tree) =
     EQ =>
       case compare i size of
         EQ =>
-          v
+          v -- index out of range
         GT =>
-          v
+          v -- index out of range
         LT =>
           Root size sh (adjustTree i sh tree)
   where
@@ -289,10 +290,40 @@ takeTree i sh (Unbalanced arr sizes) with (relaxedRadixIndex sizes i sh) | ((plu
           in computeSizes sh (A (plus (fst (relaxedRadixIndex sizes i sh)) 1) (updateAt idx' (takeTree subidx (down sh)) newarr))
   _ | _             | False =
     assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
-takeTree i _ (Leaf arr) with ((the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))) <= arr.size) proof eq
+takeTree i _ (Leaf arr) with ((plus (the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))) 1) <= arr.size) proof eq
   _ | True  =
-    let newarr = force $ take (the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))) arr.arr @{lteOpReflectsLTE _ _ eq}
-      in Leaf (A (the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))) newarr)
+    let newarr = force $ take (plus (the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))) 1) arr.arr @{lteOpReflectsLTE _ _ eq}
+      in Leaf (A (plus (the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))) 1) newarr)
+  _ | False =
+    assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
+
+partial
+private
+dropTree : Nat -> Shift -> Tree a -> Tree a
+dropTree n sh (Balanced arr) with ((radixIndex n sh) <= arr.size) proof eq
+  _ | True  =
+    case tryNatToFin 0 of
+      Nothing   =>
+        assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin"
+      Just zero =>
+        let newarr = force $ drop (radixIndex n sh) arr.arr @{lteOpReflectsLTE _ _ eq}
+          in computeSizes sh (A (minus arr.size (radixIndex n sh)) (updateAt zero (dropTree n (down sh)) newarr))
+  _ | False =
+    assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
+dropTree n sh (Unbalanced arr sizes) with (fst (relaxedRadixIndex sizes n sh) <= arr.size) proof eq
+  _ | True  =
+    case tryNatToFin 0 of
+      Nothing   =>
+        assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin"
+      Just zero =>
+        let newarr = force $ drop (fst $ relaxedRadixIndex sizes n sh) arr.arr @{lteOpReflectsLTE _ _ eq}
+          in computeSizes sh (A (minus arr.size (fst $ relaxedRadixIndex sizes n sh)) (updateAt zero (dropTree (snd $ relaxedRadixIndex sizes n sh) (down sh)) newarr))
+  _ | False =
+    assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
+dropTree n _  (Leaf arr) with ((cast ((the Int (cast n)) .&. (the Int (cast blockmask)))) <= arr.size) proof eq
+  _ | True  =
+    let newarr = force $ drop (the Nat (cast ((the Int (cast n)) .&. (the Int (cast blockmask))))) arr.arr @{lteOpReflectsLTE _ _ eq}
+      in Leaf (A (minus arr.size (the Nat (cast ((the Int (cast n)) .&. (the Int (cast blockmask)))))) newarr)
   _ | False =
     assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
 
@@ -348,7 +379,99 @@ newBranch : a -> Shift -> Tree a
 newBranch x 0  = Leaf (singleton x)
 newBranch x sh = Balanced (singleton $ newBranch x (down sh))
 
+{-
+||| Concatenates two vectors. O(log max(n1,n2)
+(><) : Vector a -> Vector a -> Vector a
+Empty                >< v                    = v
+v                    >< Empty                = v
+Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
+  let upmaxshift = case compare sh1 sh2 of
+                     LT =>
+                       up sh2
+                     EQ =>
+                       up sh1
+                     GT =>
+                       up sh1
+      newarr     = mergeTrees tree1 sh1 tree2 sh2
+    in normalize $ Root (size1 + size2) upmaxshift (computeSizes upmaxshift newarr)
+  where
+    mergeTrees : Tree a -> Nat -> Tree a -> Nat -> Array (Tree a)
+    mergeTrees tree1@(Leaf arr1) _ tree2@(Leaf arr2) _ =
+      case compare arr1.size blocksize of
+        LT =>
+          case compare (plus arr1.size arr2.size) blocksize of
+            LT =>
+              singleton $ Leaf (append arr1.arr arr2.arr)
+            EQ =>
+              singleton $ Leaf (append arr1.arr arr2.arr)
+            GT =>
+               
+        EQ =>
+          A 2 $ fromPairs 2 (Leaf tree1) [tree1,tree2]
+        GT =>
 
+
+        | length arr1 == blockSize = A.from2 tree1 tree2
+        | length arr1 + length arr2 <= blockSize = A.singleton $! Leaf (arr1 A.++ arr2)
+        | otherwise =
+            let (left, right) = A.splitAt (arr1 A.++ arr2) blockSize -- 'A.splitAt' doesn't copy anything
+                !leftTree = Leaf left
+                !rightTree = Leaf right
+            in A.from2 leftTree rightTree
+
+
+    mergeTrees tree1 sh1 tree2 sh2 = case compare sh1 sh2 of
+        LT ->
+            let !right = treeToArray tree2
+                (rightHead, rightTail) = viewlArr right
+                merged = mergeTrees tree1 sh1 rightHead (down sh2)
+            in mergeRebalance sh2 A.empty merged rightTail
+        GT ->
+            let !left = treeToArray tree1
+                (leftInit, leftLast) = viewrArr left
+                merged = mergeTrees leftLast (down sh1) tree2 sh2
+            in mergeRebalance sh1 leftInit merged A.empty
+        EQ ->
+            let !left = treeToArray tree1
+                !right = treeToArray tree2
+                (leftInit, leftLast) = viewrArr left
+                (rightHead, rightTail) = viewlArr right
+                merged = mergeTrees leftLast (down sh1) rightHead (down sh2)
+            in mergeRebalance sh1 leftInit merged rightTail
+      where
+        viewlArr arr = (A.head arr, A.drop arr 1)
+
+        viewrArr arr = (A.take arr (length arr - 1), A.last arr)
+
+    -- the type signature is necessary to compile
+    mergeRebalance :: forall a. Shift -> A.Array (Tree a) -> A.Array (Tree a) -> A.Array (Tree a) -> A.Array (Tree a)
+    mergeRebalance !sh !left !center !right
+        | sh == blockShift = mergeRebalance' (\(Leaf arr) -> arr) Leaf
+        | otherwise = mergeRebalance' treeToArray (computeSizes (down sh))
+      where
+        mergeRebalance' :: (Tree a -> A.Array t) -> (A.Array t -> Tree a) -> A.Array (Tree a)
+        mergeRebalance' extract construct = runST $ do
+            newRoot <- Buffer.new blockSize
+            newSubtree <- Buffer.new blockSize
+            newNode <- Buffer.new blockSize
+            for_ (toList left ++ toList center ++ toList right) $ \subtree ->
+                for_ (extract subtree) $ \x -> do
+                    lenNode <- Buffer.size newNode
+                    when (lenNode == blockSize) $ do
+                        pushTo construct newNode newSubtree
+                        lenSubtree <- Buffer.size newSubtree
+                        when (lenSubtree == blockSize) $ pushTo (computeSizes sh) newSubtree newRoot
+                    Buffer.push newNode x
+            pushTo construct newNode newSubtree
+            pushTo (computeSizes sh) newSubtree newRoot
+            Buffer.get newRoot
+        {-# INLINE mergeRebalance' #-}
+
+        pushTo f from to = do
+            result <- Buffer.get from
+            Buffer.push to $! f result
+        {-# INLINE pushTo #-}
+-}
 
 {-
 --------------------------------------------------------------------------------
