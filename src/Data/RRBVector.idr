@@ -494,13 +494,14 @@ x <| Root size sh tree =
     computeShift : Nat -> Nat -> Nat -> Tree a -> Nat
     computeShift sz sh min (Balanced _)          =
       -- @sz - 1@ is the index of the last element
-      let hishift  = case compare (mult (log2 (minus sz 1) `div` blockshift) blockshift) 0 of -- the shift of the root when normalizing
-                       LT =>
-                         0
-                       EQ =>
-                         0
-                       GT =>
-                         mult (log2 (minus sz 1) `div` blockshift) blockshift
+      let hishift  = let comp = mult (log2 (minus sz 1) `div` blockshift) blockshift  -- the shift of the root when normalizing
+                       in case compare comp 0 of
+                            LT =>
+                              0
+                            EQ =>
+                              0
+                            GT =>
+                              comp
           hi       = shiftR (minus sz 1) hishift -- the length of the root node when normalizing minus 1
           newshift = case compare hi blockmask of
                        LT =>
