@@ -399,21 +399,50 @@ viewl v@(Root _ _ tree) =
     headTree (Balanced arr)     =
       case tryNatToFin 0 of
         Nothing   =>
-          assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin"
+          assert_total $ idris_crash "Data.RRBVector.viewl: can't convert Nat to Fin"
         Just zero =>
           headTree (at arr.arr zero)
     headTree (Unbalanced arr _) =
       case tryNatToFin 0 of
         Nothing   =>
-          assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin"
+          assert_total $ idris_crash "Data.RRBVector.viewl: can't convert Nat to Fin"
         Just zero =>
           headTree (at arr.arr zero)
     headTree (Leaf arr)         =
       case tryNatToFin 0 of
         Nothing   =>
-          assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin"
+          assert_total $ idris_crash "Data.RRBVector.viewl: can't convert Nat to Fin"
         Just zero =>
           at arr.arr zero
+
+||| The vector without the last element and the last element, or 'Nothing' if the vector is empty. O(log n)
+partial
+export
+viewr : RRBVector a -> Maybe (RRBVector a, a)
+viewr Empty                = Nothing
+viewr v@(Root size _ tree) =
+  let init = take (minus size 1) v
+    in Just (init, lastTree tree)
+  where
+    lastTree : Tree a -> a
+    lastTree (Balanced arr)     =
+      case tryNatToFin (minus size 1) of
+        Nothing   =>
+          assert_total $ idris_crash "Data.RRBVector.viewr: can't convert Nat to Fin"
+        Just last =>
+          lastTree (at arr.arr last)
+    lastTree (Unbalanced arr _) =
+      case tryNatToFin (minus size 1) of
+        Nothing   =>
+          assert_total $ idris_crash "Data.RRBVector.viewr: can't convert Nat to Fin"
+        Just last =>
+          lastTree (at arr.arr last)
+    lastTree (Leaf arr)         =
+      case tryNatToFin (minus size 1) of
+        Nothing   =>
+          assert_total $ idris_crash "Data.RRBVector.viewr: can't convert Nat to Fin"
+        Just last =>
+          at arr.arr last
 
 --------------------------------------------------------------------------------
 --          Transformation
