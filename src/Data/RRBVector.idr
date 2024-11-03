@@ -9,7 +9,7 @@ import Data.Array.Index
 import Data.Array.Indexed
 import Data.Bits
 import Data.Maybe
---import Data.Vect
+import Data.Vect
 
 %hide Prelude.null
 %hide Prelude.toList
@@ -474,8 +474,115 @@ newBranch : a -> Shift -> Tree a
 newBranch x 0  = Leaf (singleton x)
 newBranch x sh = Balanced (singleton $ newBranch x (down sh))
 
+||| Add an element to the left end of the vector. O(log n)
+partial
+export
+(<|) : a -> RRBVector a -> RRBVector a
+x <| Empty             = singleton x
+x <| Root size sh tree =
+  case compare insertshift sh of
+    LT =>
+      Root (plus size 1) sh (consTree sh tree)
+    EQ =>
+      Root (plus size 1) sh (consTree sh tree)
+    GT =>
+      let new = A 2 $ array $ fromList [(newBranch x sh), tree]
+        in Root (plus size 1) insertshift (computeSizes insertshift new)
+  where
+    -- compute the shift at which the new branch needs to be inserted (0 means there is space in the leaf)
+    -- the size is computed for efficient calculation of the shift in a balanced subtree
+    computeShift : Nat -> Nat -> Nat -> Tree a -> Nat
+    computeShift sz sh min (Balanced _)          =
+      -- @sz - 1@ is the index of the last element
+      let hishift  = case compare (mult (log2 (minus sz 1) `div` blockshift) blockshift) 0 of -- the shift of the root when normalizing
+                       LT =>
+                         0
+                       EQ =>
+                         0
+                       GT =>
+                         mult (log2 (minus sz 1) `div` blockshift) blockshift
+          hi       = shiftR (minus sz 1) hishift -- the length of the root node when normalizing minus 1
+          newshift = case compare hi blockmask of
+                       LT =>
+                         hishift
+                       EQ =>
+                         plus hishift blockshift
+                       GT =>
+                         plus hishift blockshift
+        in case compare newshift sh of
+             LT =>
+               newshift
+             EQ =>
+               newshift
+             GT =>
+               min
+    computeShift _ sh min (Unbalanced arr sizes) =
+      let sz'     = case tryNatToFin 0 of
+                      Nothing   =>
+                        assert_total $ idris_crash "Data.RRBVector.(<|): can't convert Nat to Fin"
+                      Just zero =>
+                        at sizes.arr zero -- the size of the first subtree
+          newtree = case tryNatToFin 0 of
+                      Nothing   =>
+                        assert_total $ idris_crash "Data.RRBVector.(<|): can't convert Nat to Fin"
+                      Just zero =>
+                        at arr.arr zero
+          newmin  = case compare arr.size blocksize of
+                      LT =>
+                        sh
+                      EQ =>
+                        min
+                      GT =>
+                        min
+        in computeShift sz' (down sh) newmin newtree
+    computeShift _ _ min (Leaf arr)              =
+      case compare arr.size blocksize of
+        LT =>
+          0
+        EQ =>
+          min
+        GT =>
+          min
+    insertshift : Nat
+    insertshift = computeShift size sh (up sh) tree
+    consTree : Nat -> Tree a -> Tree a
+    consTree sh (Balanced arr)     =
+      case compare sh insertshift of
+        LT =>
+          case tryNatToFin 0 of
+            Nothing   =>
+              assert_total $ idris_crash "Data.RRBVector.(<|): can't convert Nat to Fin"
+            Just zero =>
+              computeSizes sh (A arr.size $ updateAt zero (consTree (down sh)) arr.arr)
+        EQ =>
+          computeSizes sh (A (S (arr.size)) (append (fill 1 (newBranch x (down sh))) arr.arr))
+        GT =>
+          case tryNatToFin 0 of
+            Nothing   =>
+              assert_total $ idris_crash "Data.RRBVector.(<|): can't convert Nat to Fin"
+            Just zero =>
+              computeSizes sh (A arr.size $ updateAt zero (consTree (down sh)) arr.arr)
+    consTree sh (Unbalanced arr _) =
+      case compare sh insertshift of
+        LT =>
+          case tryNatToFin 0 of
+            Nothing   =>
+              assert_total $ idris_crash "Data.RRBVector.(<|): can't convert Nat to Fin"
+            Just zero =>
+              computeSizes sh (A arr.size $ updateAt zero (consTree (down sh)) arr.arr)
+        EQ =>
+          computeSizes sh (A (S (arr.size)) (append (fill 1 (newBranch x (down sh))) arr.arr))
+        GT =>
+          case tryNatToFin 0 of
+            Nothing   =>
+              assert_total $ idris_crash "Data.RRBVector.(<|): can't convert Nat to Fin"
+            Just zero =>
+              computeSizes sh (A arr.size $ updateAt zero (consTree (down sh)) arr.arr)
+    consTree _ (Leaf arr)          =
+      Leaf (A (S (arr.size)) (append (fill 1 x) arr.arr))
+
 {-
-||| Concatenates two vectors. O(log max(n1,n2)
+||| Concatenates two vectors. O(log max(n1,n2))
 (><) : Vector a -> Vector a -> Vector a
 Empty                >< v                    = v
 v                    >< Empty                = v
