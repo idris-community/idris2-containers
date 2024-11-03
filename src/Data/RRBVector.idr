@@ -300,32 +300,23 @@ takeTree i _ (Leaf arr) with ((plus (the Nat (cast ((the Int (cast i)) .&. (the 
 partial
 private
 dropTree : Nat -> Shift -> Tree a -> Tree a
-dropTree n sh (Balanced arr) with ((radixIndex n sh) <= arr.size) proof eq
-  _ | True  =
-    case tryNatToFin 0 of
-      Nothing   =>
-        assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin"
-      Just zero =>
-        let newarr = force $ drop (radixIndex n sh) arr.arr
-          in computeSizes sh (A (minus arr.size (radixIndex n sh)) (updateAt zero (dropTree n (down sh)) newarr))
-  _ | False =
-    assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
-dropTree n sh (Unbalanced arr sizes) with (fst (relaxedRadixIndex sizes n sh) <= arr.size) proof eq
-  _ | True  =
-    case tryNatToFin 0 of
-      Nothing   =>
-        assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin"
-      Just zero =>
-        let newarr = force $ drop (fst $ relaxedRadixIndex sizes n sh) arr.arr
-          in computeSizes sh (A (minus arr.size (fst $ relaxedRadixIndex sizes n sh)) (updateAt zero (dropTree (snd $ relaxedRadixIndex sizes n sh) (down sh)) newarr))
-  _ | False =
-    assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
-dropTree n _  (Leaf arr) with ((cast ((the Int (cast n)) .&. (the Int (cast blockmask)))) <= arr.size) proof eq
-  _ | True  =
-    let newarr = force $ drop (the Nat (cast ((the Int (cast n)) .&. (the Int (cast blockmask))))) arr.arr
-      in Leaf (A (minus arr.size (the Nat (cast ((the Int (cast n)) .&. (the Int (cast blockmask)))))) newarr)
-  _ | False =
-    assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
+dropTree n sh (Balanced arr) =
+  case tryNatToFin 0 of
+    Nothing   =>
+      assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin"
+    Just zero =>
+      let newarr = force $ drop (radixIndex n sh) arr.arr
+        in computeSizes sh (A (minus arr.size (radixIndex n sh)) (updateAt zero (dropTree n (down sh)) newarr))
+dropTree n sh (Unbalanced arr sizes) =
+  case tryNatToFin 0 of
+    Nothing   =>
+      assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin"
+    Just zero =>
+      let newarr = force $ drop (fst $ relaxedRadixIndex sizes n sh) arr.arr
+        in computeSizes sh (A (minus arr.size (fst $ relaxedRadixIndex sizes n sh)) (updateAt zero (dropTree (snd $ relaxedRadixIndex sizes n sh) (down sh)) newarr))
+dropTree n _  (Leaf arr) =
+  let newarr = force $ drop (the Nat (cast ((the Int (cast n)) .&. (the Int (cast blockmask))))) arr.arr
+    in Leaf (A (minus arr.size (the Nat (cast ((the Int (cast n)) .&. (the Int (cast blockmask)))))) newarr)
 
 ||| The first i elements of the vector.
 ||| If the vector contains less than or equal to i elements, the whole vector is returned. O(log n)
