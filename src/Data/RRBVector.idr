@@ -42,29 +42,47 @@ fromList xs  =
     [tree] =>
       Root (treeSize 0 tree) 0 tree -- tree is a single leaf
     xs'    =>
-      iterateNodes blockShift ls'
+      iterateNodes blockshift xs'
   where
-    nodes : (Array (Tree a) -> (Tree a)) -> List (Tree a) -> List (Tree a)
+    nodes : (Array a -> Tree a) -> List a -> List (Tree a)
     nodes f trees =
-      unsafeCreate blocksize (go 0 blocksize)
+      [unsafeCreate blocksize (go 0 blocksize f trees)]
       where
         go :  (cur,n : Nat)
-           -> (Array (Tree a) -> (Tree a))
-           -> List (Tree a)
-           -> FromMArray n (Tree a) (Array (Tree a))
+           -> (Array a -> Tree a)
+           -> List a
+           -> FromMArray n a (Tree a)
         go cur n f []        r = T1.do
           res <- freeze r
-          pure $ A n res
+          pure $ f $ A n res
         go cur n f (x :: xs) r =
           case tryNatToFin cur of
             Nothing   =>
-              assert_total $ idris_crash "Data.RRBVector.fromList: can't convert Nat to Fin"
+              assert_total $ idris_crash "Data.RRBVector.fromList.node: can't convert Nat to Fin"
             Just cur' => T1.do
-              set r cur' (f x)
-              go (S cur) n xs r
+              set r cur' x
+              go (S cur) n f xs r
+    nodes' : (Array (Tree a) -> Tree a) -> List (Tree a) -> List (Tree a)
+    nodes' f trees =
+      [unsafeCreate blocksize (go 0 blocksize f trees)]
+      where
+        go :  (cur,n : Nat)
+           -> (Array (Tree a) -> Tree a)
+           -> List (Tree a)
+           -> FromMArray n (Tree a) (Tree a)
+        go cur n f []        r = T1.do
+          res <- freeze r
+          pure $ f $ A n res
+        go cur n f (x :: xs) r =
+          case tryNatToFin cur of
+            Nothing   =>
+              assert_total $ idris_crash "Data.RRBVector.fromList.node': can't convert Nat to Fin"
+            Just cur' => T1.do
+              set r cur' x
+              go (S cur) n f xs r
     iterateNodes : Nat -> List (Tree a) -> RRBVector a
     iterateNodes sh trees =
-      case nodes Balanced trees of
+      case nodes' Balanced trees of
         [tree] => Root (treeSize sh tree) sh tree
         trees' => iterateNodes (up sh) trees'
 
