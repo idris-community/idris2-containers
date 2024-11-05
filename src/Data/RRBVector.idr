@@ -144,6 +144,36 @@ replicate n x =
                  in iterateNodes (up sh) full' rest'
 
 --------------------------------------------------------------------------------
+--          Folds
+--------------------------------------------------------------------------------
+
+partial
+export
+foldl : (b -> a -> b) -> b -> RRBVector a -> b
+foldl f acc = go
+  where
+    foldlTree : b -> Tree a -> b
+    foldlTree acc' (Balanced arr)     = foldl foldlTree acc' arr
+    foldlTree acc' (Unbalanced arr _) = foldl foldlTree acc' arr
+    foldlTree acc' (Leaf arr)         = foldl f acc' arr
+    go : RRBVector a -> b
+    go Empty           = acc
+    go (Root _ _ tree) = foldlTree acc tree
+
+partial
+export
+foldr : (a -> b -> b) -> b -> RRBVector a -> b
+foldr f acc = go
+  where
+    foldrTree : Tree a -> b -> b
+    foldrTree (Balanced arr) acc'     = foldr foldrTree acc' arr
+    foldrTree (Unbalanced arr _) acc' = foldr foldrTree acc' arr
+    foldrTree (Leaf arr) acc'         = foldr f acc' arr
+    go : RRBVector a -> b
+    go Empty           = acc
+    go (Root _ _ tree) = foldrTree tree acc
+
+--------------------------------------------------------------------------------
 --          Indexing
 --------------------------------------------------------------------------------
 
