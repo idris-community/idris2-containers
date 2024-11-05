@@ -235,6 +235,30 @@ computeSizes sh arr =
                  False =>
                    treeBalanced subtree
 
+partial
+export
+countTrailingZeros : Nat -> Nat
+countTrailingZeros x =
+  go 0
+  where
+    w : Nat
+    w = bitSizeOf Int
+    go : Nat -> Nat
+    go i =
+      case i >= w of
+        True  =>
+          i
+        False =>
+          case tryNatToFin i of
+            Nothing =>
+              assert_total $ idris_crash "Data.RRBVector.Internal.countTrailingZeros: can't convert Nat to Fin"
+            Just i' =>
+              case testBit (the Int (cast x)) i' of
+                True  =>
+                  i
+                False =>
+                  go (plus i 1)
+
 ||| Nat log base 2.
 partial
 export
