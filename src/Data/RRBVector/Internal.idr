@@ -9,7 +9,6 @@ import Data.List
 import Data.Nat
 import Data.Nat.Exponentiation
 import Data.String
-import Data.Vect
 import Derive.Prelude
 
 %default total
@@ -134,9 +133,9 @@ Ord a => Ord (Tree a) where
 Show a => Show (Tree a) where
   show xs = show' xs where
     show' : Tree a -> String
-    show' (Balanced x)     = assert_total $ show $ toVect x.arr
-    show' (Unbalanced x _) = assert_total $ show $ toVect x.arr
-    show' (Leaf x)         = show $ toVect x.arr
+    show' (Balanced x)     = assert_total $ show x.arr
+    show' (Unbalanced x _) = assert_total $ show x.arr
+    show' (Leaf x)         = show x.arr
 
 --------------------------------------------------------------------------------
 --          Tree Utilities
