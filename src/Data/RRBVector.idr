@@ -10,6 +10,7 @@ import Data.Array.Indexed
 import Data.Bits
 import Data.Maybe
 import Data.Vect
+import Syntax.T1
 
 %hide Prelude.null
 %hide Prelude.toList
@@ -29,6 +30,43 @@ empty = Empty
 export
 singleton : a -> RRBVector a
 singleton x = Root 1 0 (Leaf $ A 1 $ fill 1 x)
+
+||| Create a new vector from a list. O(n)
+partial
+export
+fromList : List a -> RRBVector a
+fromList []  = Empty
+fromList [x] = singleton x
+fromList xs  =
+  case nodes Leaf xs of
+    [tree] =>
+      Root (treeSize 0 tree) 0 tree -- tree is a single leaf
+    xs'    =>
+      iterateNodes blockShift ls'
+  where
+    nodes : (Array (Tree a) -> (Tree a)) -> List (Tree a) -> List (Tree a)
+    nodes f trees =
+      unsafeCreate blocksize (go 0 blocksize)
+      where
+        go :  (cur,n : Nat)
+           -> (Array (Tree a) -> (Tree a))
+           -> List (Tree a)
+           -> FromMArray n (Tree a) (Array (Tree a))
+        go cur n f []        r = T1.do
+          res <- freeze r
+          pure $ A n res
+        go cur n f (x :: xs) r =
+          case tryNatToFin cur of
+            Nothing   =>
+              assert_total $ idris_crash "Data.RRBVector.fromList: can't convert Nat to Fin"
+            Just cur' => T1.do
+              set r cur' (f x)
+              go (S cur) n xs r
+    iterateNodes : Nat -> List (Tree a) -> RRBVector a
+    iterateNodes sh trees =
+      case nodes Balanced trees of
+        [tree] => Root (treeSize sh tree) sh tree
+        trees' => iterateNodes (up sh) trees'
 
 ||| Creates a vector of length n with every element set to x. O(log n)
 partial
@@ -581,6 +619,62 @@ x <| Root size sh tree =
               computeSizes sh (A arr.size $ updateAt zero (consTree (down sh)) arr.arr)
     consTree _ (Leaf arr)          =
       Leaf (A (S (arr.size)) (append (fill 1 x) arr.arr))
+
+{-
+||| Add an element to the right end of the vector. O(log n)
+(|>) : RRBVector a -> a -> RRBVector a
+Empty             |> x = singleton x
+Root size sh tree |> x =
+  case compare insertShift sh of
+    LT =>
+      Root (plus size 1) insertShift (computeSizes insertShift ())
+    EQ =>
+      Root (plus size 1) insertShift (computeSizes insertShift ())
+    GT =>
+      
+
+
+    | insertShift > sh = Root (size + 1) insertShift (computeSizes insertShift (A.from2 tree $! newBranch x sh))
+    | otherwise = Root (size + 1) sh (snocTree sh tree)
+  where
+    snocTree sh (Balanced arr)
+        | sh == insertShift = Balanced (A.snoc arr $! newBranch x (down sh)) -- the current subtree is fully balanced
+        | otherwise = Balanced $ A.adjust' arr (length arr - 1) (snocTree (down sh))
+    snocTree sh (Unbalanced arr sizes)
+        | sh == insertShift = Unbalanced (A.snoc arr $! newBranch x (down sh)) newSizesSnoc
+        | otherwise = Unbalanced (A.adjust' arr (length arr - 1) (snocTree (down sh))) newSizesAdjust
+      where
+        len = length arr
+        -- snoc the last size + 1
+        newSizesSnoc = runST $ do
+            newArr <- newPrimArray (len + 1)
+            copyPrimArray newArr 0 sizes 0 len
+            let lastSize = indexPrimArray sizes (len - 1)
+            writePrimArray newArr len (lastSize + 1)
+            unsafeFreezePrimArray newArr
+        -- adjust the last size with (+ 1)
+        newSizesAdjust = runST $ do
+            newArr <- newPrimArray len
+            copyPrimArray newArr 0 sizes 0 len
+            let lastSize = indexPrimArray sizes (len - 1)
+            writePrimArray newArr (len - 1) (lastSize + 1)
+            unsafeFreezePrimArray newArr
+    snocTree _ (Leaf arr) = Leaf $ A.snoc arr x
+
+    insertShift = computeShift size sh (up sh) tree
+
+    -- compute the shift at which the new branch needs to be inserted (0 means there is space in the leaf)
+    -- the size is computed for efficient calculation of the shift in a balanced subtree
+    computeShift !sz !sh !min (Balanced _) =
+        let newShift = (countTrailingZeros sz `div` blockShift) * blockShift
+        in if newShift > sh then min else newShift
+    computeShift _ sh min (Unbalanced arr sizes) =
+        let lastIdx = length arr - 1
+            sz' = indexPrimArray sizes lastIdx - indexPrimArray sizes (lastIdx - 1) -- the size of the last subtree
+            newMin = if length arr < blockSize then sh else min
+        in computeShift sz' (down sh) newMin (A.last arr)
+    computeShift _ _ min (Leaf arr) = if length arr < blockSize then 0 else min
+-}
 
 {-
 ||| Concatenates two vectors. O(log max(n1,n2))

@@ -286,7 +286,7 @@ Eq a => Eq (Tree a) => Eq (RRBVector a) where
 
 export
 Show a => Show (Tree a) => Show (RRBVector a) where
-  show xs = show' xs where
+  show xs = "rrbvector [" ++ (show' xs) ++ "]" where
     show' : RRBVector a -> String
     show' Empty        = ""
     show' (Root _ _ t) = show t
