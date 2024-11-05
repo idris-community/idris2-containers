@@ -46,40 +46,60 @@ fromList xs  =
   where
     nodes : (Array a -> Tree a) -> List a -> List (Tree a)
     nodes f trees =
-      [unsafeCreate blocksize (go 0 blocksize f trees)]
+      let (trees', rest) = unsafeCreate blocksize (go 0 blocksize f trees)
+        in case rest of
+             []    =>
+               [trees']
+             rest' =>
+               (trees' :: nodes f rest)
       where
         go :  (cur,n : Nat)
            -> (Array a -> Tree a)
            -> List a
-           -> FromMArray n a (Tree a)
+           -> FromMArray n a (Tree a,List a)
         go cur n f []        r = T1.do
           res <- freeze r
-          pure $ f $ A n res
+          pure $ (f $ A n res,[])
         go cur n f (x :: xs) r =
-          case tryNatToFin cur of
-            Nothing   =>
-              assert_total $ idris_crash "Data.RRBVector.fromList.node: can't convert Nat to Fin"
-            Just cur' => T1.do
-              set r cur' x
-              go (S cur) n f xs r
+          case cur == n of
+            True  => T1.do
+              res <- freeze r
+              pure $ (f $ A n res, x :: xs)
+            False =>
+              case tryNatToFin cur of
+                Nothing   =>
+                  assert_total $ idris_crash "Data.RRBVector.fromList.node: can't convert Nat to Fin"
+                Just cur' => T1.do
+                  set r cur' x
+                  go (S cur) n f xs r
     nodes' : (Array (Tree a) -> Tree a) -> List (Tree a) -> List (Tree a)
     nodes' f trees =
-      [unsafeCreate blocksize (go 0 blocksize f trees)]
+      let (trees', rest) = unsafeCreate blocksize (go 0 blocksize f trees)
+        in case rest of
+             []    =>
+               [trees']
+             rest' =>
+               (trees' :: nodes' f rest)
       where
         go :  (cur,n : Nat)
            -> (Array (Tree a) -> Tree a)
            -> List (Tree a)
-           -> FromMArray n (Tree a) (Tree a)
+           -> FromMArray n (Tree a) (Tree a,List (Tree a))
         go cur n f []        r = T1.do
           res <- freeze r
-          pure $ f $ A n res
+          pure $ (f $ A n res,[])
         go cur n f (x :: xs) r =
-          case tryNatToFin cur of
-            Nothing   =>
-              assert_total $ idris_crash "Data.RRBVector.fromList.node': can't convert Nat to Fin"
-            Just cur' => T1.do
-              set r cur' x
-              go (S cur) n f xs r
+          case cur == n of
+            True  => T1.do
+              res <- freeze r
+              pure $ (f $ A n res, x :: xs)
+            False =>
+              case tryNatToFin cur of
+                Nothing   =>
+                  assert_total $ idris_crash "Data.RRBVector.fromList.node': can't convert Nat to Fin"
+                Just cur' => T1.do
+                  set r cur' x
+                  go (S cur) n f xs r
     iterateNodes : Nat -> List (Tree a) -> RRBVector a
     iterateNodes sh trees =
       case nodes' Balanced trees of
