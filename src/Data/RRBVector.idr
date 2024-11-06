@@ -813,9 +813,10 @@ Root size sh tree |> x =
                                   (A sizes.size (setAt lastidxs lastsize sizes.arr))
     snocTree _ (Leaf arr) = Leaf (A (plus arr.size 1) (append arr.arr (fill 1 x)))
 
-{-
 ||| Concatenates two vectors. O(log max(n1,n2))
-(><) : Vector a -> Vector a -> Vector a
+partial
+export
+(><) : RRBVector a -> RRBVector a -> RRBVector a
 Empty                >< v                    = v
 v                    >< Empty                = v
 Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
@@ -827,64 +828,26 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
                      GT =>
                        up sh1
       newarr     = mergeTrees tree1 sh1 tree2 sh2
-    in normalize $ Root (size1 + size2) upmaxshift (computeSizes upmaxshift newarr)
+    in normalize $ Root (plus size1 size2) upmaxshift (computeSizes upmaxshift newarr)
   where
-    mergeTrees : Tree a -> Nat -> Tree a -> Nat -> Array (Tree a)
-    mergeTrees tree1@(Leaf arr1) _ tree2@(Leaf arr2) _ =
-      case compare arr1.size blocksize of
-        LT =>
-          case compare (plus arr1.size arr2.size) blocksize of
-            LT =>
-              singleton $ Leaf (append arr1.arr arr2.arr)
-            EQ =>
-              singleton $ Leaf (append arr1.arr arr2.arr)
-            GT =>
-               
-        EQ =>
-          A 2 $ fromPairs 2 (Leaf tree1) [tree1,tree2]
-        GT =>
+    viewlArr : Array a -> (a, Array a)
+    viewlArr arr =
+      case tryNatToFin 0 of
+        Nothing   =>
+          assert_total $ idris_crash "Data.RRBVector.(><).viewlArr: can't convert Nat to Fin"
+        Just zero =>
+          (at arr.arr zero, drop 1 arr)
+    viewrArr : Array b -> (Array b, Array b)
+    viewrArr arr =
+      case tryNatToFin $ minus arr.size 1 of
+        Nothing   =>
+          assert_total $ idris_crash "Data.RRBVector.(><).viewrArr: can't convert Nat to Fin"
+        Just last =>
+          (take last arr, at arr.arr last)
+    mergeRebalance' : (Tree a -> A.Array t) -> (A.Array t -> Tree a) -> A.Array (Tree a)
+    mergeRebalance' extract construct = --runST $ do
+      unsafeCreate 
 
-
-        | length arr1 == blockSize = A.from2 tree1 tree2
-        | length arr1 + length arr2 <= blockSize = A.singleton $! Leaf (arr1 A.++ arr2)
-        | otherwise =
-            let (left, right) = A.splitAt (arr1 A.++ arr2) blockSize -- 'A.splitAt' doesn't copy anything
-                !leftTree = Leaf left
-                !rightTree = Leaf right
-            in A.from2 leftTree rightTree
-
-
-    mergeTrees tree1 sh1 tree2 sh2 = case compare sh1 sh2 of
-        LT ->
-            let !right = treeToArray tree2
-                (rightHead, rightTail) = viewlArr right
-                merged = mergeTrees tree1 sh1 rightHead (down sh2)
-            in mergeRebalance sh2 A.empty merged rightTail
-        GT ->
-            let !left = treeToArray tree1
-                (leftInit, leftLast) = viewrArr left
-                merged = mergeTrees leftLast (down sh1) tree2 sh2
-            in mergeRebalance sh1 leftInit merged A.empty
-        EQ ->
-            let !left = treeToArray tree1
-                !right = treeToArray tree2
-                (leftInit, leftLast) = viewrArr left
-                (rightHead, rightTail) = viewlArr right
-                merged = mergeTrees leftLast (down sh1) rightHead (down sh2)
-            in mergeRebalance sh1 leftInit merged rightTail
-      where
-        viewlArr arr = (A.head arr, A.drop arr 1)
-
-        viewrArr arr = (A.take arr (length arr - 1), A.last arr)
-
-    -- the type signature is necessary to compile
-    mergeRebalance :: forall a. Shift -> A.Array (Tree a) -> A.Array (Tree a) -> A.Array (Tree a) -> A.Array (Tree a)
-    mergeRebalance !sh !left !center !right
-        | sh == blockShift = mergeRebalance' (\(Leaf arr) -> arr) Leaf
-        | otherwise = mergeRebalance' treeToArray (computeSizes (down sh))
-      where
-        mergeRebalance' :: (Tree a -> A.Array t) -> (A.Array t -> Tree a) -> A.Array (Tree a)
-        mergeRebalance' extract construct = runST $ do
             newRoot <- Buffer.new blockSize
             newSubtree <- Buffer.new blockSize
             newNode <- Buffer.new blockSize
@@ -905,7 +868,63 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
             result <- Buffer.get from
             Buffer.push to $! f result
         {-# INLINE pushTo #-}
--}
+    mergeRebalance : Shift -> Array (Tree a) -> Array (Tree a) -> Array (Tree a) -> Array (Tree a)
+    mergeRebalance sh left center right =
+      case compare sh blockshift of
+        LT =>
+          mergeRebalance' treeToArray (computeSizes (down sh))
+        EQ =>
+          mergeRebalance' (\(Leaf arr) -> arr) Leaf
+        GT =>
+          mergeRebalance' treeToArray (computeSizes (down sh))
+    mergeTrees : Tree a -> Nat -> Tree a -> Nat -> Array (Tree a)
+    mergeTrees tree1@(Leaf arr1) _   tree2@(Leaf arr2) _   =
+      case compare arr1.size blocksize of
+        LT =>
+          let arr' = A (plus arr1.size arr2.size) (append arr1.arr arr2.arr)
+            in case compare (plus arr1.size arr2.size) blocksize of
+                 LT =>
+                   singleton $ Leaf arr'
+                 EQ =>
+                   singleton $ Leaf arr'
+                 GT =>
+                   let (left, right) = (take blocksize arr',drop blocksize arr')
+                       leftree       = Leaf left
+                       righttree     = Leaf right
+                     in A 2 $ fromPairs 2 (Leaf lefttree) [lefttree,righttree]
+        EQ =>
+          A 2 $ fromPairs 2 (Leaf tree1) [tree1,tree2]
+        GT =>
+          let arr' = A (plus arr1.size arr2.size) (append arr1.arr arr2.arr)
+            in case compare (plus arr1.size arr2.size) blocksize of
+                 LT =>
+                   singleton $ Leaf arr'
+                 EQ =>
+                   singleton $ Leaf arr'
+                 GT =>
+                   let (left, right) = (take blocksize arr',drop blocksize arr')
+                       leftree       = Leaf left
+                       righttree     = Leaf right
+                     in A 2 $ fromPairs 2 (Leaf lefttree) [lefttree,righttree]
+    mergeTrees tree1             sh1 tree2             sh2 =
+      case compare sh1 sh2 of
+        LT =>
+          let right                  = treeToArray tree2
+              (righthead, righttail) = viewlArr right
+              merged                 = mergeTrees tree1 sh1 righthead (down sh2)
+            in mergeRebalance sh2 empty merged righttail
+        GT =>
+          let left                 = treeToArray tree1
+              (leftinit, leftlast) = viewrArr left
+              merged               = mergeTrees leftlast (down sh1) tree2 sh2
+            in mergeRebalance sh1 leftinit merged empty
+        EQ =>
+          let left                   = treeToArray tree1
+              right                  = treeToArray tree2
+              (leftinit, leftlast)   = viewrArr left
+              (righthead, righttail) = viewlArr right
+              merged                 = mergeTrees leftlast (down sh1) righthead (down sh2)
+            in mergeRebalance sh1 leftinit merged righttail
 
 --------------------------------------------------------------------------------
 --          Interfaces
