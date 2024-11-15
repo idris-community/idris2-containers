@@ -9,13 +9,29 @@ import Data.Array.Index
 import Data.Array.Indexed
 import Data.Bits
 import Data.Maybe
+import Data.List
+import Data.SnocList
 import Data.Vect
 import Syntax.T1
 
 %hide Prelude.null
-%hide Prelude.toList
+%hide Prelude.Ops.infixr.(<|)
+%hide Prelude.Ops.infixl.(|>)
 
 %default total
+
+--------------------------------------------------------------------------------
+--          Fixity
+--------------------------------------------------------------------------------
+
+export
+infixr 5 ><
+
+export
+infixr 5 <|
+
+export
+infixl 5 |>
 
 --------------------------------------------------------------------------------
 --          Creating RRB-Vectors
@@ -57,7 +73,7 @@ fromList xs  =
            -> (Array a -> Tree a)
            -> List a
            -> FromMArray n a (Tree a,List a)
-        go cur n f []        r = T1.do
+        go _   n f []        r = T1.do
           res <- freeze r
           pure $ (f $ A n res,[])
         go cur n f (x :: xs) r =
@@ -85,7 +101,7 @@ fromList xs  =
            -> (Array (Tree a) -> Tree a)
            -> List (Tree a)
            -> FromMArray n (Tree a) (Tree a,List (Tree a))
-        go cur n f []        r = T1.do
+        go _   n f []        r = T1.do
           res <- freeze r
           pure $ (f $ A n res,[])
         go cur n f (x :: xs) r =
@@ -182,6 +198,12 @@ export
 null : RRBVector a -> Bool
 null Empty = True
 null _     = False
+
+||| Return the size of a vector. O(1)
+export
+length : RRBVector a -> Nat
+length Empty        = 0
+length (Root s _ _) = s
 
 --------------------------------------------------------------------------------
 --          Indexing
@@ -830,82 +852,130 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
       newarr     = mergeTrees tree1 sh1 tree2 sh2
     in normalize $ Root (plus size1 size2) upmaxshift (computeSizes upmaxshift newarr)
   where
-    viewlArr : Array a -> (a, Array a)
+    viewlArr : Array (Tree a) -> (Tree a, Array (Tree a))
     viewlArr arr =
       case tryNatToFin 0 of
         Nothing   =>
           assert_total $ idris_crash "Data.RRBVector.(><).viewlArr: can't convert Nat to Fin"
         Just zero =>
           (at arr.arr zero, drop 1 arr)
-    viewrArr : Array b -> (Array b, Array b)
+    viewrArr : Array (Tree b) -> (Array (Tree b), Tree b)
     viewrArr arr =
       case tryNatToFin $ minus arr.size 1 of
         Nothing   =>
           assert_total $ idris_crash "Data.RRBVector.(><).viewrArr: can't convert Nat to Fin"
         Just last =>
-          (take last arr, at arr.arr last)
-    mergeRebalance' : (Tree a -> A.Array t) -> (A.Array t -> Tree a) -> A.Array (Tree a)
-    mergeRebalance' extract construct = --runST $ do
-      unsafeCreate 
-
-            newRoot <- Buffer.new blockSize
-            newSubtree <- Buffer.new blockSize
-            newNode <- Buffer.new blockSize
-            for_ (toList left ++ toList center ++ toList right) $ \subtree ->
-                for_ (extract subtree) $ \x -> do
-                    lenNode <- Buffer.size newNode
-                    when (lenNode == blockSize) $ do
-                        pushTo construct newNode newSubtree
-                        lenSubtree <- Buffer.size newSubtree
-                        when (lenSubtree == blockSize) $ pushTo (computeSizes sh) newSubtree newRoot
-                    Buffer.push newNode x
-            pushTo construct newNode newSubtree
-            pushTo (computeSizes sh) newSubtree newRoot
-            Buffer.get newRoot
-        {-# INLINE mergeRebalance' #-}
-
-        pushTo f from to = do
-            result <- Buffer.get from
-            Buffer.push to $! f result
-        {-# INLINE pushTo #-}
+          (take (minus arr.size 1) arr, at arr.arr last)
+    mergeRebalance' : Shift -> Array (Tree a) -> Array (Tree a) -> Array (Tree a) -> (Tree a -> Array (Tree a)) -> (Array (Tree a) -> Tree a) -> Array (Tree a)
+    mergeRebalance' sh left center right extract construct =
+      let lcr = toList $ append (append left.arr center.arr) right.arr
+        in go 0 0 Lin Lin Lin (map extract lcr)
+      where
+        go :  (nodecounter,subtreecounter : Nat)
+           -> SnocList (Array (Tree a))
+           -> SnocList (Tree a)
+           -> SnocList (Tree a)
+           -> List (Array (Tree a))
+           -> Array (Tree a)
+        go nodecounter subtreecounter newnode newsubtree newroot []        =
+          let newsubtree' = newsubtree :< (construct $ A (SnocSize newnode)
+                                                         (snocConcat newnode))
+              newroot'    = newroot :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
+            in fromList $ the (List (Tree a)) (cast newroot')
+        go nodecounter subtreecounter newnode newsubtree newroot (x :: xs) =
+          case nodecounter == blocksize of
+            True  =>
+              case subtreecounter == blocksize of
+                True  =>
+                  let newnode'        = newnode :< x
+                      newsubtree'     = newsubtree :< (construct $ A (SnocSize newnode)
+                                                                     (snocConcat newnode))
+                      newroot'        = newroot :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
+                    in go 1 0 newnode' newsubtree' newroot' xs
+                False =>
+                  let newnode'        = newnode :< x
+                      newsubtree'     = newsubtree :< (construct $ A (SnocSize newnode)
+                                                                     (snocConcat newnode))
+                      subtreecounter' = plus subtreecounter 1
+                    in go 1 subtreecounter' newnode newsubtree' newroot xs
+            False =>
+              let newnode'     = newnode :< x
+                  nodecounter' = plus nodecounter 1
+                in go nodecounter' subtreecounter newnode' newsubtree newroot xs
+    mergeRebalance'' : Shift -> Array (Tree a) -> Array (Tree a) -> Array (Tree a) -> (Tree a -> Array a) -> (Array a -> Tree a) -> Array (Tree a)
+    mergeRebalance'' sh left center right extract construct =
+      let lcr = toList $ append (append left.arr center.arr) right.arr
+        in go 0 0 Lin Lin Lin (map extract lcr)
+      where
+        go :  (nodecounter,subtreecounter : Nat)
+           -> SnocList (Array a)
+           -> SnocList (Tree a)
+           -> SnocList (Tree a)
+           -> List (Array a)
+           -> Array (Tree a)
+        go nodecounter subtreecounter newnode newsubtree newroot []        =
+          let newsubtree' = newsubtree :< (construct $ A (SnocSize newnode)
+                                                         (snocConcat newnode))
+              newroot'    = newroot :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
+            in fromList $ the (List (Tree a)) (cast newroot')
+        go nodecounter subtreecounter newnode newsubtree newroot (x :: xs) =
+          case nodecounter == blocksize of
+            True  =>
+              case subtreecounter == blocksize of
+                True  =>
+                  let newnode'        = newnode :< x
+                      newsubtree'     = newsubtree :< (construct $ A (SnocSize newnode)
+                                                                     (snocConcat newnode))
+                      newroot'        = newroot :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
+                    in go 1 0 newnode' newsubtree' newroot' xs
+                False =>
+                  let newnode'        = newnode :< x
+                      newsubtree'     = newsubtree :< (construct $ A (SnocSize newnode)
+                                                                     (snocConcat newnode))
+                      subtreecounter' = plus subtreecounter 1
+                    in go 1 subtreecounter' newnode newsubtree' newroot xs
+            False =>
+              let newnode'     = newnode :< x
+                  nodecounter' = plus nodecounter 1
+                in go nodecounter' subtreecounter newnode' newsubtree newroot xs
     mergeRebalance : Shift -> Array (Tree a) -> Array (Tree a) -> Array (Tree a) -> Array (Tree a)
     mergeRebalance sh left center right =
       case compare sh blockshift of
         LT =>
-          mergeRebalance' treeToArray (computeSizes (down sh))
+          mergeRebalance' sh left center right treeToArray (computeSizes (down sh))
         EQ =>
-          mergeRebalance' (\(Leaf arr) -> arr) Leaf
+          mergeRebalance'' sh left center right (\(Leaf arr) => arr) Leaf
         GT =>
-          mergeRebalance' treeToArray (computeSizes (down sh))
+          mergeRebalance' sh left center right treeToArray (computeSizes (down sh))
     mergeTrees : Tree a -> Nat -> Tree a -> Nat -> Array (Tree a)
     mergeTrees tree1@(Leaf arr1) _   tree2@(Leaf arr2) _   =
       case compare arr1.size blocksize of
         LT =>
           let arr' = A (plus arr1.size arr2.size) (append arr1.arr arr2.arr)
-            in case compare (plus arr1.size arr2.size) blocksize of
+            in case compare arr'.size blocksize of
                  LT =>
                    singleton $ Leaf arr'
                  EQ =>
                    singleton $ Leaf arr'
                  GT =>
                    let (left, right) = (take blocksize arr',drop blocksize arr')
-                       leftree       = Leaf left
+                       lefttree      = Leaf left
                        righttree     = Leaf right
-                     in A 2 $ fromPairs 2 (Leaf lefttree) [lefttree,righttree]
+                     in A 2 $ fromPairs 2 lefttree [(1,righttree)]
         EQ =>
-          A 2 $ fromPairs 2 (Leaf tree1) [tree1,tree2]
+          A 2 $ fromPairs 2 tree1 [(1,tree2)]
         GT =>
           let arr' = A (plus arr1.size arr2.size) (append arr1.arr arr2.arr)
-            in case compare (plus arr1.size arr2.size) blocksize of
+            in case compare arr'.size blocksize of
                  LT =>
                    singleton $ Leaf arr'
                  EQ =>
                    singleton $ Leaf arr'
                  GT =>
                    let (left, right) = (take blocksize arr',drop blocksize arr')
-                       leftree       = Leaf left
+                       lefttree      = Leaf left
                        righttree     = Leaf right
-                     in A 2 $ fromPairs 2 (Leaf lefttree) [lefttree,righttree]
+                     in A 2 $ fromPairs 2 lefttree [(1,righttree)]
     mergeTrees tree1             sh1 tree2             sh2 =
       case compare sh1 sh2 of
         LT =>
@@ -938,6 +1008,17 @@ Functor RRBVector where
 partial
 export
 Foldable RRBVector where
-  foldl f z = Data.RRBVector.foldl f z
-  foldr f z = Data.RRBVector.foldr f z
-  null      = null
+  foldl f z           = Data.RRBVector.foldl f z
+  foldr f z           = Data.RRBVector.foldr f z
+  null                = null
+
+partial
+export
+Applicative RRBVector where
+  pure      = singleton
+  fs <*> xs = Data.RRBVector.foldl (\acc, f => acc >< map f xs) empty fs
+
+partial
+export
+Monad RRBVector where
+  xs >>= f = Data.RRBVector.foldl (\acc, x => acc >< f x) empty xs
