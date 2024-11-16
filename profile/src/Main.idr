@@ -534,6 +534,34 @@ mapSeqUnsized n = do
   let s = SU.fromList [0..n]
   map (\x => plus x 1) s
 
+replicateRRBVector : Nat -> RRBVector Nat
+replicateRRBVector n = do
+  V.replicate n 0
+
+replicateSeqUnsized : Nat -> Seq Nat
+replicateSeqUnsized n = do
+  SU.replicate n 0
+
+splitAtRRBVector : Nat -> (RRBVector Nat, RRBVector Nat)
+splitAtRRBVector n = do
+  let v = V.fromList [0..n]
+  V.splitAt (n `div` 2) v
+
+splitAtSeqUnsized : Nat -> (Seq Nat, Seq Nat)
+splitAtSeqUnsized n = do
+  let s = SU.fromList [0..n]
+  SU.splitAt (n `div` 2) s
+
+reverseRRBVector : Nat -> RRBVector Nat
+reverseRRBVector n = do
+  let v = V.fromList [0..n]
+  V.reverse v
+
+reverseSeqUnsized : Nat -> Seq Nat
+reverseSeqUnsized n = do
+  let s = SU.fromList [0..n]
+  SU.reverse s
+
 partial
 bench : Benchmark Void
 bench = Group "containers"
@@ -697,12 +725,50 @@ bench = Group "containers"
   , Group "mapRRBVector"
       [ Single "1"       (basic mapRRBVector 0)
       , Single "100"     (basic mapRRBVector 99)
-      , Single "1000"     (basic mapRRBVector 999)
+      , Single "1000"    (basic mapRRBVector 999)
+      , Single "10000"   (basic mapRRBVector 9999)
       ]
   , Group "mapSeqUnsized"
       [ Single "1"       (basic mapSeqUnsized 0)
-      , Single "100"     (basic mapRRBVector 99)
-      , Single "1000"     (basic mapRRBVector 999)
+      , Single "100"     (basic mapSeqUnsized 99)
+      , Single "1000"    (basic mapSeqUnsized 999)
+      , Single "10000"   (basic mapSeqUnsized 9999)
+      ]
+  , Group "replicateRRBVector"
+      [ Single "1"       (basic replicateRRBVector 0)
+      , Single "100"     (basic replicateRRBVector 99)
+      , Single "1000"    (basic replicateRRBVector 999)
+      , Single "10000"   (basic replicateRRBVector 9999)
+      ]
+  , Group "replicateSeqUnsized"
+      [ Single "1"       (basic replicateSeqUnsized 0)
+      , Single "100"     (basic replicateSeqUnsized 99)
+      , Single "1000"    (basic replicateSeqUnsized 999)
+      , Single "10000"   (basic replicateSeqUnsized 9999)
+      ]
+  , Group "reverseRRBVector"
+      [ Single "1"       (basic reverseRRBVector 0)
+      , Single "100"     (basic reverseRRBVector 99)
+      , Single "1000"    (basic reverseRRBVector 999)
+      , Single "10000"   (basic reverseRRBVector 9999)
+      ]
+  , Group "reverseSeqUnsized"
+      [ Single "1"       (basic reverseSeqUnsized 0)
+      , Single "100"     (basic reverseSeqUnsized 99)
+      , Single "1000"    (basic reverseSeqUnsized 999)
+      , Single "10000"   (basic reverseSeqUnsized 9999)
+      ]
+  , Group "splitAtRRBVector"
+      [ Single "1"       (basic splitAtRRBVector 0)
+      , Single "100"     (basic splitAtRRBVector 99)
+      , Single "1000"    (basic splitAtRRBVector 999)
+      , Single "10000"   (basic splitAtRRBVector 9999)
+      ]
+  , Group "splitAtSeqUnsized"
+      [ Single "1"       (basic splitAtSeqUnsized 0)
+      , Single "100"     (basic splitAtSeqUnsized 99)
+      , Single "1000"    (basic splitAtSeqUnsized 999)
+      , Single "10000"   (basic splitAtSeqUnsized 9999)
       ]
   ]
 
