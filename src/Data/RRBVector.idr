@@ -10,8 +10,10 @@ import Data.Array.Indexed
 import Data.Bits
 import Data.Maybe
 import Data.List
+import Data.List1
 import Data.SnocList
 import Data.Vect
+import Data.Zippable
 import Syntax.T1
 
 %hide Prelude.null
@@ -73,9 +75,9 @@ fromList xs  =
            -> (Array a -> Tree a)
            -> List a
            -> FromMArray n a (Tree a,List a)
-        go _   n f []        r = T1.do
+        go cur n f []        r = T1.do
           res <- freeze r
-          pure $ (f $ A n res,[])
+          pure $ (f $ force $ take cur $ A n res,[])
         go cur n f (x :: xs) r =
           case cur == n of
             True  => T1.do
@@ -101,9 +103,9 @@ fromList xs  =
            -> (Array (Tree a) -> Tree a)
            -> List (Tree a)
            -> FromMArray n (Tree a) (Tree a,List (Tree a))
-        go _   n f []        r = T1.do
+        go cur n f []        r = T1.do
           res <- freeze r
-          pure $ (f $ A n res,[])
+          pure $ (f $ force $ take cur $ A n res,[])
         go cur n f (x :: xs) r =
           case cur == n of
             True  => T1.do
@@ -119,8 +121,10 @@ fromList xs  =
     iterateNodes : Nat -> List (Tree a) -> RRBVector a
     iterateNodes sh trees =
       case nodes' Balanced trees of
-        [tree] => Root (treeSize sh tree) sh tree
-        trees' => iterateNodes (up sh) trees'
+        [tree] =>
+          Root (treeSize sh tree) sh tree
+        trees' =>
+          iterateNodes (up sh) trees'
 
 ||| Creates a vector of length n with every element set to x. O(log n)
 partial
@@ -158,6 +162,22 @@ replicate n x =
              GT =>
                let full' = Balanced (A blocksize $ fill blocksize full)
                  in iterateNodes (up sh) full' rest'
+
+--------------------------------------------------------------------------------
+--          Creating Lists from RRB-Vectors
+--------------------------------------------------------------------------------
+
+||| Convert a vector to a list. O(n)
+partial
+export
+toList : RRBVector a -> List a
+toList Empty           = []
+toList (Root _ _ tree) = treeToList tree
+  where
+    treeToList : Tree a -> List a
+    treeToList (Balanced trees)     = concat (map treeToList (toList trees))
+    treeToList (Unbalanced trees _) = concat (map treeToList (toList trees))
+    treeToList (Leaf arr)           = toList arr
 
 --------------------------------------------------------------------------------
 --          Folds
@@ -601,6 +621,39 @@ map f (Root size sh tree) = Root size sh (mapTree tree)
     mapTree (Leaf arr)             =
       Leaf (map f arr)
 
+||| Reverse the vector. O(n)
+partial
+export
+reverse : RRBVector a -> RRBVector a
+reverse v =
+  case compare (length v) 1 of
+    LT =>
+      v
+    EQ =>
+      v
+    GT =>
+      case fromList $ toList v of
+        Nothing =>
+          assert_total $ idris_crash "Data.RRBVector.reverse: can't convert to List1"
+        Just v' =>
+          fromList $ forget $ reverse v'
+
+||| Take two vectors and return a vector of corresponding pairs.
+||| If one input is longer, excess elements are discarded from the right end. O(min(n1,n2))
+partial
+export
+zip : RRBVector a -> RRBVector b -> RRBVector (a, b)
+zip v1 v2 =
+  case fromList $ toList v1 of
+    Nothing  =>
+      assert_total $ idris_crash "Data.RRBVector.zip: can't convert to List1"
+    Just v1' =>
+      case fromList $ toList v2 of
+        Nothing  =>
+          assert_total $ idris_crash "Data.RRBVector.zip: can't convert to List1"
+        Just v2' =>
+          fromList $ forget $ zip v1' v2'
+
 --------------------------------------------------------------------------------
 --          Concatenation
 --------------------------------------------------------------------------------
@@ -897,7 +950,7 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
                       newsubtree'     = newsubtree :< (construct $ A (SnocSize newnode)
                                                                      (snocConcat newnode))
                       subtreecounter' = plus subtreecounter 1
-                    in go 1 subtreecounter' newnode newsubtree' newroot xs
+                    in go 1 subtreecounter' newnode' newsubtree' newroot xs
             False =>
               let newnode'     = newnode :< x
                   nodecounter' = plus nodecounter 1
@@ -933,7 +986,7 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
                       newsubtree'     = newsubtree :< (construct $ A (SnocSize newnode)
                                                                      (snocConcat newnode))
                       subtreecounter' = plus subtreecounter 1
-                    in go 1 subtreecounter' newnode newsubtree' newroot xs
+                    in go 1 subtreecounter' newnode' newsubtree' newroot xs
             False =>
               let newnode'     = newnode :< x
                   nodecounter' = plus nodecounter 1
@@ -996,9 +1049,38 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
               merged                 = mergeTrees leftlast (down sh1) righthead (down sh2)
             in mergeRebalance sh1 leftinit merged righttail
 
+||| Insert an element at the given index, shifting the rest of the vector over.
+||| If the index is negative, add the element to the left end of the vector.
+||| If the index is bigger than or equal to the length of the vector, add the element to the right end of the vector. O(log n)
+partial
+export
+insertAt : Nat -> a -> RRBVector a -> RRBVector a
+insertAt i x v =
+  let (left, right) = splitAt i v
+    in (left |> x) >< right
+
+||| Delete the element at the given index.
+||| If the index is out of range, return the original vector. O(log n)
+partial
+export
+deleteAt : Nat -> RRBVector a -> RRBVector a
+deleteAt i v =
+  let (left, right) = splitAt (plus i 1) v
+    in take i left >< right
+
 --------------------------------------------------------------------------------
 --          Interfaces
 --------------------------------------------------------------------------------
+
+partial
+export
+Ord a => Ord (RRBVector a) where
+  compare xs ys = compare (Data.RRBVector.toList xs) (Data.RRBVector.toList ys)
+
+partial
+export
+Eq a => Eq (RRBVector a) where
+  xs == ys = length xs == length ys && Data.RRBVector.toList xs == Data.RRBVector.toList ys
 
 partial
 export

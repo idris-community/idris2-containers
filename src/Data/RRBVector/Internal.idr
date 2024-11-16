@@ -1,6 +1,7 @@
 ||| RRB Vector Internals
 module Data.RRBVector.Internal
 
+import Data.Array
 import Data.Array.Core
 import Data.Array.Index
 import Data.Array.Indexed
@@ -110,6 +111,7 @@ data Tree a = Balanced (Array (Tree a))
             | Unbalanced (Array (Tree a)) (Array Nat)
             | Leaf (Array a)
 
+public export
 Eq a => Eq (Tree a) where
   (Balanced x)      == (Balanced y)      = assert_total $ heq x.arr y.arr
   (Unbalanced x x') == (Unbalanced y y') = assert_total $ heq x.arr y.arr && heq x'.arr y'.arr
@@ -130,12 +132,24 @@ Ord a => Ord (Tree a) where
   compare (Leaf _)         (Unbalanced _ _) = GT
 -}
 
+partial
+public export
+Show a => Show (Tree a) where
+  show (Balanced trees)     =
+    "Balanced " ++ show (toList trees)
+  show (Unbalanced trees _) =
+    "Unbalanced " ++ show (toList trees) -- ++ " " ++ show (toList nats)
+  show (Leaf elems)         =
+    "Leaf " ++ show (toList elems)
+
+{-
 Show a => Show (Tree a) where
   show xs = show' xs where
     show' : Tree a -> String
     show' (Balanced x)     = assert_total $ show x.arr
     show' (Unbalanced x _) = assert_total $ show x.arr
     show' (Leaf x)         = show x.arr
+-}
 
 --------------------------------------------------------------------------------
 --          Tree Utilities
@@ -301,15 +315,15 @@ data RRBVector a = Root Nat   -- size
                         (Tree a)
                  | Empty
 
-export
+public export
 Eq a => Eq (Tree a) => Eq (RRBVector a) where
   (Root n s t) == (Root n' s' t') = n == n' && s == s' && t == t'
   Empty        == Empty           = True
   _            == _               = False
 
-export
+public export
 Show a => Show (Tree a) => Show (RRBVector a) where
   show xs = "rrbvector [" ++ (show' xs) ++ "]" where
     show' : RRBVector a -> String
-    show' Empty        = ""
-    show' (Root _ _ t) = show t
+    show' Empty           = ""
+    show' (Root size sh t) = "size " ++ (show size) ++ " shift " ++ (show sh) ++ " tree " ++ show t
