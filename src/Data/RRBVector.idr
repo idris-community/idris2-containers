@@ -282,7 +282,7 @@ lookup i (Root size sh tree) =
 partial
 export
 index : Nat -> RRBVector a -> a
-index i = fromMaybe (assert_total $ idris_crash "index out of range") . lookup i
+index i = fromMaybe (assert_total $ idris_crash "Data.RRBVector.index: index out of range") . lookup i
 
 ||| A flipped version of lookup. O(log n)
 partial
@@ -888,7 +888,7 @@ Root size sh tree |> x =
                                   (A sizes.size (setAt lastidxs lastsize sizes.arr))
     snocTree _ (Leaf arr) = Leaf (A (plus arr.size 1) (append arr.arr (fill 1 x)))
 
-||| Concatenates two vectors. O(log max(n1,n2))
+||| Concatenates two vectors. O(log(max(n1,n2)))
 partial
 export
 (><) : RRBVector a -> RRBVector a -> RRBVector a

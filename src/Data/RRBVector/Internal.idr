@@ -207,26 +207,23 @@ computeSizes sh arr =
     True  =>
       Balanced arr
     False =>
-      let arrnat = loop sh arr (fill arr.size 0) 0 0
-        in Unbalanced arr (A arr.size arrnat)
+      let arrnat = unsafeCreate arr.size (loop sh 0 0 arr.size (toList arr))
+        in Unbalanced arr arrnat
   where
-    loop : {n : Nat} -> Shift -> Array (Tree a) -> IArray n Nat -> Nat -> Nat -> IArray n Nat
-    loop sh arr arrnat acc i =
-      case i < arr.size of
-        True  =>
-          let size = case tryNatToFin i of
-                       Nothing =>
-                         assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.loop: can't convert Nat to Fin"
-                       Just i' =>
-                         treeSize (down sh) (at arr.arr i')
-              acc' = plus acc size
-            in case tryNatToFin i of
-                 Nothing =>
-                   assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.loop: can't convert Nat to Fin"
-                 Just i' =>
-                   loop sh arr (setAt i' acc' arrnat) acc' (plus i 1)
-        False =>
-          arrnat
+    loop :  (sh,cur,acc,n : Nat)
+         -> List (Tree a)
+         -> FromMArray n Nat (Array Nat)
+    loop sh _   acc n []        r = T1.do
+      res <- freeze r
+      pure $ A n res
+    loop sh cur acc n (x :: xs) r =
+      case tryNatToFin cur of
+        Nothing   =>
+          assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.go: can't convert Nat to Fin"
+        Just cur' =>
+          let acc' = plus acc (treeSize (down sh) x)
+            in T1.do set r cur' acc'
+                     loop sh (S cur) acc' n xs r
     maxsize : Nat
     maxsize = shiftL 1 sh -- the maximum size of a subtree
     len : Nat
