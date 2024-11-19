@@ -3,6 +3,7 @@ module Data.RRBVector
 
 import public Data.RRBVector.Internal
 
+import Control.Monad.ST
 import Data.Array
 import Data.Array.Core
 import Data.Array.Index
@@ -143,17 +144,17 @@ replicate n x =
         EQ =>
           Root n 0 (Leaf $ A n $ fill n x)
         GT =>
-          let size' = the Nat (cast ((the Int (cast (minus n 1))) .&. (the Int (cast (plus blockmask 1)))))
+          let size' = integerToNat ((natToInteger $ minus n 1) .&. (natToInteger $ plus blockmask 1))
             in iterateNodes blockshift
                             (Leaf $ A blocksize $ fill blocksize x)
                             (Leaf $ A size' $ fill size' x)
   where
     iterateNodes : Shift -> Tree a -> Tree a -> RRBVector a
     iterateNodes sh full rest =
-      let subtreesm1  = shiftR (minus n 1) sh
-          restsize    = the Nat (cast ((the Int (cast subtreesm1)) .&. (the Int (cast blockmask))))
+      let subtreesm1  = (natToInteger $ minus n 1) `shiftR` sh
+          restsize    = integerToNat (subtreesm1 .&. (natToInteger blockmask))
           rest'       = Balanced $ A (plus restsize 1) $ append (fill restsize full) (fill 1 rest)
-        in case compare subtreesm1 blocksize of
+        in case compare subtreesm1 (natToInteger blocksize) of
              LT =>
                Root n sh rest'
              EQ =>
@@ -270,7 +271,7 @@ lookup i (Root size sh tree) =
              Just idx' =>
                lookupTree subidx (down sh) (at arr.arr idx')
     lookupTree i _ (Leaf arr)              =
-      let i' = the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))
+      let i' = integerToNat ((natToInteger i) .&. (natToInteger blockmask))
         in case tryNatToFin i' of
              Nothing =>
                assert_total $ idris_crash "Data.RRBVector.lookup: can't convert Nat to Fin"
@@ -338,7 +339,7 @@ update i x v@(Root size sh tree) =
              Just idx' =>
                Unbalanced (A arr.size (updateAt idx' (updateTree subidx (down sh)) arr.arr)) sizes
     updateTree i _ (Leaf arr)              =
-      let i' = the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))
+      let i' = integerToNat ((natToInteger i) .&. (natToInteger blockmask))
         in case tryNatToFin i' of
              Nothing =>
                assert_total $ idris_crash "Data.RRBVector.update: can't convert Nat to Fin"
@@ -387,7 +388,7 @@ adjust i f v@(Root size sh tree) =
              Just idx' =>
                Unbalanced (A arr.size (updateAt idx' (adjustTree subidx (down sh)) arr.arr)) sizes
     adjustTree i _ (Leaf arr)              =
-      let i' = the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))
+      let i' = integerToNat ((natToInteger i) .&. (natToInteger blockmask))
         in case tryNatToFin i' of
              Nothing =>
                assert_total $ idris_crash "Data.RRBVector.adjust: can't convert Nat to Fin"
@@ -448,10 +449,10 @@ takeTree i sh (Unbalanced arr sizes) with (relaxedRadixIndex sizes i sh) | ((plu
           in computeSizes sh (A (plus (fst (relaxedRadixIndex sizes i sh)) 1) (updateAt idx' (takeTree subidx (down sh)) newarr))
   _ | _             | False =
     assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
-takeTree i _ (Leaf arr) with ((plus (the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))) 1) <= arr.size) proof eq
+takeTree i _ (Leaf arr) with (integerToNat (((natToInteger i) .&. (natToInteger blockmask)) + 1) <= arr.size) proof eq
   _ | True  =
-    let newarr = force $ take (plus (the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))) 1) arr.arr @{lteOpReflectsLTE _ _ eq}
-      in Leaf (A (plus (the Nat (cast ((the Int (cast i)) .&. (the Int (cast blockmask))))) 1) newarr)
+    let newarr = force $ take (integerToNat (((natToInteger i) .&. (natToInteger blockmask)) + 1)) arr.arr @{lteOpReflectsLTE _ _ eq}
+      in Leaf (A (integerToNat (((natToInteger i) .&. (natToInteger blockmask)) + 1)) newarr)
   _ | False =
     assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
 
@@ -473,8 +474,9 @@ dropTree n sh (Unbalanced arr sizes) =
       let newarr = force $ drop (fst $ relaxedRadixIndex sizes n sh) arr.arr
         in computeSizes sh (A (minus arr.size (fst $ relaxedRadixIndex sizes n sh)) (updateAt zero (dropTree (snd $ relaxedRadixIndex sizes n sh) (down sh)) newarr))
 dropTree n _  (Leaf arr) =
-  let newarr = force $ drop (the Nat (cast ((the Int (cast n)) .&. (the Int (cast blockmask))))) arr.arr
-    in Leaf (A (minus arr.size (the Nat (cast ((the Int (cast n)) .&. (the Int (cast blockmask)))))) newarr)
+  let n      = integerToNat ((natToInteger n) .&. (natToInteger blockmask))
+      newarr = force $ drop n arr.arr
+    in Leaf (A (minus arr.size n) newarr)
 
 ||| The first i elements of the vector.
 ||| If the vector contains less than or equal to i elements, the whole vector is returned. O(log n)
@@ -693,8 +695,8 @@ x <| Root size sh tree =
                               0
                             GT =>
                               comp
-          hi       = shiftR (minus sz 1) hishift -- the length of the root node when normalizing minus 1
-          newshift = case compare hi blockmask of
+          hi       = (natToInteger $ minus sz 1) `shiftR` hishift -- the length of the root node when normalizing minus 1
+          newshift = case compare hi (natToInteger blockmask) of
                        LT =>
                          hishift
                        EQ =>
@@ -921,76 +923,106 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
           (take (minus arr.size 1) arr, at arr.arr last)
     mergeRebalance' : Shift -> Array (Tree a) -> Array (Tree a) -> Array (Tree a) -> (Tree a -> Array (Tree a)) -> (Array (Tree a) -> Tree a) -> Array (Tree a)
     mergeRebalance' sh left center right extract construct =
-      let lcr = toList $ append (append left.arr center.arr) right.arr
-        in go 0 0 Lin Lin Lin (map extract lcr)
-      where
-        go :  (nodecounter,subtreecounter : Nat)
-           -> SnocList (Array (Tree a))
-           -> SnocList (Tree a)
-           -> SnocList (Tree a)
-           -> List (Array (Tree a))
-           -> Array (Tree a)
-        go nodecounter subtreecounter newnode newsubtree newroot []        =
-          let newsubtree' = newsubtree :< (construct $ A (SnocSize newnode)
-                                                         (snocConcat newnode))
-              newroot'    = newroot :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
-            in fromList $ the (List (Tree a)) (cast newroot')
-        go nodecounter subtreecounter newnode newsubtree newroot (x :: xs) =
-          case nodecounter == blocksize of
-            True  =>
-              case subtreecounter == blocksize of
-                True  =>
-                  let newnode'        = newnode :< x
-                      newsubtree'     = newsubtree :< (construct $ A (SnocSize newnode)
-                                                                     (snocConcat newnode))
-                      newroot'        = newroot :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
-                    in go 1 0 newnode' newsubtree' newroot' xs
-                False =>
-                  let newnode'        = newnode :< x
-                      newsubtree'     = newsubtree :< (construct $ A (SnocSize newnode)
-                                                                     (snocConcat newnode))
-                      subtreecounter' = plus subtreecounter 1
-                    in go 1 subtreecounter' newnode' newsubtree' newroot xs
-            False =>
-              let newnode'     = newnode :< x
-                  nodecounter' = plus nodecounter 1
-                in go nodecounter' subtreecounter newnode' newsubtree newroot xs
+      runST $ do
+        nodecounter    <- newSTRef 0
+        subtreecounter <- newSTRef 0
+        newnode        <- newSTRef Lin
+        newsubtree     <- newSTRef Lin
+        newroot        <- newSTRef Lin
+        for_ (toList left ++ toList center ++ toList right) $ \subtree =>
+          for_ (extract subtree) $ \x => do
+            nodecounter' <- readSTRef nodecounter
+            case nodecounter' == (natToInteger blocksize) of
+              True  => do
+                subtreecounter' <- readSTRef subtreecounter
+                case subtreecounter' == (natToInteger blocksize) of
+                  True  => do
+                    newnode' <- readSTRef newnode
+                    modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
+                                                                      (snocConcat newnode'))
+                                           )
+                    writeSTRef newnode Lin
+                    writeSTRef nodecounter 0
+                    modifySTRef subtreecounter (\y => y + 1
+                                               )
+                    newsubtree' <- readSTRef newsubtree
+                    modifySTRef newroot (\y => y :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
+                                        )
+                    writeSTRef newsubtree Lin
+                    writeSTRef subtreecounter 0
+                  False => do
+                    newnode' <- readSTRef newnode
+                    modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
+                                                                      (snocConcat newnode'))
+                                           )
+                    writeSTRef newnode Lin
+                    writeSTRef nodecounter 0
+                    modifySTRef subtreecounter (\y => y + 1)
+              False => do
+                modifySTRef newnode (\y => y :< (extract x)
+                                    )
+                modifySTRef nodecounter (\y => y + 1
+                                        )
+        newnode' <- readSTRef newnode
+        modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
+                                                          (snocConcat newnode'))
+                                           )
+        newsubtree' <- readSTRef newsubtree
+        modifySTRef newroot (\y => y :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
+                            )
+        newroot' <- readSTRef newroot
+        pure $ fromList $ the (List (Tree a)) (cast newroot')
     mergeRebalance'' : Shift -> Array (Tree a) -> Array (Tree a) -> Array (Tree a) -> (Tree a -> Array a) -> (Array a -> Tree a) -> Array (Tree a)
     mergeRebalance'' sh left center right extract construct =
-      let lcr = toList $ append (append left.arr center.arr) right.arr
-        in go 0 0 Lin Lin Lin (map extract lcr)
-      where
-        go :  (nodecounter,subtreecounter : Nat)
-           -> SnocList (Array a)
-           -> SnocList (Tree a)
-           -> SnocList (Tree a)
-           -> List (Array a)
-           -> Array (Tree a)
-        go nodecounter subtreecounter newnode newsubtree newroot []        =
-          let newsubtree' = newsubtree :< (construct $ A (SnocSize newnode)
-                                                         (snocConcat newnode))
-              newroot'    = newroot :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
-            in fromList $ the (List (Tree a)) (cast newroot')
-        go nodecounter subtreecounter newnode newsubtree newroot (x :: xs) =
-          case nodecounter == blocksize of
-            True  =>
-              case subtreecounter == blocksize of
-                True  =>
-                  let newnode'        = newnode :< x
-                      newsubtree'     = newsubtree :< (construct $ A (SnocSize newnode)
-                                                                     (snocConcat newnode))
-                      newroot'        = newroot :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
-                    in go 1 0 newnode' newsubtree' newroot' xs
-                False =>
-                  let newnode'        = newnode :< x
-                      newsubtree'     = newsubtree :< (construct $ A (SnocSize newnode)
-                                                                     (snocConcat newnode))
-                      subtreecounter' = plus subtreecounter 1
-                    in go 1 subtreecounter' newnode' newsubtree' newroot xs
-            False =>
-              let newnode'     = newnode :< x
-                  nodecounter' = plus nodecounter 1
-                in go nodecounter' subtreecounter newnode' newsubtree newroot xs
+      runST $ do
+        nodecounter    <- newSTRef 0
+        subtreecounter <- newSTRef 0
+        newnode        <- newSTRef Lin
+        newsubtree     <- newSTRef Lin
+        newroot        <- newSTRef Lin
+        for_ (toList left ++ toList center ++ toList right) $ \subtree =>
+          for_ (extract subtree) $ \x => do
+            nodecounter' <- readSTRef nodecounter
+            case nodecounter' == (natToInteger blocksize) of
+              True  => do
+                subtreecounter' <- readSTRef subtreecounter
+                case subtreecounter' == (natToInteger blocksize) of
+                  True  => do
+                    newnode' <- readSTRef newnode
+                    modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
+                                                                      (snocConcat newnode'))
+                                           )
+                    writeSTRef newnode Lin
+                    writeSTRef nodecounter 0
+                    modifySTRef subtreecounter (\y => y + 1
+                                               )
+                    newsubtree' <- readSTRef newsubtree
+                    modifySTRef newroot (\y => y :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
+                                        )
+                    writeSTRef newsubtree Lin
+                    writeSTRef subtreecounter 0
+                  False => do
+                    newnode' <- readSTRef newnode
+                    modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
+                                                                      (snocConcat newnode'))
+                                           )
+                    writeSTRef newnode Lin
+                    writeSTRef nodecounter 0
+                    modifySTRef subtreecounter (\y => y + 1)
+              False => do
+                modifySTRef newnode (\y => y :< (fill 1 x)
+                                    )
+                modifySTRef nodecounter (\y => y + 1
+                                        )
+        newnode' <- readSTRef newnode
+        modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
+                                                          (snocConcat newnode'))
+                                           )
+        newsubtree' <- readSTRef newsubtree
+        modifySTRef newroot (\y => y :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
+                            )
+        newroot' <- readSTRef newroot
+        pure $ fromList $ the (List (Tree a)) (cast newroot')
     mergeRebalance : Shift -> Array (Tree a) -> Array (Tree a) -> Array (Tree a) -> Array (Tree a)
     mergeRebalance sh left center right =
       case compare sh blockshift of
@@ -1067,6 +1099,16 @@ deleteAt : Nat -> RRBVector a -> RRBVector a
 deleteAt i v =
   let (left, right) = splitAt (plus i 1) v
     in take i left >< right
+
+--------------------------------------------------------------------------------
+--          Show Utilities
+--------------------------------------------------------------------------------
+
+||| Show internal representation of the vector.
+export
+showTree : Show a => Show (Tree a) => Show (RRBVector a) => RRBVector a -> String
+showTree Empty            = ""
+showTree (Root size sh t) = "rrbvector " ++ "[" ++ "size " ++ (show size) ++ " shift " ++ (show sh) ++ " tree " ++ show t ++ "]"
 
 --------------------------------------------------------------------------------
 --          Interfaces

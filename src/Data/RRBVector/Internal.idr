@@ -8,7 +8,6 @@ import Data.Array.Indexed
 import Data.Bits
 import Data.List
 import Data.Nat
-import Data.Nat.Exponentiation
 import Data.String
 import Derive.Prelude
 
@@ -24,23 +23,13 @@ private
 bitSizeOf : (ty : Type) -> FiniteBits ty => Nat
 bitSizeOf ty = bitSize {a = ty}
 
-||| Custom shiftL function on Nat.
-export
-shiftL : Nat -> Nat -> Nat
-shiftL n k = n * (pow 2 k)
-
-||| Custom shiftR function on Nat.
-export
-shiftR : Nat -> Nat -> Nat
-shiftR n k = n `div` pow 2 k
-
 --------------------------------------------------------------------------------
 --          Internals
 --------------------------------------------------------------------------------
 
 public export
 Shift : Type
-Shift = Nat
+Shift = Nat--Integer
 
 ||| The number of bits used per level.
 export
@@ -50,7 +39,7 @@ blockshift = 4
 ||| The maximum size of a block.
 export
 blocksize : Nat
-blocksize = shiftL 1 blockshift
+blocksize = integerToNat $ 1 `shiftL` blockshift--(integerToNat blockshift)
 
 ||| The mask used to extract the index into the array.
 export
@@ -67,8 +56,8 @@ down sh = minus sh blockshift
 
 export
 radixIndex : Nat -> Shift -> Nat
-radixIndex i sh = 
-  the Nat (cast ((the Int (cast $ shiftR i sh)) .&. (the Int (cast blockmask))))
+radixIndex i sh = integerToNat ((natToInteger i) `shiftR` sh .&. (natToInteger blockmask))
+--  the Nat (cast ((the Integer (cast $ shiftR i sh)) .&. (the Integer (cast blockmask))))
 
 partial
 export
@@ -118,38 +107,15 @@ Eq a => Eq (Tree a) where
   (Leaf x)          == (Leaf y)          = heq x.arr y.arr
   _                 == _                 = False
 
-{-
-||| Unbalanced < Balanced < Leaf
-Ord a => Ord (Tree a) where
-  compare (Balanced x)     (Balanced y)     = assert_total $ hcomp x.arr y.arr
-  compare (Balanced _)     (Unbalanced _ _) = GT
-  compare (Balanced _)     (Leaf _)         = LT
-  compare (Unbalanced x _) (Unbalanced y _) = assert_total $ hcomp x.arr y.arr
-  compare (Unbalanced _ _) (Balanced _)     = LT
-  compare (Unbalanced _ _) (Leaf _)         = LT
-  compare (Leaf x)         (Leaf y)         = hcomp x.arr y.arr
-  compare (Leaf _)         (Balanced _)     = GT
-  compare (Leaf _)         (Unbalanced _ _) = GT
--}
-
 partial
 public export
 Show a => Show (Tree a) where
   show (Balanced trees)     =
     "Balanced " ++ show (toList trees)
   show (Unbalanced trees _) =
-    "Unbalanced " ++ show (toList trees) -- ++ " " ++ show (toList nats)
+    "Unbalanced " ++ show (toList trees)
   show (Leaf elems)         =
     "Leaf " ++ show (toList elems)
-
-{-
-Show a => Show (Tree a) where
-  show xs = show' xs where
-    show' : Tree a -> String
-    show' (Balanced x)     = assert_total $ show x.arr
-    show' (Unbalanced x _) = assert_total $ show x.arr
-    show' (Leaf x)         = show x.arr
--}
 
 --------------------------------------------------------------------------------
 --          Tree Utilities
@@ -178,7 +144,8 @@ treeSize : Shift -> Tree a -> Nat
 treeSize = go 0
   where
     go : Shift -> Shift -> Tree a -> Nat
-    go acc _  (Leaf arr)             = plus acc arr.size
+    go acc _  (Leaf arr)             =
+      plus acc arr.size
     go acc _  (Unbalanced arr sizes) =
       let i = case tryNatToFin $ minus arr.size 1 of
                 Nothing =>
@@ -193,7 +160,7 @@ treeSize = go 0
                    assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds"
                  Just i'' =>
                    i''
-        in go (plus acc (mult i (shiftL 1 sh)))
+        in go (plus acc (mult i (integerToNat (1 `shiftL` sh))))
               (down sh)
               (at arr.arr i')
 
@@ -224,8 +191,8 @@ computeSizes sh arr =
           let acc' = plus acc (treeSize (down sh) x)
             in T1.do set r cur' acc'
                      loop sh (S cur) acc' n xs r
-    maxsize : Nat
-    maxsize = shiftL 1 sh -- the maximum size of a subtree
+    maxsize : Integer
+    maxsize = 1 `shiftL` sh -- the maximum size of a subtree
     len : Nat
     len = arr.size
     lenM1 : Nat
@@ -242,7 +209,7 @@ computeSizes sh arr =
                             at arr.arr i'
             in case i < lenM1 of
                  True  =>
-                   treeSize (down sh) subtree == maxsize && go (plus i 1)
+                   (natToInteger $ treeSize (down sh) subtree) == maxsize && go (plus i 1)
                  False =>
                    treeBalanced subtree
 
@@ -274,7 +241,7 @@ countTrailingZeros x =
 partial
 export
 log2 : Nat -> Nat
-log2 x = 
+log2 x =
   let bitSizeMinus1 = minus (bitSizeOf Int) 1
     in minus bitSizeMinus1 (countLeadingZeros x)
   where
@@ -322,5 +289,5 @@ public export
 Show a => Show (Tree a) => Show (RRBVector a) where
   show xs = "rrbvector [" ++ (show' xs) ++ "]" where
     show' : RRBVector a -> String
-    show' Empty           = ""
-    show' (Root size sh t) = "size " ++ (show size) ++ " shift " ++ (show sh) ++ " tree " ++ show t
+    show' Empty            = ""
+    show' (Root size sh t) = show t
