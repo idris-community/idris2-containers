@@ -1,7 +1,7 @@
 package containers
 
 authors    = "stefan-hoeck and matthew-mosior"
-brief      = "Basic Tree and Queue data structures"
+brief      = "Assorted concrete container types"
 version    = 0.6.0
 sourcedir  = "src"
 depends    = base         >= 0.6.0
