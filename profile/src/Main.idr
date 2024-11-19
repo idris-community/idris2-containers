@@ -616,5 +616,4 @@ bench = Group "containers"
 
 partial
 main : IO ()
-main = do
-  runDefault (const True) Details show bench
+main = runDefault (const True) Details show bench

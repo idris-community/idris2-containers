@@ -1101,14 +1101,14 @@ deleteAt i v =
     in take i left >< right
 
 --------------------------------------------------------------------------------
---          Show Utilities
+--          Show Utilities (RRB-Vector)
 --------------------------------------------------------------------------------
 
 ||| Show the full representation of the vector.
 export
-showTree : Show a => Show (Tree a) => Show (RRBVector a) => RRBVector a -> String
-showTree Empty            = ""
-showTree (Root size sh t) = "rrbvector " ++ "[" ++ "size " ++ (show size) ++ " shift " ++ (show sh) ++ " tree " ++ show t ++ "]"
+showRRBVectorRep : Show a => Show (Tree a) => Show (RRBVector a) => RRBVector a -> String
+showRRBVectorRep Empty            = ""
+showRRBVectorRep (Root size sh t) = "rrbvector " ++ "[" ++ "size " ++ (show size) ++ " shift " ++ (show sh) ++ " tree " ++ (showTreeRep t) ++ "]"
 
 --------------------------------------------------------------------------------
 --          Interfaces
@@ -1141,6 +1141,15 @@ export
 Applicative RRBVector where
   pure      = singleton
   fs <*> xs = Data.RRBVector.foldl (\acc, f => acc >< map f xs) empty fs
+
+partial
+export
+Semigroup (RRBVector a) where
+  (<+>) = (><)
+
+export
+Semigroup (RRBVector a) => Monoid (RRBVector a) where
+  neutral = empty
 
 partial
 export

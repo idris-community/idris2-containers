@@ -111,11 +111,25 @@ partial
 public export
 Show a => Show (Tree a) where
   show (Balanced trees)     =
-    "Balanced " ++ show (toList trees)
+    show $ toList trees
   show (Unbalanced trees _) =
-    "Unbalanced " ++ show (toList trees)
+    show $ toList trees
   show (Leaf elems)         =
-    "Leaf " ++ show (toList elems)
+    show $ toList elems
+
+--------------------------------------------------------------------------------
+--          Show Utilities (Tree)
+--------------------------------------------------------------------------------
+
+partial
+public export
+showTreeRep : Show a => Show (Tree a) => Tree a -> String
+showTreeRep (Balanced trees)     =
+  "Balanced " ++ (show $ toList trees)
+showTreeRep (Unbalanced trees _) =
+  "Unbalanced " ++ (show $ toList trees)
+showTreeRep (Leaf elems)         =
+  "Leaf " ++ (show $ toList elems)
 
 --------------------------------------------------------------------------------
 --          Tree Utilities
@@ -287,7 +301,7 @@ Eq a => Eq (Tree a) => Eq (RRBVector a) where
 
 public export
 Show a => Show (Tree a) => Show (RRBVector a) where
-  show xs = "rrbvector [" ++ (show' xs) ++ "]" where
+  show xs = "[" ++ (show' xs) ++ "]" where
     show' : RRBVector a -> String
     show' Empty            = ""
     show' (Root size sh t) = show t
