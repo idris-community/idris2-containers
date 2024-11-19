@@ -786,7 +786,7 @@ Root size sh tree |> x =
       Root (plus size 1) sh (snocTree sh tree)
     EQ =>
       Root (plus size 1) sh (snocTree sh tree)
-    GT =>     
+    GT =>
       let new = A 2 $ array $ fromList [tree,(newBranch x sh)]
         in Root (plus size 1) insertshift (computeSizes insertshift new)
   where

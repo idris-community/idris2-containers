@@ -210,7 +210,7 @@ computeSizes sh arr =
     len : Nat
     len = arr.size
     lenM1 : Nat
-    lenM1 = minus len 1 
+    lenM1 = minus len 1
     isBalanced : Bool
     isBalanced = go 0
       where

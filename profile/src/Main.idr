@@ -531,8 +531,8 @@ bench = Group "containers"
       ]
   , Group "fromListSeqUnsized"
       [ Single "1"      (basic createSeqUnsized 0)
-      , Single "100"    (basic createSeqUnsized 99) 
-      , Single "1000"   (basic createSeqUnsized 999) 
+      , Single "100"    (basic createSeqUnsized 99)
+      , Single "1000"   (basic createSeqUnsized 999)
       ]
   , Group "consRRBVector"
       [ Single "10"      (basic consRRBVector 9)
