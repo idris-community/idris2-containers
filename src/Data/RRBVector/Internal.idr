@@ -10,6 +10,7 @@ import Data.List
 import Data.Nat
 import Data.String
 import Derive.Prelude
+import Syntax.T1 as T1
 
 %default total
 %language ElabReflection

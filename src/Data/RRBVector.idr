@@ -15,7 +15,7 @@ import Data.List1
 import Data.SnocList
 import Data.Vect
 import Data.Zippable
-import Syntax.T1
+import Syntax.T1 as T1
 
 %hide Prelude.null
 %hide Prelude.Ops.infixr.(<|)
