@@ -6,6 +6,7 @@ version    = 0.6.0
 sourcedir  = "src"
 depends    = base         >= 0.6.0
            , array
+           , contrib
            , elab-util
 
 modules = Data.Map

@@ -374,155 +374,17 @@ appendSeqUnsized n = do
   let s = SU.fromList [0..n]
   s ++ s
 
-indexRRBVector : Nat -> RRBVector Nat
+indexRRBVector : Nat -> Maybe ()
 indexRRBVector n = do
   let v = V.fromList [0..n]
-  let a = index 0 v
-  let b = index 1 v
-  let c = index 2 v
-  let d = index 3 v
-  let e = index 4 v
-  let f = index 5 v
-  let g = index 6 v
-  let h = index 7 v
-  let i = index 8 v
-  let j = index 9 v
-  v
+  for_ (id v) $ \v' =>
+    V.lookup v' v
 
-indexSeqUnsized : Nat -> Seq Nat
+indexSeqUnsized : Nat -> Maybe ()
 indexSeqUnsized n = do
   let s = SU.fromList [0..n]
-  let a = index 0 s
-  let b = index 1 s
-  let c = index 2 s
-  let d = index 3 s
-  let e = index 4 s
-  let f = index 5 s
-  let g = index 6 s
-  let h = index 7 s
-  let i = index 8 s
-  let j = index 9 s
-  s
-
-updateRRBVector : Nat -> RRBVector Nat
-updateRRBVector n = do
-  let v = V.fromList [0..n]
-  let v = update 0 1 v
-  let v = update 1 2 v
-  let v = update 2 3 v
-  let v = update 3 4 v
-  let v = update 4 5 v
-  let v = update 5 6 v
-  let v = update 6 7 v
-  let v = update 7 8 v
-  let v = update 8 9 v
-  let v = update 9 10 v
-  v
-
-updateSeqUnsized : Nat -> Seq Nat
-updateSeqUnsized n = do
-  let s = SU.fromList [0..n]
-  let s = update 0 1 s
-  let s = update 1 2 s
-  let s = update 2 3 s
-  let s = update 3 4 s
-  let s = update 4 5 s
-  let s = update 5 6 s
-  let s = update 6 7 s
-  let s = update 7 8 s
-  let s = update 8 9 s
-  let s = update 9 10 s
-  s
-
-adjustRRBVector : Nat -> RRBVector Nat
-adjustRRBVector n = do
-  let v = V.fromList [0..n]
-  let v = adjust 0 (\x => plus x 1) v
-  let v = adjust 1 (\x => plus x 1) v
-  let v = adjust 2 (\x => plus x 1) v
-  let v = adjust 3 (\x => plus x 1) v
-  let v = adjust 4 (\x => plus x 1) v
-  let v = adjust 5 (\x => plus x 1) v
-  let v = adjust 6 (\x => plus x 1) v
-  let v = adjust 7 (\x => plus x 1) v
-  let v = adjust 8 (\x => plus x 1) v
-  let v = adjust 9 (\x => plus x 1) v
-  v
-
-adjustSeqUnsized : Nat -> Seq Nat
-adjustSeqUnsized n = do
-  let s = SU.fromList [0..n]
-  let s = adjust (\x => plus x 1) 0 s
-  let s = adjust (\x => plus x 1) 1 s
-  let s = adjust (\x => plus x 1) 2 s
-  let s = adjust (\x => plus x 1) 3 s
-  let s = adjust (\x => plus x 1) 4 s
-  let s = adjust (\x => plus x 1) 5 s
-  let s = adjust (\x => plus x 1) 6 s
-  let s = adjust (\x => plus x 1) 7 s
-  let s = adjust (\x => plus x 1) 8 s
-  let s = adjust (\x => plus x 1) 9 s
-  s
-
-takeRRBVector : Nat -> RRBVector Nat
-takeRRBVector n = do
-  let v = V.fromList [0..n]
-  let a = take 1 v
-  let b = take 2 v
-  let c = take 3 v
-  let d = take 4 v
-  let e = take 5 v
-  let f = take 6 v
-  let g = take 7 v
-  let h = take 8 v
-  let i = take 9 v
-  let j = take 10 v
-  v
-
-takeSeqUnsized : Nat -> Seq Nat
-takeSeqUnsized n = do
-  let s = SU.fromList [0..n]
-  let a = take 1 s
-  let b = take 2 s
-  let c = take 3 s
-  let d = take 4 s
-  let e = take 5 s
-  let f = take 6 s
-  let g = take 7 s
-  let h = take 8 s
-  let i = take 9 s
-  let j = take 10 s
-  s
-
-dropRRBVector : Nat -> RRBVector Nat
-dropRRBVector n = do
-  let v = V.fromList [0..n]
-  let a = drop 1 v
-  let b = drop 2 v
-  let c = drop 3 v
-  let d = drop 4 v
-  let e = drop 5 v
-  let f = drop 6 v
-  let g = drop 7 v
-  let h = drop 8 v
-  let i = drop 9 v
-  let j = drop 10 v
-  v
-
-dropSeqUnsized : Nat -> Seq Nat
-dropSeqUnsized n = do
-  let s = SU.fromList [0..n]
-  let a = drop 1 s
-  let b = drop 2 s
-  let c = drop 3 s
-  let d = drop 4 s
-  let e = drop 5 s
-  let f = drop 6 s
-  let g = drop 7 s
-  let h = drop 8 s
-  let i = drop 9 s
-  let j = drop 10 s
-  s
+  for_ (id s) $ \s' =>
+    SU.index s' s
 
 mapRRBVector : Nat -> RRBVector Nat
 mapRRBVector n = do
@@ -565,8 +427,7 @@ reverseSeqUnsized n = do
 partial
 bench : Benchmark Void
 bench = Group "containers"
-  [ {-
-    Group "List"
+  [ Group "List"
      [ Single "1"       (basic createList 0)
      , Single "100"     (basic createList 99)
      , Single "1000"    (basic createList 999)
@@ -663,8 +524,7 @@ bench = Group "containers"
   , Group "intersectionSortedSet"
       [ Single "1000" (basic intersectionSortedSet 999)
       ]
-  -}
-    Group "fromListRRBVector"
+  , Group "fromListRRBVector"
       [ Single "1"      (basic createRRBVector 0)
       , Single "100"    (basic createRRBVector 99)
       , Single "1000"   (basic createRRBVector 999)
@@ -693,34 +553,16 @@ bench = Group "containers"
       [ Single "10"      (basic appendSeqUnsized 9)
       ]
   , Group "indexRRBVector"
-      [ Single "10"      (basic indexRRBVector 9)
+      [ Single "1"      (basic indexRRBVector 0)
+      , Single "100"    (basic indexRRBVector 99)
+      , Single "1000"   (basic indexRRBVector 999)
+      , Single "10000"  (basic indexRRBVector 9999)
       ]
   , Group "indexSeqUnsized"
-      [ Single "10"      (basic indexSeqUnsized 9)
-      ]
-  , Group "updateRRBVector"
-      [ Single "10"      (basic updateRRBVector 9)
-      ]
-  , Group "updateSeqUnsized"
-      [ Single "10"      (basic updateSeqUnsized 9)
-      ]
-  , Group "adjustRRBVector"
-      [ Single "10"      (basic adjustRRBVector 9)
-      ]
-  , Group "adjustSeqUnsized"
-      [ Single "10"      (basic adjustSeqUnsized 9)
-      ]
-  , Group "takeRRBVector"
-      [ Single "10"      (basic takeRRBVector 9)
-      ]
-  , Group "takeSeqUnsized"
-      [ Single "10"      (basic takeSeqUnsized 9)
-      ]
-  , Group "dropRRBVector"
-      [ Single "10"      (basic dropRRBVector 9)
-      ]
-  , Group "dropSeqUnsized"
-      [ Single "10"      (basic dropSeqUnsized 9)
+      [ Single "1"      (basic indexSeqUnsized 0)
+      , Single "100"    (basic indexSeqUnsized 99)
+      , Single "1000"   (basic indexSeqUnsized 999)
+      , Single "10000"  (basic indexSeqUnsized 9999)
       ]
   , Group "mapRRBVector"
       [ Single "1"       (basic mapRRBVector 0)
@@ -776,37 +618,3 @@ partial
 main : IO ()
 main = do
   runDefault (const True) Details show bench
-  let x = createRRBVector 50
-  let y = createRRBVector 5
-  let z = V.singleton 1
-  print $ show x
-  putStrLn ""
-  print $ show y
-  putStrLn ""
-  print $ show z
-  putStrLn ""
-  print $ show $ V.toList x
-  putStrLn ""
-  print $ show $ V.reverse x
-  putStrLn ""
-  print $ show $ V.map (\x => plus x 1) x
-  putStrLn ""
-  print $ show $ take 4 x
-  putStrLn ""
-  print $ show $ drop 4 x
-  putStrLn ""
-  print $ show $ 61 <| x >< y
-  putStrLn ""
-  print $ show $ y >< x
-  putStrLn ""
-  print $ show $ x |> 51
-  putStrLn ""
-  print $ show $ 51 <| x
-  putStrLn ""
-  print $ show $ index 1 y
-  putStrLn ""
-  print $ show $ update 1 6 y
-  putStrLn ""
-  print $ show $ adjust 1 (\x => plus x 1) y
-  putStrLn ""
-  print $ show $ splitAt 2 y

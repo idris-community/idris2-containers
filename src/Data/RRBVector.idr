@@ -1104,7 +1104,7 @@ deleteAt i v =
 --          Show Utilities
 --------------------------------------------------------------------------------
 
-||| Show internal representation of the vector.
+||| Show the full representation of the vector.
 export
 showTree : Show a => Show (Tree a) => Show (RRBVector a) => RRBVector a -> String
 showTree Empty            = ""
@@ -1127,7 +1127,7 @@ Eq a => Eq (RRBVector a) where
 partial
 export
 Functor RRBVector where
-  map f m = map f m
+  map f v = map f v
 
 partial
 export
