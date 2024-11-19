@@ -30,7 +30,7 @@ bitSizeOf ty = bitSize {a = ty}
 
 public export
 Shift : Type
-Shift = Nat--Integer
+Shift = Nat
 
 ||| The number of bits used per level.
 export
@@ -40,7 +40,7 @@ blockshift = 4
 ||| The maximum size of a block.
 export
 blocksize : Nat
-blocksize = integerToNat $ 1 `shiftL` blockshift--(integerToNat blockshift)
+blocksize = integerToNat $ 1 `shiftL` blockshift
 
 ||| The mask used to extract the index into the array.
 export
@@ -58,7 +58,6 @@ down sh = minus sh blockshift
 export
 radixIndex : Nat -> Shift -> Nat
 radixIndex i sh = integerToNat ((natToInteger i) `shiftR` sh .&. (natToInteger blockmask))
---  the Nat (cast ((the Integer (cast $ shiftR i sh)) .&. (the Integer (cast blockmask))))
 
 partial
 export
