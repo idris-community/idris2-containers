@@ -59,7 +59,7 @@ export
 radixIndex : Nat -> Shift -> Nat
 radixIndex i sh = integerToNat ((natToInteger i) `shiftR` sh .&. (natToInteger blockmask))
 
-partial
+covering
 export
 relaxedRadixIndex : Array Nat -> Nat -> Shift -> (Nat, Nat)
 relaxedRadixIndex sizes i sh =
@@ -107,7 +107,7 @@ Eq a => Eq (Tree a) where
   (Leaf x)          == (Leaf y)          = heq x.arr y.arr
   _                 == _                 = False
 
-partial
+covering
 public export
 Show a => Show (Tree a) where
   show (Balanced trees)     =
@@ -121,7 +121,7 @@ Show a => Show (Tree a) where
 --          Show Utilities (Tree)
 --------------------------------------------------------------------------------
 
-partial
+covering
 public export
 showTreeRep : Show a => Show (Tree a) => Tree a -> String
 showTreeRep (Balanced trees)     =
@@ -152,7 +152,7 @@ treeBalanced (Unbalanced _ _) = False
 treeBalanced (Leaf _)         = True
 
 ||| Computes the size of a tree with shift.
-partial
+covering
 export
 treeSize : Shift -> Tree a -> Nat
 treeSize = go 0
@@ -180,7 +180,7 @@ treeSize = go 0
 
 ||| Turns an array into a tree node by computing the sizes of its subtrees.
 ||| sh is the shift of the resulting tree.
-partial
+covering
 export
 computeSizes : Shift -> Array (Tree a) -> Tree a
 computeSizes sh arr =
@@ -227,7 +227,7 @@ computeSizes sh arr =
                  False =>
                    treeBalanced subtree
 
-partial
+covering
 export
 countTrailingZeros : Nat -> Nat
 countTrailingZeros x =
@@ -252,7 +252,7 @@ countTrailingZeros x =
                   go (plus i 1)
 
 ||| Nat log base 2.
-partial
+covering
 export
 log2 : Nat -> Nat
 log2 x =
