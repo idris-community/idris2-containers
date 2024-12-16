@@ -59,7 +59,6 @@ export
 radixIndex : Nat -> Shift -> Nat
 radixIndex i sh = integerToNat ((natToInteger i) `shiftR` sh .&. (natToInteger blockmask))
 
-covering
 export
 relaxedRadixIndex : Array Nat -> Nat -> Shift -> (Nat, Nat)
 relaxedRadixIndex sizes i sh =
@@ -88,7 +87,7 @@ relaxedRadixIndex sizes i sh =
              True  =>
                idx
              False =>
-               loop sizes (plus idx 1)
+               assert_total $ loop sizes (plus idx 1)
 
 --------------------------------------------------------------------------------
 --          Internal Tree Representation
@@ -107,29 +106,27 @@ Eq a => Eq (Tree a) where
   (Leaf x)          == (Leaf y)          = heq x.arr y.arr
   _                 == _                 = False
 
-covering
 public export
 Show a => Show (Tree a) where
   show (Balanced trees)     =
-    show $ toList trees
+    assert_total $ show $ toList trees
   show (Unbalanced trees _) =
-    show $ toList trees
+    assert_total $ show $ toList trees
   show (Leaf elems)         =
-    show $ toList elems
+    assert_total $ show $ toList elems
 
 --------------------------------------------------------------------------------
 --          Show Utilities (Tree)
 --------------------------------------------------------------------------------
 
-covering
 public export
 showTreeRep : Show a => Show (Tree a) => Tree a -> String
 showTreeRep (Balanced trees)     =
-  "Balanced " ++ (show $ toList trees)
+  assert_total $ "Balanced " ++ (show $ toList trees)
 showTreeRep (Unbalanced trees _) =
-  "Unbalanced " ++ (show $ toList trees)
+  assert_total $ "Unbalanced " ++ (show $ toList trees)
 showTreeRep (Leaf elems)         =
-  "Leaf " ++ (show $ toList elems)
+  assert_total $ "Leaf " ++ (show $ toList elems)
 
 --------------------------------------------------------------------------------
 --          Tree Utilities
@@ -152,7 +149,6 @@ treeBalanced (Unbalanced _ _) = False
 treeBalanced (Leaf _)         = True
 
 ||| Computes the size of a tree with shift.
-covering
 export
 treeSize : Shift -> Tree a -> Nat
 treeSize = go 0
@@ -165,7 +161,7 @@ treeSize = go 0
                 Nothing =>
                   assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds"
                 Just i' =>
-                 i'
+                  i'
         in plus acc (at sizes.arr i)
     go acc sh (Balanced arr)         =
       let i  = minus arr.size 1
@@ -176,11 +172,10 @@ treeSize = go 0
                    i''
         in go (plus acc (mult i (integerToNat (1 `shiftL` sh))))
               (down sh)
-              (at arr.arr i')
+              (assert_smaller arr (at arr.arr i'))
 
 ||| Turns an array into a tree node by computing the sizes of its subtrees.
 ||| sh is the shift of the resulting tree.
-covering
 export
 computeSizes : Shift -> Array (Tree a) -> Tree a
 computeSizes sh arr =
@@ -204,7 +199,7 @@ computeSizes sh arr =
         Just cur' =>
           let acc' = plus acc (treeSize (down sh) x)
             in T1.do set r cur' acc'
-                     loop sh (S cur) acc' n xs r
+                     assert_total $ loop sh (S cur) acc' n xs r
     maxsize : Integer
     maxsize = 1 `shiftL` sh -- the maximum size of a subtree
     len : Nat
@@ -223,11 +218,10 @@ computeSizes sh arr =
                             at arr.arr i'
             in case i < lenM1 of
                  True  =>
-                   (natToInteger $ treeSize (down sh) subtree) == maxsize && go (plus i 1)
+                   assert_total $ (natToInteger $ treeSize (down sh) subtree) == maxsize && go (plus i 1)
                  False =>
                    treeBalanced subtree
 
-covering
 export
 countTrailingZeros : Nat -> Nat
 countTrailingZeros x =
@@ -249,10 +243,9 @@ countTrailingZeros x =
                 True  =>
                   i
                 False =>
-                  go (plus i 1)
+                  assert_total $ go (plus i 1)
 
 ||| Nat log base 2.
-covering
 export
 log2 : Nat -> Nat
 log2 x =
@@ -279,7 +272,7 @@ log2 x =
                     True  =>
                       i
                     False =>
-                      go (minus i 1)
+                      assert_total $ go (minus i 1)
 
 --------------------------------------------------------------------------------
 --          RRB Vectors
