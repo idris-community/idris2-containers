@@ -165,9 +165,6 @@ showTreeRep (Leaf elems)         =
 --          Tree Utilities
 --------------------------------------------------------------------------------
 
---parameters {0 rs : Resources}
---           {auto 0 p : Res (MArray n a) rs}
-
 export
 singleton :  a
           -> (1 t : T1 rs)
@@ -184,7 +181,7 @@ treeToArray (Unbalanced arr _) = Right arr
 treeToArray (Leaf _)           = assert_total $ idris_crash "Data.RRBVector.Internal.treeToArray: leaf"
 
 export
-treeBalanced :  Tree a
+treeBalanced :  Tree bsize usize lsize a
              -> Bool
 treeBalanced (Balanced _)     = True
 treeBalanced (Unbalanced _ _) = False
@@ -193,22 +190,22 @@ treeBalanced (Leaf _)         = True
 ||| Computes the size of a tree with shift.
 export
 treeSize :  Shift
-         -> Tree a
+         -> Tree bsize usize lsize a
          -> Nat
 treeSize = go 0
   where
     go : Shift -> Shift -> Tree a -> Nat
     go acc _  (Leaf arr)             =
-      plus acc arr.size
+      plus acc lsize
     go acc _  (Unbalanced arr sizes) =
-      let i = case tryNatToFin $ minus arr.size 1 of
+      let i = case tryNatToFin $ minus usize 1 of
                 Nothing =>
                   assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds"
                 Just i' =>
                   i'
         in plus acc (at sizes.arr i)
     go acc sh (Balanced arr)         =
-      let i  = minus arr.size 1
+      let i  = minus bsize 1
           i' = case tryNatToFin i of
                  Nothing  =>
                    assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds"
