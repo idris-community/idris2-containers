@@ -7,6 +7,7 @@ sourcedir  = "src"
 depends    = base         >= 0.6.0
            , array
            , elab-util
+           , ref1
 
 modules = Data.Map
         , Data.Map.Internal

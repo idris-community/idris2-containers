@@ -7,7 +7,8 @@ import Control.Monad.ST
 import Data.Array
 import Data.Array.Core
 import Data.Array.Index
-import Data.Array.Indexed
+import Data.Array.Mutable
+--import Data.Array.Indexed
 import Data.Bits
 import Data.Maybe
 import Data.List
