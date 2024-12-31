@@ -86,13 +86,16 @@ relaxedRadixIndex sizes i sh =
                      in minus i (at sizes.arr idx')
     in (idx, subIdx)
   where
-    loop : MArray n Nat -> Nat -> Nat
-    loop sizes idx =
+    loop :  MArray n Nat
+         -> Nat
+         -> F1 [MArray n Nat] Nat
+    loop sizes idx t =
       let current = case tryNatToFin idx of
-                      Nothing       =>
+                      Nothing   =>
                         assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex.loop: index out of bounds"
                       Just idx' =>
-                        at sizes.arr idx' -- idx will always be in range for a well-formed tree
+                        --at sizes.arr idx' -- idx will always be in range for a well-formed tree
+                        get sizes idx' t -- idx will always be in range for a well-formed tree
         in case i < current of
              True  =>
                idx
