@@ -72,19 +72,24 @@ relaxedRadixIndex :  MArray n Nat
                   -> Shift
                   -> (Nat, Nat)
 relaxedRadixIndex sizes i sh =
-  let guess  = radixIndex i sh -- guess <= idx
-      idx    = loop sizes guess
-      subIdx = case idx == 0 of
-                 True  =>
-                   i
-                 False =>
-                   let idx' = case tryNatToFin $ minus idx 1 of
-                                Nothing    =>
-                                  assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex: index out of bounds"
-                                Just idx'' =>
-                                  idx''
-                     in minus i (at sizes.arr idx')
-    in (idx, subIdx)
+  run1 $ \t =>
+    let guess    # t := ref1 (radixIndex i sh) t
+        idx      # t := loop sizes guess t
+        idx'     # t := case idx == 0 of
+                          True  =>
+                            ref1 i t
+                          False =>
+                            let idx' = case tryNatToFin $ minus idx 1 of
+                                         Nothing    =>
+                                           assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex: index out of bounds"
+                                         Just idx'' =>
+                                           ref idx'' t
+        subidx   # t := get sizes idx' t
+        subidx'  # t := ref1 (minus i subidx) t
+        idx'     # t := readAndRelease idx t
+        subidx'' # t := readAndRelease subidx' t
+        _        # t := release guess t
+      in (idx', subidx'') # t
   where
     loop :  MArray n Nat
          -> Nat
