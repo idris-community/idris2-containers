@@ -16,7 +16,7 @@ import Data.List1
 --          Creating Maps
 --------------------------------------------------------------------------------
 
-||| The empty map. (O)1
+||| The empty map. O(1)
 export
 empty : Map k v
 empty = Tip

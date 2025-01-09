@@ -5,15 +5,18 @@ brief      = "Assorted concrete container types"
 version    = 0.6.0
 sourcedir  = "src"
 depends    = base         >= 0.6.0
+           , array
            , elab-util
 
 modules = Data.BoundedQueue
         , Data.Map
         , Data.Map.Internal
-        , Data.Seq.Internal
-        , Data.Seq.Sized
-        , Data.Seq.Unsized
+        , Data.RRBVector
+        , Data.RRBVector.Internal
         , Data.Set
         , Data.Set.Internal
+        , Data.Seq.Sized
+        , Data.Seq.Unsized
+        , Data.Seq.Internal
         , Data.Queue
         , Data.Tree

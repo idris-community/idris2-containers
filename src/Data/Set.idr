@@ -17,7 +17,7 @@ import Data.List1
 --          Creating Sets
 --------------------------------------------------------------------------------
 
-||| The empty set. (O)1
+||| The empty set. O(1)
 export
 empty : Set a
 empty = Tip
