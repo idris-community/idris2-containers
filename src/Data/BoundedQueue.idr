@@ -1,3 +1,4 @@
+||| Bounded Queues
 module Data.BoundedQueue
 
 import Data.Seq.Unsized
