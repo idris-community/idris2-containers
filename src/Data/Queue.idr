@@ -1,3 +1,4 @@
+||| Immutable FIFO Queues.
 module Data.Queue
 
 import Derive.Prelude
