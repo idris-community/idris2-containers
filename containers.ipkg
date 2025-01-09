@@ -8,7 +8,8 @@ depends    = base         >= 0.6.0
            , array
            , elab-util
 
-modules = Data.Map
+modules = Data.BoundedQueue
+        , Data.Map
         , Data.Map.Internal
         , Data.RRBVector
         , Data.RRBVector.Internal
