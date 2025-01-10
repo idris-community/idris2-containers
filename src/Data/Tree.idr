@@ -1,4 +1,4 @@
-||| Finite Rose Trees.
+||| Finite Rose Trees
 module Data.Tree
 
 import Data.List
