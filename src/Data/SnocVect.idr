@@ -2,8 +2,6 @@ module Data.SnocVect
 
 import Data.Vect
 
-%hide Prelude.Types.elem
-
 %default total
 
 ||| A Backwards Vect
@@ -183,12 +181,6 @@ public export
 Traversable (SnocVect k) where
   traverse _ Lin = pure Lin
   traverse f (xs :< x) = [| traverse f xs :< f x |]
-
-||| Check if something is a member of a snoc-vect using the default Boolean equality.
-public export
-elem : Eq a => a -> SnocVect k a -> Bool
-elem x Lin = False
-elem x (sx :< y) = x == y || elem x sx
 
 ||| Find the first element of the snoc-vect that satisfies the predicate.
 public export
