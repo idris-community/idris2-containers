@@ -17,9 +17,6 @@ data SnocVect : Nat -> Type -> Type where
 
 %name SnocVect sx, sy, sz
 
-export infixl 7 <><
-export infixr 6 <>>
-
 ||| 'fish': Action of lists on snoc-lists
 public export
 (<><) : SnocVect n a -> Vect m a -> SnocVect (n + m) a
