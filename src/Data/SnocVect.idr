@@ -148,10 +148,8 @@ public export
 Foldable (SnocVect n) where
   foldr f z = foldr f z . (<>> [])
 
-  foldl f z xs = h xs where
-    h : SnocVect k elem -> acc
-    h Lin = z
-    h (xs :< x) = f (h xs) x
+  foldl f z Lin     = z
+  foldl f z (xs:<x) = f (foldl f z xs) x
 
   null Lin      = True
   null (_ :< _) = False
@@ -167,7 +165,7 @@ public export
 
 ||| Get diagonal elements
 public export
-diag : SnocVect len (SnocVect len elem) -> SnocVect len elem
+diag : SnocVect len (SnocVect len el) -> SnocVect len el
 diag [<]             = [<]
 diag (ssx :< (sx :< x)) = diag (map liat ssx) :< x
 
