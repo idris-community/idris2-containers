@@ -1,4 +1,4 @@
-||| RRB Vector Internals
+|| RRB Vector Internals
 module Data.RRBVector.Internal
 
 --import Data.Array
@@ -60,52 +60,76 @@ down :  Shift
      -> Shift
 down sh = minus sh blockshift
 
-export
-radixIndex :  Nat
-           -> Shift
-           -> Nat
-radixIndex i sh = integerToNat ((natToInteger i) `shiftR` sh .&. (natToInteger blockmask))
+--export
+--radixIndex :  Nat
+--           -> Shift
+--           -> Nat
+--radixIndex i sh = integerToNat ((natToInteger i) `shiftR` sh .&. (natToInteger blockmask))
 
 export
-relaxedRadixIndex :  MArray n Nat
+relaxedRadixIndex :  {n : _}
+                  -> MArray n Nat
                   -> Nat
                   -> Shift
                   -> (Nat, Nat)
 relaxedRadixIndex sizes i sh =
   run1 $ \t =>
-    let guess    # t := ref1 (radixIndex i sh) t
-        idx      # t := loop sizes guess t
-        idx'     # t := case idx == 0 of
-                          True  =>
-                            ref1 i t
-                          False =>
-                            let idx' = case tryNatToFin $ minus idx 1 of
-                                         Nothing    =>
-                                           assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex: index out of bounds"
-                                         Just idx'' =>
-                                           ref idx'' t
-        subidx   # t := get sizes idx' t
-        subidx'  # t := ref1 (minus i subidx) t
-        idx'     # t := readAndRelease idx t
-        subidx'' # t := readAndRelease subidx' t
-        _        # t := release guess t
-      in (idx', subidx'') # t
+    let guess  # t := radixIndex i sh t
+        idx    # t := loop sizes (minus n 1) guess t
+        subidx # t := toSubIdx sizes idx t
+      in (idx, subidx) # t
   where
-    loop :  MArray n Nat
-         -> Nat
+    toSubIdx :  (sizes : MArray n Nat)
+             -> (idx : Nat)
+             -> {0 rs : Resources}
+             -> {auto 0 p : Res sizes rs}
+             -> {auto 0 _ : LT (minus idx 1) n}
+             -> F1 rs Nat
+    toSubIdx sizes Z   t = i # t
+    toSubIdx sizes idx t =
+      let idx' # t := getNat sizes (minus idx 1) t
+        in minus i idx' # t
+    radixIndex :  Nat
+               -> Shift
+               -> F1 [Nat] Nat
+    radixIndex i sh t = 
+      let radixindex # t := integerToNat ((natToInteger i) `shiftR` sh .&. (natToInteger blockmask))
+        in radixindex # t
+    loop :  (sizes : MArray n Nat)
+         -> (n', idx : Nat)
+         -> {0 rs : Resources}
+         -> {auto 0 p : Res sizes rs}
+         -> {auto 0 _ : LT idx n}
+         -> {auto 0 _ : LTE (S n') n}
+         -> F1 rs Nat
+    loop sizes (S n') idx t =
+      case n' < idx of
+        True  =>
+          idx # t
+        False =>
+          let current # t := getNat sizes n' t
+            in case i < current of
+                 True  =>
+                   n' # t
+                 False =>
+                   loop sizes n' idx t
+    {-
+    loop :  Nat
          -> F1 [MArray n Nat] Nat
-    loop sizes idx t =
-      let current = case tryNatToFin idx of
-                      Nothing   =>
-                        assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex.loop: index out of bounds"
-                      Just idx' =>
-                        --at sizes.arr idx' -- idx will always be in range for a well-formed tree
-                        get sizes idx' t -- idx will always be in range for a well-formed tree
+    loop idx t =
+      let current # t := getNat sizes 
+      let current # t := case tryNatToFin idx of
+                           Nothing   =>
+                             assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex.loop: index out of bounds"
+                           Just idx' =>
+                             --at sizes.arr idx' -- idx will always be in range for a well-formed tree
+                             get sizes idx' t -- idx will always be in range for a well-formed tree
         in case i < current of
              True  =>
-               idx
+               idx # t
              False =>
-               assert_total $ loop sizes (plus idx 1)
+               assert_total $ loop (plus idx 1) # t
+  -}
 
 --------------------------------------------------------------------------------
 --          Internal Tree Representation
