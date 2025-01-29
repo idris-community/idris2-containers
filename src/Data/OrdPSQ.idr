@@ -361,3 +361,13 @@ toList psq =
           (k, p, v) :: toListLTree l ++ toListLTree r
         RLoser _ (Elem' k p v) l _ r =>
           (k, p, v) :: toListLTree l ++ toListLTree r
+
+--------------------------------------------------------------------------------
+--          Interfaces
+--------------------------------------------------------------------------------
+
+export
+Foldable (OrdPSQ k p) where
+  foldl f z           = Data.OrdPSQ.foldl f z
+  foldr f z           = Data.OrdPSQ.foldr f z
+  null                = Data.OrdPSQ.null
