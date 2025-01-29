@@ -1,4 +1,4 @@
-||| Ordered Priority Search Queue (OrdPSQ) Internals
+||| Ordered Priority Search Queue Internals
 module Data.OrdPSQ.Internal
 
 import Data.List
@@ -9,7 +9,7 @@ import Derive.Prelude
 %language ElabReflection
 
 --------------------------------------------------------------------------------
---          OrdPSQs
+--          Elem
 --------------------------------------------------------------------------------
 
 public export
@@ -22,7 +22,7 @@ data Elem k p v = Elem' k p v
 
 public export
 Show k => Show p => Show v => Show (Elem k p v) where
-  show (Elem' k p v) = "elem "  ++
+  show (Elem' k p v) = "Elem "  ++
                        "("      ++
                        (show k) ++
                        " "      ++
@@ -31,23 +31,49 @@ Show k => Show p => Show v => Show (Elem k p v) where
                        (show v) ++
                        ")"
 
+namespace Elem
+  export
+  foldr : (a -> b -> b) -> b -> Elem k p a -> b
+  foldr f z (Elem' _ _ v) = f v z
+
+  export
+  foldl : (b -> a -> b) -> b -> Elem k p a -> b
+  foldl f z (Elem' _ _ v) = f z v
+
+  export
+  map : (a -> b) -> Elem k p a -> Elem k p b
+  map f (Elem' k p v) = Elem' k p (f v)
+
+export
+Functor (Elem k p) where
+  map f v = map f v
+
+export
+Foldable (Elem k p) where
+  foldr f z = Data.OrdPSQ.Internal.Elem.foldr f z
+  foldl f z = Data.OrdPSQ.Internal.Elem.foldl f z
+
+--------------------------------------------------------------------------------
+--          LTree
+--------------------------------------------------------------------------------
+
 public export
 data LTree k p v = Start
                  | LLoser Size
                           (Elem k p v)
                           (LTree k p v)
-                          k
+                          k             -- split key
                           (LTree k p v)
                  | RLoser Size
                           (Elem k p v)
                           (LTree k p v)
-                          k
+                          k             -- split key
                           (LTree k p v)
 
 public export
 Show k => Show p => Show v => Show (LTree k p v) where
   show Start              = "start"
-  show (LLoser s e l m r) = "lloser " ++
+  show (LLoser s e l m r) = "LLoser " ++
                             "("       ++ 
                             (show s)  ++
                             " "       ++
@@ -59,7 +85,7 @@ Show k => Show p => Show v => Show (LTree k p v) where
                             " "       ++
                             (show r)  ++
                             ")"
-  show (RLoser s e l m r) = "rloser " ++
+  show (RLoser s e l m r) = "RLoser " ++
                             "("       ++
                             (show s)  ++
                             " "       ++
@@ -72,6 +98,42 @@ Show k => Show p => Show v => Show (LTree k p v) where
                             (show r)  ++
                             ")"
 
+namespace LTree
+  export
+  foldr : (a -> b -> b) -> b -> LTree k p a -> b
+  foldr f z Start              = z
+  foldr f z (LLoser _ e l _ r) =
+    foldr f (Prelude.foldr f (foldr f z r) e) l
+  foldr f z (RLoser _ e l _ r) =
+    foldr f (Prelude.foldr f (foldr f z r) e) l
+
+  export
+  foldl : (b -> a -> b) -> b -> LTree k p a -> b
+  foldl f z Start              = z
+  foldl f z (LLoser _ e l _ r) =
+    foldl f (Prelude.foldl f (foldl f z l) e) r
+  foldl f z (RLoser _ e l _ r) =
+    foldl f (Prelude.foldl f (foldl f z l) e) r
+
+  export
+  map : (a -> b) -> LTree k p a -> LTree k p b
+  map _ Start              = Start
+  map f (LLoser s e l k r) = LLoser s (map f e) (map f l) k (map f r)
+  map f (RLoser s e l k r) = RLoser s (map f e) (map f l) k (map f r)
+
+export
+Functor (LTree k p) where
+  map f v = map f v
+
+export
+Foldable (LTree k p) where
+  foldr f z = Data.OrdPSQ.Internal.LTree.foldr f z
+  foldl f z = Data.OrdPSQ.Internal.LTree.foldl f z
+
+--------------------------------------------------------------------------------
+--          OrdPSQ
+--------------------------------------------------------------------------------
+
 ||| An OrdPSQ uses the Ord instance of the key type to build a priority search queue.
 ||| It is a mapping from keys k to priorities p and values v.
 public export
@@ -81,10 +143,10 @@ data OrdPSQ k p v = Void
                            k
 
 Show (Elem k p v) => Show (LTree k p v) => Show (OrdPSQ k p v) where
-  show xs = "[" ++ (show' xs) ++ "]" where
+  show xs = show' xs  where
     show' : OrdPSQ k p v -> String
     show' Void           = ""
-    show' (Winner e l m) = "winner " ++
+    show' (Winner e l m) = "Winner " ++
                            "("       ++
                            (show e)  ++
                            " "       ++

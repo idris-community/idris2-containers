@@ -1,4 +1,4 @@
-||| Ordered Priority Search Queue (OrdPSQ)
+||| Ordered Priority Search Queue
 module Data.OrdPSQ
 
 import public Data.OrdPSQ.Internal
@@ -174,6 +174,16 @@ fold f acc psq =
     go acc (LLoser _ (Elem' k p v) lt _ rt) = go (f k p v (go acc lt)) rt
     go acc (RLoser _ (Elem' k p v) lt _ rt) = go (f k p v (go acc lt)) rt
 
+export
+foldr : (a -> b -> b) -> b -> OrdPSQ k p a -> b
+foldr f z Void           = z
+foldr f z (Winner e l _) = Prelude.foldr f (Data.OrdPSQ.Internal.LTree.foldr f z l) e
+
+export
+foldl : (b -> a -> b) -> b -> OrdPSQ k p a -> b
+foldl f z Void           = z
+foldl f z (Winner e l _) = Prelude.foldl f (Data.OrdPSQ.Internal.LTree.foldl f z l) e
+
 --------------------------------------------------------------------------------
 --          Views
 --------------------------------------------------------------------------------
@@ -289,33 +299,65 @@ deleteMin t =
 covering
 export
 alter : Ord k => Ord p => (Maybe (p, v) -> (b, Maybe (p, v))) -> k -> OrdPSQ k p v -> (b, OrdPSQ k p v)
-alter f k psq0 =
-  let (psq1, mbpv) = case deleteView k psq0 of
+alter f k psq =
+  let (psq', mbpv) = case deleteView k psq of
                        Nothing          =>
-                         (psq0, Nothing)
+                         (psq, Nothing)
                        Just (p, v, psq) =>
                          (psq, Just (p, v))
       (b, mbpv') = f mbpv
     in case mbpv' of
          Nothing     =>
-           (b, psq1)
+           (b, psq')
          Just (p, v) =>
-           (b, insert k p v psq1)
+           (b, insert k p v psq')
 
 ||| A variant of alter which works on the element with the minimum priority.
 ||| Unlike alter, this variant also allows you to change the key of the element. O(log n)
 covering
 export
 alterMin : Ord k => Ord p => (Maybe (k, p, v) -> (b, Maybe (k, p, v))) -> OrdPSQ k p v -> (b, OrdPSQ k p v)
-alterMin f psq0 =
-  case minView psq0 of
+alterMin f psq =
+  case minView psq of
     Nothing            =>
       let (b, mbkpv) = f Nothing
-        in (b, insertMay mbkpv psq0)
-    Just (k,p,v, psq1) =>
+        in (b, insertMay mbkpv psq)
+    Just (k,p,v, psq') =>
       let (b, mbkpv) = f $ Just (k, p, v)
-        in (b, insertMay mbkpv psq1)
+        in (b, insertMay mbkpv psq')
   where
     insertMay : Maybe (k, p, v) -> OrdPSQ k p v -> OrdPSQ k p v
     insertMay Nothing          psq = psq
     insertMay (Just (k, p, v)) psq = insert k p v psq
+
+--------------------------------------------------------------------------------
+--          Conversion
+--------------------------------------------------------------------------------
+
+||| Build a queue from a list of (key, priority, value) tuples.
+||| If the list contains more than one priority and value for the same key, the
+||| last priority and value for the key is retained. O(n * log n)
+covering
+export
+fromList : Ord k => Ord p => List (k, p, v) -> OrdPSQ k p v
+fromList = foldl (\q, (k, p, v) => insert k p v q) empty
+
+||| Convert a queue to a list of (key, priority, value) tuples. O(n)
+export
+toList : OrdPSQ k p v -> List (k, p, v)
+toList psq =
+  case psq of
+    Void                     =>
+      []
+    Winner (Elem' k p v) l _ =>
+      (k, p, v) :: toListLTree l
+  where
+    toListLTree : LTree k p v -> List (k, p, v)
+    toListLTree lTree =
+      case lTree of
+        Start                        =>
+          []
+        LLoser _ (Elem' k p v) l _ r =>
+          (k, p, v) :: toListLTree l ++ toListLTree r
+        RLoser _ (Elem' k p v) l _ r =>
+          (k, p, v) :: toListLTree l ++ toListLTree r
