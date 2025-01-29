@@ -367,6 +367,10 @@ toList psq =
 --------------------------------------------------------------------------------
 
 export
+Functor (OrdPSQ k p) where
+  map f = Data.OrdPSQ.map (\_, _, v => f v)
+
+export
 Foldable (OrdPSQ k p) where
   foldl f z           = Data.OrdPSQ.foldl f z
   foldr f z           = Data.OrdPSQ.foldr f z
