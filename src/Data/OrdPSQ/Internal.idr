@@ -72,7 +72,7 @@ data LTree k p v = Start
 
 public export
 Show k => Show p => Show v => Show (LTree k p v) where
-  show Start              = "start"
+  show Start              = "Start"
   show (LLoser s e l m r) = "LLoser " ++
                             "("       ++ 
                             (show s)  ++
@@ -145,7 +145,7 @@ data OrdPSQ k p v = Void
 Show (Elem k p v) => Show (LTree k p v) => Show (OrdPSQ k p v) where
   show xs = show' xs  where
     show' : OrdPSQ k p v -> String
-    show' Void           = ""
+    show' Void           = "Void"
     show' (Winner e l m) = "Winner " ++
                            "("       ++
                            (show e)  ++
