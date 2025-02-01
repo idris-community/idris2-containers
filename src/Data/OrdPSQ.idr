@@ -5,11 +5,8 @@ import public Data.OrdPSQ.Internal
 
 import Data.List
 import Data.Maybe
-import Data.String
-import Derive.Prelude
 
 %default total
-%language ElabReflection
 
 --------------------------------------------------------------------------------
 --          Construction
@@ -372,6 +369,6 @@ Functor (OrdPSQ k p) where
 
 export
 Foldable (OrdPSQ k p) where
-  foldl f z           = Data.OrdPSQ.foldl f z
-  foldr f z           = Data.OrdPSQ.foldr f z
-  null                = Data.OrdPSQ.null
+  foldl f z = Data.OrdPSQ.foldl f z
+  foldr f z = Data.OrdPSQ.foldr f z
+  null      = Data.OrdPSQ.null

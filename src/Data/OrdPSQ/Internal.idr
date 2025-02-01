@@ -3,10 +3,8 @@ module Data.OrdPSQ.Internal
 
 import Data.List
 import Data.String
-import Derive.Prelude
 
 %default total
-%language ElabReflection
 
 --------------------------------------------------------------------------------
 --          Elem
@@ -142,6 +140,7 @@ data OrdPSQ k p v = Void
                            (LTree k p v)
                            k
 
+public export
 Show (Elem k p v) => Show (LTree k p v) => Show (OrdPSQ k p v) where
   show xs = show' xs  where
     show' : OrdPSQ k p v -> String

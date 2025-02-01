@@ -13,6 +13,8 @@ modules = Data.BoundedQueue
         , Data.FVect.Capacity
         , Data.Map
         , Data.Map.Internal
+        , Data.NatPSQ
+        , Data.NatPSQ.Internal
         , Data.OrdPSQ
         , Data.OrdPSQ.Internal
         , Data.Queue
