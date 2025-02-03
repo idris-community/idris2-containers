@@ -22,31 +22,30 @@ import Data.Maybe
 ||| replaced with the supplied priority and value. O(min(n, W))
 export
 insert : Ord k => Hashable k => Ord p => k -> p -> v -> HashPSQ k p v -> HashPSQ k p v
-insert k p v (HashPSQ' npsq) =
+insert k p v (MkHashPSQ npsq) =
   MkHashPSQ $
     snd     $
       NatPSQ.alter (\x => ((), ins x)) (cast $ hash k) npsq
   where
-    ins : Maybe (p, Bucket k p v) -> Maybe (p, Bucket k p v)
-    ins 
-    ins Nothing                       = Just (p, Bucket' k v (OrdPSQ.empty))
-    ins (Just (p', Bucket' k' v' os)) =
-      case k' == k of
+    ins : Maybe (p', Bucket k' p' v') -> Maybe (p', Bucket k' p' v')
+    ins Nothing                       = Just (p, MkBucket k v (OrdPSQ.empty))
+    ins (Just (p'', MkBucket k'' v'' os)) =
+      case k'' == k of
         True  =>
           -- Tricky: p might have less priority than an item in os.
           Just (mkBucket k p v os)
         False =>
-          case p' < p || (p == p' && k' < k) of
+          case p'' < p || (p == p'' && k'' < k) of
             True  =>
-              Just (p', Bucket' k' v' (OrdPSQ.insert k p v os))
+              Just (p'', MkBucket k'' v'' (OrdPSQ.insert k p v os))
             False =>
               case OrdPSQ.member k os of
                 True  =>
                   -- This is a bit tricky: k might already be present in 'os' and we
                   -- don't want to end up with duplicate keys.
-                  Just (p, Bucket' k v (OrdPSQ.insert k' p' v' (OrdPSQ.delete k os)))
+                  Just (p, MkBucket k v (OrdPSQ.insert k'' p'' v'' (OrdPSQ.delete k os)))
                 False =>
-                  Just (p, Bucket' k v (OrdPSQ.insert k' p' v' os))
+                  Just (p, MkBucket k v (OrdPSQ.insert k'' p'' v'' os))
 
 --------------------------------------------------------------------------------
 --          Construction
@@ -55,7 +54,7 @@ insert k p v (HashPSQ' npsq) =
 ||| The empty queue. O(1)
 export
 empty : HashPSQ k p v
-empty = HashPSQ' NatPSQ.empty
+empty = MkHashPSQ NatPSQ.empty
 
 ||| Build a queue with one element. O(1)
 export

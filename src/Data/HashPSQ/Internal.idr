@@ -15,11 +15,11 @@ import Data.String
 --------------------------------------------------------------------------------
  
 public export
-data Bucket k p v = Bucket' k v (OrdPSQI.OrdPSQ k p v)
+data Bucket k p v = MkBucket k v (OrdPSQI.OrdPSQ k p v)
 
 public export
 Show k => Show p => Show v => Show (OrdPSQI.OrdPSQ k p v) => Show (Bucket k p v) where
-  show (Bucket' k v o) =
+  show (MkBucket k v o) =
     "Bucket " ++
     "("       ++
     (show k)  ++
@@ -34,7 +34,7 @@ toBucket : Ord k => Ord p => OrdPSQI.OrdPSQ k p v -> Maybe (p, Bucket k p v)
 toBucket opsq =
   case OrdPSQ.minView opsq of
     Just (k, p, x, opsq') =>
-      Just (p, Bucket' k x opsq')
+      Just (p, MkBucket k x opsq')
     Nothing               =>
       Nothing
 
@@ -61,4 +61,4 @@ mkBucket k p x opsq =
 ||| This means worst case complexity is usually given by O(min(n,W), log n), where W is the number of bits in an Int.
 ||| This simplifies to O(min(n, W)) since log n is always smaller than W on current machines.
 public export
-data HashPSQ k p v = HashPSQ' (NatPSQI.NatPSQ p (Bucket k p v))
+data HashPSQ k p v = MkHashPSQ (NatPSQI.NatPSQ p (Bucket k p v))
