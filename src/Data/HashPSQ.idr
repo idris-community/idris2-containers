@@ -28,7 +28,7 @@ insert k p v (MkHashPSQ npsq) =
       NatPSQ.alter (\x => ((), ins x)) (cast $ hash k) npsq
   where
     ins : Maybe (p', Bucket k' p' v') -> Maybe (p', Bucket k' p' v')
-    ins Nothing                       = Just (p, MkBucket k v (OrdPSQ.empty))
+    ins Nothing                           = Just (p, MkBucket k v (OrdPSQ.empty))
     ins (Just (p'', MkBucket k'' v'' os)) =
       case k'' == k of
         True  =>
