@@ -12,15 +12,15 @@ import Data.Maybe
 --          Construction
 --------------------------------------------------------------------------------
 
-||| The empty queue.
+||| The empty queue. O(1)
 export
 empty : OrdPSQ k p v
 empty = Void
 
-||| Build a queue with one element.
+||| Build a queue with one element. O(1)
 export
 singleton : k -> p -> v -> OrdPSQ k p v
-singleton k p v = Winner (Elem' k p v) Start k
+singleton k p v = Winner (MkElem k p v) Start k
 
 --------------------------------------------------------------------------------
 --          Query
@@ -48,15 +48,15 @@ lookup key = go
     go : OrdPSQ k p v -> Maybe (p, v)
     go t =
       case tourView t of
-        Null                  =>
+        Null                   =>
           Nothing
-        Single (Elem' k' p v) =>
+        Single (MkElem k' p v) =>
           case key == k' of
             True  =>
               Just (p, v)
             False =>
               Nothing
-        Play tl tr            =>
+        Play tl tr             =>
           case key <= maxKey tl of
             True  =>
               go tl
@@ -72,8 +72,8 @@ member k = isJust . lookup k
 ||| The element with the lowest priority. O(1)
 export
 findMin : OrdPSQ k p v -> Maybe (k, p, v)
-findMin Void                       = Nothing
-findMin (Winner (Elem' k p v) _ _) = Just (k, p, v)
+findMin Void                        = Nothing
+findMin (Winner (MkElem k p v) _ _) = Just (k, p, v)
 
 --------------------------------------------------------------------------------
 --          Insertion
@@ -91,9 +91,9 @@ insert key priority value = go
     go : OrdPSQ k p v -> OrdPSQ k p v
     go t =
       case t of
-        Void                              =>
+        Void                               =>
           singleton key priority value
-        Winner (Elem' k' p' v') Start _   =>
+        Winner (MkElem k' p' v') Start _   =>
           case compare key k' of
             LT =>
               singleton key priority value `play` singleton k' p' v'
@@ -101,13 +101,13 @@ insert key priority value = go
               singleton key priority value
             GT =>
               singleton k' p' v' `play` singleton key priority value
-        Winner e (RLoser _ e' tl m tr) m' =>
+        Winner e (RLoser _ e' tl m tr) m'  =>
           case key <= m of
             True  =>
               go (Winner e tl m) `play` (Winner e' tr m')
             False =>
               (Winner e tl m) `play` go (Winner e' tr m')
-        Winner e (LLoser _ e' tl m tr) m' =>
+        Winner e (LLoser _ e' tl m tr) m'  =>
           case key <= m of
             True  =>
               go (Winner e' tl m) `play` (Winner e tr m')
@@ -124,7 +124,7 @@ map : (k -> p -> v -> w) -> OrdPSQ k p v -> OrdPSQ k p w
 map f = goPSQ
   where
     goElem : Elem k p v -> Elem k p w
-    goElem (Elem' k p x) = Elem' k p (f k p x)
+    goElem (MkElem k p x) = MkElem k p (f k p x)
     goLTree : LTree k p v -> LTree k p w
     goLTree Start              = Start
     goLTree (LLoser s e l k r) = LLoser s (goElem e) (goLTree l) k (goLTree r)
@@ -144,9 +144,9 @@ unsafeMapMonotonic : (k -> p -> v -> (q, w)) -> OrdPSQ k p v -> OrdPSQ k q w
 unsafeMapMonotonic f = goPSQ
   where
     goElem : Elem k p v -> Elem k q w
-    goElem (Elem' k p x) =
+    goElem (MkElem k p x) =
       let (p', x') = f k p x
-        in Elem' k p' x'
+        in MkElem k p' x'
     goLTree : LTree k p v -> LTree k q w
     goLTree Start              = Start
     goLTree (LLoser s e l k r) = LLoser s (goElem e) (goLTree l) k (goLTree r)
@@ -160,16 +160,16 @@ export
 fold : (k -> p -> v -> a -> a) -> a -> OrdPSQ k p v -> a
 fold f acc psq =
   case psq of
-    Void                       =>
+    Void                        =>
       acc
-    (Winner (Elem' k p v) t _) =>
+    (Winner (MkElem k p v) t _) =>
       let acc' = f k p v acc
         in go acc' t
   where
     go : a -> LTree k p v -> a
-    go acc Start                            = acc
-    go acc (LLoser _ (Elem' k p v) lt _ rt) = go (f k p v (go acc lt)) rt
-    go acc (RLoser _ (Elem' k p v) lt _ rt) = go (f k p v (go acc lt)) rt
+    go acc Start                             = acc
+    go acc (LLoser _ (MkElem k p v) lt _ rt) = go (f k p v (go acc lt)) rt
+    go acc (RLoser _ (MkElem k p v) lt _ rt) = go (f k p v (go acc lt)) rt
 
 export
 foldr : (a -> b -> b) -> b -> OrdPSQ k p a -> b
@@ -193,21 +193,21 @@ export
 deleteView : Ord k => Ord p => k -> OrdPSQ k p v -> Maybe (p, v, OrdPSQ k p v)
 deleteView k psq =
   case psq of
-    Void                              =>
+    Void                               =>
       Nothing
-    Winner (Elem' k' p v) Start _     =>
+    Winner (MkElem k' p v) Start _     =>
       case k == k' of
         True  =>
           Just (p, v, empty)
         False =>
           Nothing
-    Winner e (RLoser _ e' tl m tr) m' =>
+    Winner e (RLoser _ e' tl m tr) m'  =>
       case k <= m of
         True  =>
           map (\(p, v, q) => (p, v,  q `play` (Winner e' tr m'))) (deleteView k (Winner e tl m))
         False =>
           map (\(p, v, q) => (p, v,  (Winner e tl m) `play` q)) (deleteView k (Winner e' tr m'))
-    Winner e (LLoser _ e' tl m tr) m' =>
+    Winner e (LLoser _ e' tl m tr) m'  =>
       case k <= m of
         True  =>
           map (\(p, v, q) => (p, v, q `play` (Winner e tr m'))) (deleteView k (Winner e' tl m))
@@ -238,8 +238,8 @@ secondBest (RLoser _ e tl m tr) m' = secondBest tl m `play` Winner e tr m'
 ||| rest of the queue stripped of that binding. O(log n)
 export
 minView : Ord k => Ord p => OrdPSQ k p v -> Maybe (k, p, v, OrdPSQ k p v)
-minView Void                       = Nothing
-minView (Winner (Elem' k p v) t m) = Just (k, p, v, secondBest t m)
+minView Void                        = Nothing
+minView (Winner (MkElem k p v) t m) = Just (k, p, v, secondBest t m)
 
 --------------------------------------------------------------------------------
 --          Delete/Update
@@ -256,21 +256,21 @@ delete key = go
     go : OrdPSQ k p v -> OrdPSQ k p v
     go t =
       case t of
-        Void                              =>
+        Void                               =>
           empty
-        Winner (Elem' k' p v) Start _     =>
+        Winner (MkElem k' p v) Start _     =>
           case key == k' of
             True  =>
               empty
             False =>
               singleton k' p v
-        Winner e (RLoser _ e' tl m tr) m' =>
+        Winner e (RLoser _ e' tl m tr) m'  =>
           case key <= m of
             True  =>
               go (Winner e tl m) `play` (Winner e' tr m')
             False =>
               (Winner e tl m) `play` go (Winner e' tr m')
-        Winner e (LLoser _ e' tl m tr) m' =>
+        Winner e (LLoser _ e' tl m tr) m'  =>
           case key <= m of
             True  =>
               go (Winner e' tl m) `play` (Winner e tr m')
@@ -344,20 +344,24 @@ export
 toList : OrdPSQ k p v -> List (k, p, v)
 toList psq =
   case psq of
-    Void                     =>
+    Void                      =>
       []
-    Winner (Elem' k p v) l _ =>
+    Winner (MkElem k p v) l _ =>
       (k, p, v) :: toListLTree l
   where
     toListLTree : LTree k p v -> List (k, p, v)
     toListLTree lTree =
       case lTree of
-        Start                        =>
+        Start                         =>
           []
-        LLoser _ (Elem' k p v) l _ r =>
+        LLoser _ (MkElem k p v) l _ r =>
           (k, p, v) :: toListLTree l ++ toListLTree r
-        RLoser _ (Elem' k p v) l _ r =>
+        RLoser _ (MkElem k p v) l _ r =>
           (k, p, v) :: toListLTree l ++ toListLTree r
+
+||| Obtain the list of present keys in the queue. O(n)
+keys : OrdPSQ k p v -> List k
+keys t = [k | (k, _, _) <- toList t]
 
 --------------------------------------------------------------------------------
 --          Interfaces

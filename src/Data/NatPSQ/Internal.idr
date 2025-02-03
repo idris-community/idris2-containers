@@ -54,7 +54,7 @@ zero i m = (natFromBits i) .&. (natFromBits m) == 0
 
 private
 maskW : Size -> Size
-maskW m = complement (m-1) `xor` m
+maskW m = complement (m - 1) `xor` m
 
 export
 noMatch : Key -> Key -> Mask -> Bool

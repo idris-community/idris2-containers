@@ -1,109 +1,52 @@
-||| Ordered Nat Priority Search Queue
-module Data.NatPSQ
+||| Hash Priority Search Queue
+module Data.HashPSQ
 
+import public Data.HashPSQ.Internal
+import public Data.NatPSQ
 import public Data.NatPSQ.Internal
+import public Data.OrdPSQ
 
 import Data.List
+import Data.Hashable
 import Data.Maybe
 
 %default total
 
 --------------------------------------------------------------------------------
---          Unsafe operations
+--          Insertion
 --------------------------------------------------------------------------------
 
-private
-link : Key -> p -> v -> Key -> NatPSQ p v -> NatPSQ p v -> NatPSQ p v
-link k p x k' k't othertree =
-  let m = branchMask k k'
-    in case zero m k' of
-         True  =>
-           Bin k p x m k't othertree
-         False =>
-           Bin k p x m othertree k't
-
-||| Internal function that merges two disjoint NatPSQ's that share the
-||| same prefix mask.
-private
-merge : Ord p => Mask -> NatPSQ p v -> NatPSQ p v -> NatPSQ p v
-merge m l r =
-  case l of
-    Nil                   =>
-      r
-    Tip lk lp lx          =>
-      case r of
-        Nil                   =>
-          l
-        Tip rk rp rx          =>
-          case (lp, lk) < (rp, rk) of
-            True  =>
-              Bin lk lp lx m Nil r
-            False =>
-              Bin rk rp rx m l   Nil
-        Bin rk rp rx rm rl rr =>
-          case (lp, lk) < (rp, rk) of
-            True  =>
-              Bin lk lp lx m Nil r
-            False =>
-              Bin rk rp rx m l   (merge rm rl rr)
-    Bin lk lp lx lm ll lr =>
-      case r of
-        Nil                   =>
-          l
-        Tip rk rp rx          =>
-          case (lp, lk) < (rp, rk) of
-            True  =>
-              Bin lk lp lx m (merge lm ll lr) r
-            False =>
-              Bin rk rp rx m l                Nil
-        Bin rk rp rx rm rl rr =>
-          case (lp, lk) < (rp, rk) of
-            True  =>
-              Bin lk lp lx m (merge lm ll lr) r
-            False =>
-              Bin rk rp rx m l                (merge rm rl rr)
-
-||| Smart constructor for a Bin node.
-private
-bin : Key -> p -> v -> Mask -> NatPSQ p v -> NatPSQ p v -> NatPSQ p v
-bin k p x _ Nil Nil = Tip k p x
-bin k p x m l   r   = Bin k p x m l r
-
-||| Internal function to insert a key that is *not* present in the priority queue.
-private
-unsafeInsertNew : Ord p => Key -> p -> v -> NatPSQ p v -> NatPSQ p v
-unsafeInsertNew k p x t =
-  case t of
-    Nil                =>
-      Tip k p x
-    Tip k' p' x'       =>
-      case (p, k) < (p', k') of
+||| Insert a new key, priority and value into the queue.
+||| If the key is already present in the queue,
+||| the associated priority and value are
+||| replaced with the supplied priority and value. O(min(n, W))
+export
+insert : Ord k => Hashable k => Ord p => k -> p -> v -> HashPSQ k p v -> HashPSQ k p v
+insert k p v (HashPSQ' npsq) =
+  MkHashPSQ $
+    snd     $
+      NatPSQ.alter (\x => ((), ins x)) (cast $ hash k) npsq
+  where
+    ins : Maybe (p, Bucket k p v) -> Maybe (p, Bucket k p v)
+    ins 
+    ins Nothing                       = Just (p, Bucket' k v (OrdPSQ.empty))
+    ins (Just (p', Bucket' k' v' os)) =
+      case k' == k of
         True  =>
-          link k  p  x  k' t           Nil
+          -- Tricky: p might have less priority than an item in os.
+          Just (mkBucket k p v os)
         False =>
-          link k' p' x' k  (Tip k p x) Nil
-    Bin k' p' x' m l r =>
-      case noMatch k k' m of
-        True  =>
-          case (p, k) < (p', k') of
+          case p' < p || (p == p' && k' < k) of
             True  =>
-              link k  p  x  k' t           Nil
+              Just (p', Bucket' k' v' (OrdPSQ.insert k p v os))
             False =>
-              link k' p' x' k  (Tip k p x) (merge m l r)
-        False =>
-          case (p, k) < (p', k') of
-            True  =>
-              case zero k' m of
+              case OrdPSQ.member k os of
                 True  =>
-                  Bin k  p  x  m (unsafeInsertNew k' p' x' l) r
+                  -- This is a bit tricky: k might already be present in 'os' and we
+                  -- don't want to end up with duplicate keys.
+                  Just (p, Bucket' k v (OrdPSQ.insert k' p' v' (OrdPSQ.delete k os)))
                 False =>
-                  Bin k  p  x  m l (unsafeInsertNew k' p' x' r)
-            False =>
-              case zero k m of
-                True =>
-                  Bin k' p' x' m (unsafeInsertNew k  p  x  l) r
-                False =>
-                  Bin k' p' x' m l (unsafeInsertNew k  p  x  r)
+                  Just (p, Bucket' k v (OrdPSQ.insert k' p' v' os))
 
 --------------------------------------------------------------------------------
 --          Construction
@@ -111,17 +54,19 @@ unsafeInsertNew k p x t =
 
 ||| The empty queue. O(1)
 export
-empty : NatPSQ p v
-empty = Nil
+empty : HashPSQ k p v
+empty = HashPSQ' NatPSQ.empty
 
 ||| Build a queue with one element. O(1)
 export
-singleton : Ord p => Nat -> p -> v -> NatPSQ p v
-singleton k p v = Tip k p v
+singleton : Ord k => Hashable k => Ord p => k -> p -> v -> HashPSQ k p v
+singleton k p v = Data.HashPSQ.insert k p v empty
 
 --------------------------------------------------------------------------------
 --          Query
 --------------------------------------------------------------------------------
+
+{-
 
 ||| Is the queue empty? O(1)
 export
@@ -338,7 +283,11 @@ insert k p x t = unsafeInsertNew k p x (delete k t)
 ||| in a queue.
 ||| It also allows you to calculate an additional value b. O(min(n, W))
 export
-alter : Ord p => (Maybe (p, v) -> (b, Maybe (p, v))) -> Nat -> NatPSQ p v -> (b, NatPSQ p v)
+alter :  Ord p
+      => (Maybe (p, v) -> (b, Maybe (p, v)))
+      -> Nat
+      -> NatPSQ p v
+      -> (b, NatPSQ p v)
 alter f k t =
   let (t', mbx) = case deleteView k t of
                     Nothing          =>
@@ -353,12 +302,16 @@ alter f k t =
            let t'' = unsafeInsertNew k p v t'
              in (b, t'')
 
+
 ||| A variant of alter which works on the element with the
 ||| minimum priority. Unlike alter,
 ||| this variant also allows you to change the
 ||| key of the element. O(min(n, W))
 export
-alterMin : Ord p => (Maybe (Nat, p, v) -> (b, Maybe (Nat, p, v))) -> NatPSQ p v -> (b, NatPSQ p v)
+alterMin :  Ord p
+         => (Maybe (Nat, p, v) -> (b, Maybe (Nat, p, v)))
+         -> NatPSQ p v
+         -> (b, NatPSQ p v)
 alterMin f Nil               =
   case f Nothing of
     (b, Nothing)           =>
@@ -468,11 +421,6 @@ toList (Tip k p v)       = [(k, p, v)]
 toList (Bin k p v _ l r) =
   (k, p, v) :: toList l ++ toList r
 
-||| Obtain the list of present keys in the queue. O(n)
-export
-keys : NatPSQ p v -> List Nat
-keys t = [k | (k, _, _) <- toList t]
-
 --------------------------------------------------------------------------------
 --          Interfaces
 --------------------------------------------------------------------------------
@@ -486,3 +434,4 @@ Foldable (NatPSQ p) where
   foldl = Data.NatPSQ.foldl
   foldr = Data.NatPSQ.foldr
   null  = Data.NatPSQ.null
+-}

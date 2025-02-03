@@ -16,31 +16,31 @@ Size = Nat
 
 ||| Elem k p v binds the key k to the value v with priority p.
 public export
-data Elem k p v = Elem' k p v
+data Elem k p v = MkElem k p v
 
 public export
 Show k => Show p => Show v => Show (Elem k p v) where
-  show (Elem' k p v) = "Elem "  ++
-                       "("      ++
-                       (show k) ++
-                       " "      ++
-                       (show p) ++
-                       " "      ++
-                       (show v) ++
-                       ")"
+  show (MkElem k p v) = "Elem "  ++
+                        "("      ++
+                        (show k) ++
+                        " "      ++
+                        (show p) ++
+                        " "      ++
+                        (show v) ++
+                        ")"
 
 namespace Elem
   export
   foldr : (a -> b -> b) -> b -> Elem k p a -> b
-  foldr f z (Elem' _ _ v) = f v z
+  foldr f z (MkElem _ _ v) = f v z
 
   export
   foldl : (b -> a -> b) -> b -> Elem k p a -> b
-  foldl f z (Elem' _ _ v) = f z v
+  foldl f z (MkElem _ _ v) = f z v
 
   export
   map : (a -> b) -> Elem k p a -> Elem k p b
-  map f (Elem' k p v) = Elem' k p (f v)
+  map f (MkElem k p v) = MkElem k p (f v)
 
 export
 Functor (Elem k p) where
@@ -194,90 +194,90 @@ maxKey (Winner _ _ m) = m
 
 private
 lLoser : k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
-lLoser k p v tl m tr = LLoser (1 + size' tl + size' tr) (Elem' k p v) tl m tr
+lLoser k p v tl m tr = LLoser (1 + size' tl + size' tr) (MkElem k p v) tl m tr
 
 private
 rLoser : k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
-rLoser k p v tl m tr = RLoser (1 + size' tl + size' tr) (Elem' k p v) tl m tr
+rLoser k p v tl m tr = RLoser (1 + size' tl + size' tr) (MkElem k p v) tl m tr
 
 private
 lSingleLeft : Ord k => Ord p => k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
-lSingleLeft k1 p1 v1 t1 m1 (LLoser _ (Elem' k2 p2 v2) t2 m2 t3) =
+lSingleLeft k1 p1 v1 t1 m1 (LLoser _ (MkElem k2 p2 v2) t2 m2 t3) =
   case (p1, k1) `beats` (p2, k2) of
     True  =>
       lLoser k1 p1 v1 (rLoser k2 p2 v2 t1 m1 t2) m2 t3
     False =>
       lLoser k2 p2 v2 (lLoser k1 p1 v1 t1 m1 t2) m2 t3
-lSingleLeft k1 p1 v1 t1 m1 (RLoser _ (Elem' k2 p2 v2) t2 m2 t3) =
+lSingleLeft k1 p1 v1 t1 m1 (RLoser _ (MkElem k2 p2 v2) t2 m2 t3) =
   rLoser k2 p2 v2 (lLoser k1 p1 v1 t1 m1 t2) m2 t3
-lSingleLeft _  _  _  _  _  _                                    =
+lSingleLeft _  _  _  _  _  _                                     =
   assert_total $ idris_crash "Data.OrdPSQ.Internal.lSingleLeft: malformed tree"
 
 private
 rSingleLeft : k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
-rSingleLeft k1 p1 v1 t1 m1 (LLoser _ (Elem' k2 p2 v2) t2 m2 t3) =
+rSingleLeft k1 p1 v1 t1 m1 (LLoser _ (MkElem k2 p2 v2) t2 m2 t3) =
     rLoser k1 p1 v1 (rLoser k2 p2 v2 t1 m1 t2) m2 t3
-rSingleLeft k1 p1 v1 t1 m1 (RLoser _ (Elem' k2 p2 v2) t2 m2 t3) =
+rSingleLeft k1 p1 v1 t1 m1 (RLoser _ (MkElem k2 p2 v2) t2 m2 t3) =
     rLoser k2 p2 v2 (rLoser k1 p1 v1 t1 m1 t2) m2 t3
-rSingleLeft _  _  _  _  _  _                                    =
+rSingleLeft _  _  _  _  _  _                                     =
   assert_total $ idris_crash "Data.OrdPSQ.Internal.rSingleLeft: malformed tree"
 
 private
 lSingleRight : k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
-lSingleRight k1 p1 v1 (LLoser _ (Elem' k2 p2 v2) t1 m1 t2) m2 t3 =
+lSingleRight k1 p1 v1 (LLoser _ (MkElem k2 p2 v2) t1 m1 t2) m2 t3 =
     lLoser k2 p2 v2 t1 m1 (lLoser k1 p1 v1 t2 m2 t3)
-lSingleRight k1 p1 v1 (RLoser _ (Elem' k2 p2 v2) t1 m1 t2) m2 t3 =
+lSingleRight k1 p1 v1 (RLoser _ (MkElem k2 p2 v2) t1 m1 t2) m2 t3 =
     lLoser k1 p1 v1 t1 m1 (lLoser k2 p2 v2 t2 m2 t3)
-lSingleRight _  _  _  _                                    _  _  =
+lSingleRight _  _  _  _                                     _  _  =
   assert_total $ idris_crash "Data.OrdPSQ.Internal.lSingleRight: malformed tree"
 
 private
 rSingleRight : Ord k => Ord p => k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
-rSingleRight k1 p1 v1 (LLoser _ (Elem' k2 p2 v2) t1 m1 t2) m2 t3 =
+rSingleRight k1 p1 v1 (LLoser _ (MkElem k2 p2 v2) t1 m1 t2) m2 t3 =
     lLoser k2 p2 v2 t1 m1 (rLoser k1 p1 v1 t2 m2 t3)
-rSingleRight k1 p1 v1 (RLoser _ (Elem' k2 p2 v2) t1 m1 t2) m2 t3 =
+rSingleRight k1 p1 v1 (RLoser _ (MkElem k2 p2 v2) t1 m1 t2) m2 t3 =
   case (p1, k1) `beats` (p2, k2) of
     True  =>
       rLoser k1 p1 v1 t1 m1 (lLoser k2 p2 v2 t2 m2 t3)
     False =>
       rLoser k2 p2 v2 t1 m1 (rLoser k1 p1 v1 t2 m2 t3)
-rSingleRight _  _  _  _                                    _  _  =
+rSingleRight _  _  _  _                                     _  _  =
   assert_total $ idris_crash "Data.OrdPSQ.Internal.rSingleRight: malformed tree"
 
 private
 lDoubleLeft : Ord k => Ord p => k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
-lDoubleLeft k1 p1 v1 t1 m1 (LLoser _ (Elem' k2 p2 v2) t2 m2 t3) =
+lDoubleLeft k1 p1 v1 t1 m1 (LLoser _ (MkElem k2 p2 v2) t2 m2 t3) =
   lSingleLeft k1 p1 v1 t1 m1 (lSingleRight k2 p2 v2 t2 m2 t3)
-lDoubleLeft k1 p1 v1 t1 m1 (RLoser _ (Elem' k2 p2 v2) t2 m2 t3) =
+lDoubleLeft k1 p1 v1 t1 m1 (RLoser _ (MkElem k2 p2 v2) t2 m2 t3) =
   lSingleLeft k1 p1 v1 t1 m1 (rSingleRight k2 p2 v2 t2 m2 t3)
-lDoubleLeft _  _  _  _  _  _                                    =
+lDoubleLeft _  _  _  _  _  _                                     =
   assert_total $ idris_crash "Data.OrdPSQ.Internal.lDoubleLeft: malformed tree"
 
 private
 lDoubleRight : Ord k => Ord p => k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
-lDoubleRight k1 p1 v1 (LLoser _ (Elem' k2 p2 v2) t1 m1 t2) m2 t3 =
+lDoubleRight k1 p1 v1 (LLoser _ (MkElem k2 p2 v2) t1 m1 t2) m2 t3 =
   lSingleRight k1 p1 v1 (lSingleLeft k2 p2 v2 t1 m1 t2) m2 t3
-lDoubleRight k1 p1 v1 (RLoser _ (Elem' k2 p2 v2) t1 m1 t2) m2 t3 =
+lDoubleRight k1 p1 v1 (RLoser _ (MkElem k2 p2 v2) t1 m1 t2) m2 t3 =
   lSingleRight k1 p1 v1 (rSingleLeft k2 p2 v2 t1 m1 t2) m2 t3
-lDoubleRight _  _  _  _                                    _  _  =
+lDoubleRight _  _  _  _                                     _  _  =
   assert_total $ idris_crash "Data.OrdPSQ.Internal.lDoubleRight: malformed tree"
 
 private
 rDoubleLeft : Ord k => Ord p => k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
-rDoubleLeft k1 p1 v1 t1 m1 (LLoser _ (Elem' k2 p2 v2) t2 m2 t3) =
+rDoubleLeft k1 p1 v1 t1 m1 (LLoser _ (MkElem k2 p2 v2) t2 m2 t3) =
   rSingleLeft k1 p1 v1 t1 m1 (lSingleRight k2 p2 v2 t2 m2 t3)
-rDoubleLeft k1 p1 v1 t1 m1 (RLoser _ (Elem' k2 p2 v2) t2 m2 t3) =
+rDoubleLeft k1 p1 v1 t1 m1 (RLoser _ (MkElem k2 p2 v2) t2 m2 t3) =
   rSingleLeft k1 p1 v1 t1 m1 (rSingleRight k2 p2 v2 t2 m2 t3)
-rDoubleLeft _  _  _  _  _  _                                    =
+rDoubleLeft _  _  _  _  _  _                                     =
   assert_total $ idris_crash "Data.OrdPSQ.Internal.rDoubleLeft: malformed tree"
 
 private
 rDoubleRight : Ord k => Ord p => k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
-rDoubleRight k1 p1 v1 (LLoser _ (Elem' k2 p2 v2) t1 m1 t2) m2 t3 =
+rDoubleRight k1 p1 v1 (LLoser _ (MkElem k2 p2 v2) t1 m1 t2) m2 t3 =
   rSingleRight k1 p1 v1 (lSingleLeft k2 p2 v2 t1 m1 t2) m2 t3
-rDoubleRight k1 p1 v1 (RLoser _ (Elem' k2 p2 v2) t1 m1 t2) m2 t3 =
+rDoubleRight k1 p1 v1 (RLoser _ (MkElem k2 p2 v2) t1 m1 t2) m2 t3 =
   rSingleRight k1 p1 v1 (rSingleLeft k2 p2 v2 t1 m1 t2) m2 t3
-rDoubleRight _  _  _  _                                    _  _  =
+rDoubleRight _  _  _  _                                     _  _  =
   assert_total $ idris_crash "Data.OrdPSQ.Internal.rDoubleRight: malformed tree"
 
 private
@@ -305,7 +305,7 @@ rBalanceLeft  k p v l m r =
     True  =>
       rSingleLeft k p v l m r
     False =>
-      rDoubleLeft  k p v l m r
+      rDoubleLeft k p v l m r
 
 private
 rBalanceRight : Ord k => Ord p => k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
@@ -367,9 +367,9 @@ tourView (Winner e (LLoser _ e' tl m tr) m') = Winner e' tl m `Play` Winner e tr
 ||| strictly smaller than the keys in the second tree.
 export
 play : Ord k => Ord p => OrdPSQ k p v -> OrdPSQ k p v -> OrdPSQ k p v
-Void                     `play` t'                             = t'
-t                        `play` Void                           = t
-(Winner e@(Elem' k p v) t m) `play` (Winner e'@(Elem' k' p' v') t' m') =
+Void                          `play` t'                                  = t'
+t                             `play` Void                                = t
+(Winner e@(MkElem k p v) t m) `play` (Winner e'@(MkElem k' p' v') t' m') =
   case (p, k) `beats` (p', k') of
     True  =>
       Winner e (rBalance k' p' v' t m t') m'
