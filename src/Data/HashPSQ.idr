@@ -16,36 +16,39 @@ import Data.Maybe
 --          Insertion
 --------------------------------------------------------------------------------
 
+covering
+private
+ins : Eq k => Ord k => Ord p => k -> p -> v -> Maybe (p, Bucket k p v) -> Maybe (p, Bucket k p v)
+ins k p v Nothing                        = Just (p, MkBucket k v (OrdPSQ.empty))
+ins k p v (Just (p', MkBucket k' v' os)) =
+  case k' == k of
+    True  =>
+      -- Tricky: p might have less priority than an item in os.
+      Just (mkBucket k p v os)
+    False =>
+      case p' < p || (p == p' && k' < k) of
+        True  =>
+          Just (p', MkBucket k' v' (OrdPSQ.insert k p v os))
+        False =>
+          case OrdPSQ.member k os of
+            True  =>
+              -- This is a bit tricky: k might already be present in 'os' and we
+              -- don't want to end up with duplicate keys.
+              Just (p, MkBucket k v (OrdPSQ.insert k' p' v' (OrdPSQ.delete k os)))
+            False =>
+              Just (p, MkBucket k v (OrdPSQ.insert k' p' v' os))
+
 ||| Insert a new key, priority and value into the queue.
 ||| If the key is already present in the queue,
 ||| the associated priority and value are
 ||| replaced with the supplied priority and value. O(min(n, W))
+covering
 export
 insert : Ord k => Hashable k => Ord p => k -> p -> v -> HashPSQ k p v -> HashPSQ k p v
 insert k p v (MkHashPSQ npsq) =
   MkHashPSQ $
     snd     $
-      NatPSQ.alter (\x => ins x) (cast $ hash k) npsq
-  where
-    ins : Maybe (p, Bucket k p v) -> Maybe (p, Bucket k p v)
-    ins Nothing                           = Just (p, MkBucket k v (OrdPSQ.empty))
-    ins (Just (p', MkBucket k' v' os)) =
-      case k' == k of
-        True  =>
-          -- Tricky: p might have less priority than an item in os.
-          Just (mkBucket k p v os)
-        False =>
-          case p' < p || (p == p' && k' < k) of
-            True  =>
-              Just (p', MkBucket k' v' (OrdPSQ.insert k p v os))
-            False =>
-              case OrdPSQ.member k os of
-                True  =>
-                  -- This is a bit tricky: k might already be present in 'os' and we
-                  -- don't want to end up with duplicate keys.
-                  Just (p, MkBucket k v (OrdPSQ.insert k' p' v' (OrdPSQ.delete k os)))
-                False =>
-                  Just (p, MkBucket k v (OrdPSQ.insert k' p' v' os))
+      NatPSQ.alter (\x => ((), ins k p v x)) (cast $ hash k) npsq
 
 --------------------------------------------------------------------------------
 --          Construction
@@ -57,6 +60,7 @@ empty : HashPSQ k p v
 empty = MkHashPSQ NatPSQ.empty
 
 ||| Build a queue with one element. O(1)
+covering
 export
 singleton : Ord k => Hashable k => Ord p => k -> p -> v -> HashPSQ k p v
 singleton k p v = Data.HashPSQ.insert k p v empty
@@ -65,66 +69,56 @@ singleton k p v = Data.HashPSQ.insert k p v empty
 --          Query
 --------------------------------------------------------------------------------
 
-{-
-
 ||| Is the queue empty? O(1)
 export
-null : NatPSQ p v -> Bool
-null Nil = True
-null _   = False
+null : HashPSQ k p v -> Bool
+null (MkHashPSQ npsq) = NatPSQ.null npsq
 
-||| The number of elements in a queue. O(1)
+||| The number of elements in a queue. O(n)
 export
-size : NatPSQ p v -> Nat
-size Nil               = 0
-size (Tip _ _ _)       = 1
-size (Bin _ _ _ _ l r) = 1 + size l + size r
+size : HashPSQ k p v -> Nat
+size (MkHashPSQ npsq) =
+  NatPSQ.fold (\_, _, (MkBucket _ _ opsq), acc => 1 + OrdPSQ.size opsq + acc)
+              0
+              npsq
 
-||| The priority and value of a given key, or Nothing
-||| if the key is not bound. O(log n)
+||| The priority and value of a given key, or Nothing if the
+||| key is not bound. O(min(n ,W))
+covering
 export
-lookup : Nat -> NatPSQ p v -> Maybe (p, v)
-lookup key = go
-  where
-    go : NatPSQ p v -> Maybe (p, v)
-    go Nil                  =
-          Nothing
-    go (Tip k' p' x')       =
-      case key == k' of
-        True  =>
-          Just (p', x')
-        False =>
-          Nothing
-    go (Bin k' p' x' m l r) =
-      case noMatch key k' m of
-        True  =>
-          Nothing
-        False =>
-          case key == k' of
-            True  =>
-              Just (p', x')
-            False =>
-              case zero key m of
-                True  =>
-                  go l
-                False =>
-                  go r
+lookup : Ord k => Hashable k => Ord p => k -> HashPSQ k p v -> Maybe (p, v)
+lookup k (MkHashPSQ npsq) =
+  let nsq' = NatPSQ.lookup (cast $ hash k) npsq
+    in case nsq' of
+         Nothing                      =>
+           Nothing
+         Just (p0, MkBucket k0 v0 os) =>
+           case k0 == k of
+             True  =>
+               Just (p0, v0)
+             False =>
+               OrdPSQ.lookup k os
 
-||| Check if a key is present in the queue. O(log n)
+||| Check if a key is present in the queue. O(min(n, W))
 export
 member : Nat-> NatPSQ p v -> Bool
 member k = isJust . lookup k
 
 ||| The element with the lowest priority. O(1)
 export
-findMin : NatPSQ p v -> Maybe (Nat, p, v)
-findMin Nil               = Nothing
-findMin (Tip k p x)       = Just (k, p, x)
-findMin (Bin k p x _ _ _) = Just (k, p, x)
+findMin : Ord k => Hashable k => Ord p => HashPSQ k p v -> Maybe (k, p, v)
+findMin (MkHashPSQ npsq) =
+  case NatPSQ.findMin npsq of
+    Nothing                     =>
+      Nothing
+    Just (_, p, MkBucket k x _) =>
+      Just (k, p, x)
+
 
 --------------------------------------------------------------------------------
 --          Views
 --------------------------------------------------------------------------------
+{-
 
 ||| Delete a key and its priority and value from the queue. If
 ||| the key was present, the associated priority and value are returned in
