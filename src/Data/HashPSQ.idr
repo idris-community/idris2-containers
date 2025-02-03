@@ -25,27 +25,27 @@ insert : Ord k => Hashable k => Ord p => k -> p -> v -> HashPSQ k p v -> HashPSQ
 insert k p v (MkHashPSQ npsq) =
   MkHashPSQ $
     snd     $
-      NatPSQ.alter (\x => ((), ins x)) (cast $ hash k) npsq
+      NatPSQ.alter (\x => ins x) (cast $ hash k) npsq
   where
-    ins : Maybe (p', Bucket k' p' v') -> Maybe (p', Bucket k' p' v')
+    ins : Maybe (p, Bucket k p v) -> Maybe (p, Bucket k p v)
     ins Nothing                           = Just (p, MkBucket k v (OrdPSQ.empty))
-    ins (Just (p'', MkBucket k'' v'' os)) =
-      case k'' == k of
+    ins (Just (p', MkBucket k' v' os)) =
+      case k' == k of
         True  =>
           -- Tricky: p might have less priority than an item in os.
           Just (mkBucket k p v os)
         False =>
-          case p'' < p || (p == p'' && k'' < k) of
+          case p' < p || (p == p' && k' < k) of
             True  =>
-              Just (p'', MkBucket k'' v'' (OrdPSQ.insert k p v os))
+              Just (p', MkBucket k' v' (OrdPSQ.insert k p v os))
             False =>
               case OrdPSQ.member k os of
                 True  =>
                   -- This is a bit tricky: k might already be present in 'os' and we
                   -- don't want to end up with duplicate keys.
-                  Just (p, MkBucket k v (OrdPSQ.insert k'' p'' v'' (OrdPSQ.delete k os)))
+                  Just (p, MkBucket k v (OrdPSQ.insert k' p' v' (OrdPSQ.delete k os)))
                 False =>
-                  Just (p, MkBucket k v (OrdPSQ.insert k'' p'' v'' os))
+                  Just (p, MkBucket k v (OrdPSQ.insert k' p' v' os))
 
 --------------------------------------------------------------------------------
 --          Construction
