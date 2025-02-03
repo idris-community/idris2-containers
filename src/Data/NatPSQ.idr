@@ -70,7 +70,7 @@ bin k p x _ Nil Nil = Tip k p x
 bin k p x m l   r   = Bin k p x m l r
 
 ||| Internal function to insert a key that is *not* present in the priority queue.
-private
+export
 unsafeInsertNew : Ord p => Key -> p -> v -> NatPSQ p v -> NatPSQ p v
 unsafeInsertNew k p x t =
   case t of

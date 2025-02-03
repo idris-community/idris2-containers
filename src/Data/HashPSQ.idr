@@ -184,32 +184,41 @@ minView (MkHashPSQ npsq) =
     (Just (k, p, x), npsq') =>
       Just (k, p, x, MkHashPSQ npsq')
 
-{-
-||| Return a list of elements ordered by key whose priorities are at most @pt@,
-||| and the rest of the queue stripped of these elements.  The returned list of
-||| elements can be in any order: no guarantees there.
+||| Return a list of elements ordered by key whose priorities are at most pt,
+||| and the rest of the queue stripped of these elements.
+||| The returned list of elements can be in any order: no guarantees there.
+covering
 export
-atMostView : Ord p => p -> NatPSQ p v -> (List (Nat, p, v), NatPSQ p v)
-atMostView pt t = go Nil t
-  where
-    go : List (Key, p, v) -> NatPSQ p v -> (List (Key, p, v), NatPSQ p v)
-    go acc Nil               =
-      (acc, t)
-    go acc (Tip k p x)       =
-      case p > pt of
-        True  =>
-          (acc, t)
-        False =>
-          ((k, p, x) :: acc, Nil)
-    go acc (Bin k p x m l r) =
-      case p > pt of
-        True  =>
-          (acc, t)
-        False =>
-          let (acc',  l') = go acc  l
-              (acc'', r') = go acc' r
-            in  ((k, p, x) :: acc'', merge m l' r')
--}
+atMostView : Hashable k => Ord k => Ord p => p -> HashPSQ k p v -> (List (k, p, v), HashPSQ k p v)
+atMostView pt (MkHashPSQ t0) =
+  let -- First we use IntPSQ.atMostView to get a collection of buckets that have
+      -- AT LEAST one element with a low priority.  Buckets will usually only
+      -- contain a single element.
+      (buckets, t1) = NatPSQ.atMostView pt t0
+      -- We now need to run through the buckets.  This will give us a list of
+      -- elements to return and a bunch of buckets to re-insert.
+      (returns, reinserts) = go Nil Nil buckets
+      -- Now we can do the re-insertion pass.
+      t2 = foldl
+             (\t, (p, b@(MkBucket k _ _)) => NatPSQ.unsafeInsertNew (cast $ hash k) p b t)
+             t1
+             reinserts
+
+    in (returns, MkHashPSQ t2)
+    where
+      -- We use two accumulators, for returns and re-inserts.
+      go : List (k, p, v) -> List (p, Bucket k p v) -> List (a, p, Bucket k p v) -> (List (k, p, v), List (p, Bucket k p v))
+      go rets reins []                                = (rets, reins)
+      go rets reins ((_, p, MkBucket k v opsq) :: bs) =
+          -- Note that 'elems' should be very small, ideally a null list.
+          let (elems, opsq') = OrdPSQ.atMostView pt opsq
+              rets'          = (k, p, v) :: elems ++ rets
+              reins'         = case toBucket opsq' of
+                                 Nothing      =>
+                                   reins
+                                 Just (p', b) =>
+                                   ((p', b) :: reins)
+            in  go rets' reins' bs
 
 --------------------------------------------------------------------------------
 --          Delete

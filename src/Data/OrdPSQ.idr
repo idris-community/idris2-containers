@@ -241,6 +241,32 @@ minView : Ord k => Ord p => OrdPSQ k p v -> Maybe (k, p, v, OrdPSQ k p v)
 minView Void                        = Nothing
 minView (Winner (MkElem k p v) t m) = Just (k, p, v, secondBest t m)
 
+||| Return a list of elements ordered by key whose priorities are at most pt,
+||| and the rest of the queue stripped of these elements.
+||| The returned list of elements can be in any order: no guarantees there.
+covering
+export
+atMostView : Ord k => Ord p => p -> OrdPSQ k p v -> (List (k, p, v), OrdPSQ k p v)
+atMostView pt = go Nil
+  where
+    go : Ord a => List (a, p, c) -> OrdPSQ a p c -> (List(a, p, c), OrdPSQ a p c)
+    go acc Void                                             = (acc, Void)
+    go acc (Winner (MkElem k p v) Start                 _)  = ((k, p, v) :: acc, Void)
+    go acc (Winner e              (RLoser _ e' tl m tr) m') =
+        let (acc',  t')  = go acc  (Winner e  tl m)
+            (acc'', t'') = go acc' (Winner e' tr m')
+          in (acc'', t' `play` t'')
+    go acc (Winner e              (LLoser _ e' tl m tr) m') =
+        let (acc',  t')  = go acc  (Winner e' tl m)
+            (acc'', t'') = go acc' (Winner e  tr m')
+          in (acc'', t' `play` t'')
+    go acc t@(Winner (MkElem _ p _) _ _)                    =
+      case p > pt of
+        True  =>
+          (acc, t)
+        False =>
+          assert_total $ idris_crash "Data.OrdPSQ.atMostView: impossible case"
+
 --------------------------------------------------------------------------------
 --          Delete/Update
 --------------------------------------------------------------------------------
