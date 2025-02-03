@@ -149,27 +149,42 @@ deleteView k (MkHashPSQ npsq) =
       Nothing
     (Just (p, x), npsq') =>
       Just (p, x, MkHashPSQ npsq')
-{-
+
 ||| Insert a new key, priority and value into the queue. If the key
 ||| is already present in the queue, then the evicted priority and value can be
 ||| found the first element of the returned tuple. O(min(n, W))
+covering
 export
-insertView : Ord p => Nat -> p -> v -> NatPSQ p v -> (Maybe (p, v), NatPSQ p v)
+insertView : Hashable k => Ord k => Ord p => k -> p -> v -> HashPSQ k p v -> (Maybe (p, v), HashPSQ k p v)
 insertView k p x t =
   case deleteView k t of
     Nothing          =>
-      (Nothing,       unsafeInsertNew k p x t)
-    Just (p', v', t') =>
-      (Just (p', v'), unsafeInsertNew k p x t')
+      (Nothing,       insert k p x t)
+    Just (p', x', _) =>
+      (Just (p', x'), insert k p x t)
+
+private
+minV : Ord k => Ord p => Maybe (a, b, Bucket k p v) -> (Maybe (k, b, v), Maybe (a, p, Bucket k p v))
+minV Nothing                        = (Nothing, Nothing)
+minV (Just (h, p, MkBucket k x os)) =
+  case OrdPSQ.minView os of
+    Nothing                =>
+      (Just (k, p, x), Nothing)
+    Just (k', p', x', os') =>
+      (Just (k, p, x), Just (h, p', MkBucket k' x' os'))
 
 ||| Retrieve the binding with the least priority, and the
 ||| rest of the queue stripped of that binding. O(min(n, W))
 export
-minView : Ord p => NatPSQ p v -> Maybe (Nat, p, v, NatPSQ p v)
-minView Nil               = Nothing
-minView (Tip k p x)       = Just (k, p, x, Nil)
-minView (Bin k p x m l r) = Just (k, p, x, merge m l r)
+minView : Hashable k => Ord k => Ord p => HashPSQ k p v -> Maybe (k, p, v, HashPSQ k p v)
+minView (MkHashPSQ npsq) =
+  case NatPSQ.alterMin minV npsq of
+    (Nothing       , _    ) =>
+      Nothing
+    (Just (k, p, x), npsq') =>
+      Just (k, p, x, MkHashPSQ npsq')
 
+{-
 ||| Return a list of elements ordered by key whose priorities are at most @pt@,
 ||| and the rest of the queue stripped of these elements.  The returned list of
 ||| elements can be in any order: no guarantees there.
