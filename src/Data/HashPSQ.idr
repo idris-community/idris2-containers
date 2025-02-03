@@ -223,46 +223,24 @@ atMostView pt (MkHashPSQ t0) =
 --------------------------------------------------------------------------------
 --          Delete
 --------------------------------------------------------------------------------
-{-
 
 ||| Delete a key and its priority and value from the queue.
-||| When the key is not a member of the queue,
-||| the original queue is returned. O(min(n, W))
+||| When the key is not a member of the queue, the original queue is returned. O(min(n, W))
+covering
 export
-delete : Ord p => Nat -> NatPSQ p v -> NatPSQ p v
-delete key = go
-  where
-    go : NatPSQ p v -> NatPSQ p v
-    go t =
-      case t of
-        Nil                =>
-          Nil
-        Tip k' _ _         =>
-          case key == k' of
-            True  =>
-              Nil
-            False =>
-              t
-        Bin k' p' x' m l r =>
-          case noMatch key k' m of
-            True  =>
-              t
-            False =>
-              case key == k' of
-                True  =>
-                  merge m l r
-                False =>
-                  case zero key m of
-                    True  =>
-                      bin k' p' x' m (go l) r
-                    False =>
-                      bin k' p' x' m l      (go r)
+delete : Hashable k => Ord k => Ord p => k -> HashPSQ k p v -> HashPSQ k p v
+delete k t =
+  case deleteView k t of
+    Nothing         =>
+      t
+    Just (_, _, t') =>
+      t'
 
 ||| Delete the binding with the least priority, and return the
 ||| rest of the queue stripped of that binding.
-||| In case the queue is empty, the empty queue is returned again. O(min(n, w))
+||| In case the queue is empty, the empty queue is returned again. O(min(n, W))
 export
-deleteMin : Ord p => NatPSQ p v -> NatPSQ p v
+deleteMin : Hashable k => Ord k => Ord p => HashPSQ k p v -> HashPSQ k p v
 deleteMin t =
   case minView t of
     Nothing            =>
@@ -271,86 +249,66 @@ deleteMin t =
       t'
 
 --------------------------------------------------------------------------------
---          Insertion
---------------------------------------------------------------------------------
-
-||| Insert a new key, priority and value into the queue. If the key
-||| is already present in the queue, the associated priority and value are
-||| replaced with the supplied priority and value. O(min(n, W))
-export
-insert : Ord p => Nat -> p -> v -> NatPSQ p v -> NatPSQ p v
-insert k p x t = unsafeInsertNew k p x (delete k t)
-
---------------------------------------------------------------------------------
 --          Alter
 --------------------------------------------------------------------------------
 
-||| The expression alter f k queue alters the value x at k,
-||| or absence thereof.
-||| alter can be used to insert, delete, or update a value
-||| in a queue.
-||| It also allows you to calculate an additional value b. O(min(n, W))
+||| The expression, alter f k queue, alters the value x at k, or absence thereof.
+||| alter can be used to insert, delete, or update a value in a queue.
+||| It also allows you to calculate an additional value b. O(min(n, w))
+covering
 export
-alter :  Ord p
-      => (Maybe (p, v) -> (b, Maybe (p, v)))
-      -> Nat
-      -> NatPSQ p v
-      -> (b, NatPSQ p v)
-alter f k t =
-  let (t', mbx) = case deleteView k t of
-                    Nothing          =>
-                      (t, Nothing)
-                    Just (p, v, t'') =>
-                      (t'', Just (p, v))
-      (b, mbx') = f mbx
-    in case mbx' of
-         Nothing     =>
-           (b, t')
-         Just (p, v) =>
-           let t'' = unsafeInsertNew k p v t'
-             in (b, t'')
-
+alter : Hashable k => Ord k => Ord p => (Maybe (p, v) -> (b, Maybe (p, v))) -> k -> HashPSQ k p v -> (b, HashPSQ k p v)
+alter f k (MkHashPSQ npsq) =
+  let h = cast $ hash k
+    in case NatPSQ.deleteView h npsq of
+         Nothing =>
+           case f Nothing of
+             (b, Nothing)     =>
+               (b, MkHashPSQ npsq)
+             (b, Just (p, x)) =>
+               (b, MkHashPSQ $ NatPSQ.unsafeInsertNew h p (MkBucket k x OrdPSQ.empty) npsq)
+         Just (bp, MkBucket bk bx opsq, npsq') =>
+           case k == bk of
+             True  =>
+               case f (Just (bp, bx)) of
+                 (b, Nothing) =>
+                   case toBucket opsq of
+                     Nothing             =>
+                       (b, MkHashPSQ npsq')
+                     Just (bp', bucket') =>
+                       (b, MkHashPSQ $ NatPSQ.unsafeInsertNew h bp' bucket' npsq')
+                 (b, Just (p, x)) =>
+                   let (bp', bucket') = mkBucket k p x opsq
+                     in (b, MkHashPSQ $ NatPSQ.unsafeInsertNew h bp' bucket' npsq')
+             False =>
+               let (b, opsq')     = OrdPSQ.alter f k opsq
+                   (bp', bucket') = mkBucket bk bp bx opsq'
+                 in (b, MkHashPSQ $ NatPSQ.unsafeInsertNew h bp' bucket' npsq')
 
 ||| A variant of alter which works on the element with the
-||| minimum priority. Unlike alter,
-||| this variant also allows you to change the
-||| key of the element. O(min(n, W))
+||| minimum priority.
+||| Unlike alter, this variant also allows you to change the key of the element. O(min(n, W))
+covering
 export
-alterMin :  Ord p
-         => (Maybe (Nat, p, v) -> (b, Maybe (Nat, p, v)))
-         -> NatPSQ p v
-         -> (b, NatPSQ p v)
-alterMin f Nil               =
-  case f Nothing of
-    (b, Nothing)           =>
-      (b, Nil)
-    (b, Just (k', p', x')) =>
-      (b, Tip k' p' x')
-alterMin f (Tip k p x)       =
-  case f (Just (k, p, x)) of
-    (b, Nothing)           =>
-      (b, Nil)
-    (b, Just (k', p', x')) =>
-      (b, Tip k' p' x')
-alterMin f (Bin k p x m l r) =
-  case f (Just (k, p, x)) of
-    (b, Nothing)           =>
-      (b, merge m l r)
-    (b, Just (k', p', x')) =>
-      case k  /= k' of
-        True  =>
-          (b, insert k' p' x' (merge m l r))
-        False =>
-          case p' <= p of
-            True  =>
-              (b, Bin k p' x' m l r)
-            False =>
-              (b, unsafeInsertNew k p' x' (merge m l r))
+alterMin : Hashable k => Ord k => Ord p => (Maybe (k, p, v) -> (b, Maybe (k, p, v))) -> HashPSQ k p v -> (b, HashPSQ k p v)
+alterMin f t0 =
+  let (t, mbx)  = case minView t0 of
+                    Nothing             =>
+                      (t0, Nothing)
+                    Just (k, p, x, t0') =>
+                      (t0', Just (k, p, x))
+      (b, mbx') = f mbx
+    in case mbx' of
+         Nothing        =>
+           (b, t)
+         Just (k, p, x) =>
+           (b, insert k p x t)
 
 --------------------------------------------------------------------------------
 --          Traversal
 --------------------------------------------------------------------------------
 
+{-
 ||| Modify every value in the queue. O(n)
 export
 map : (v -> w) -> NatPSQ p v -> NatPSQ p w
