@@ -184,7 +184,7 @@ findMin (Bin k p x _ _ _) = Just (k, p, x)
 
 ||| Delete a key and its priority and value from the queue. If
 ||| the key was present, the associated priority and value are returned in
-||| addition to the updated queue. O(min(n, W)) 
+||| addition to the updated queue. O(min(n, W))
 export
 deleteView : Ord p => Nat -> NatPSQ p v -> Maybe (p, v, NatPSQ p v)
 deleteView k t =

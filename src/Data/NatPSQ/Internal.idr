@@ -46,7 +46,7 @@ natFromBits = cast
 
 private
 bitsFromNat : Size -> Key
-bitsFromNat = cast 
+bitsFromNat = cast
 
 export
 zero : Key -> Mask -> Bool
@@ -64,7 +64,7 @@ noMatch k1 k2 m = natFromBits k1 .&. m' /= natFromBits k2 .&. m'
 
 private
 highestBitMask : Size -> Size
-highestBitMask x1 = 
+highestBitMask x1 =
   let x2 = x1 .|. x1 `shiftR` 1
       x3 = x2 .|. x2 `shiftR` 2
       x4 = x3 .|. x3 `shiftR` 4
