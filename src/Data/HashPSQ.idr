@@ -308,6 +308,16 @@ alterMin f t0 =
 --          Traversal
 --------------------------------------------------------------------------------
 
+||| Modify every value in the queue. O(n)
+export
+map : (v -> w) -> HashPSQ k p v -> HashPSQ k p w
+map f (MkHashPSQ npsq) =
+  MkHashPSQ (NatPSQ.map mapBucket npsq)
+  where
+    mapBucket : Bucket k p v -> Bucket k p w
+    mapBucket (MkBucket k v opsq) =
+      MkBucket k (f v) (OrdPSQ.map (\k', p', v' => f v') opsq)
+
 --------------------------------------------------------------------------------
 --          Conversion
 --------------------------------------------------------------------------------
@@ -338,14 +348,7 @@ keys t = [k | (k, _, _) <- toList t]
 --------------------------------------------------------------------------------
 --          Interfaces
 --------------------------------------------------------------------------------
-{-
-export
-Functor (NatPSQ p) where
-  map = Data.NatPSQ.map
 
 export
-Foldable (NatPSQ p) where
-  foldl = Data.NatPSQ.foldl
-  foldr = Data.NatPSQ.foldr
-  null  = Data.NatPSQ.null
--}
+Functor (HashPSQ k p) where
+  map = Data.HashPSQ.map
