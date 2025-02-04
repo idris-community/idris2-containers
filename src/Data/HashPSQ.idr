@@ -308,89 +308,37 @@ alterMin f t0 =
 --          Traversal
 --------------------------------------------------------------------------------
 
-{-
-||| Modify every value in the queue. O(n)
-export
-map : (v -> w) -> NatPSQ p v -> NatPSQ p w
-map _ Nil               = Nil
-map f (Tip k p x)       = Tip k p (f x)
-map f (Bin k p x m l r) = Bin k p (f x) m (map f l) (map f r)
-
-||| Maps a function over the values and priorities of the queue.
-||| The function f must be monotonic with respect to the priorities.
-||| This means that if x < y, then fst (f k x v) < fst (f k y v).
-||| The precondition is not checked.
-||| If f is not monotonic, then the result
-||| will be invalid. O(n)
-export
-unsafeMapMonotonic : (Key -> p -> v -> (q, w)) -> NatPSQ p v -> NatPSQ q w
-unsafeMapMonotonic f Nil               =
-  Nil
-unsafeMapMonotonic f (Tip k p x)       =
-  let (p', x') = f k p x
-    in Tip k p' x'
-unsafeMapMonotonic f (Bin k p x m l r) =
-  let (p', x') = f k p x
-    in Bin k p' x' m (unsafeMapMonotonic f l) (unsafeMapMonotonic f r)
-
-||| Fold over every key, priority and value in the queue.
-||| The order in which the fold is performed is not specified. O(n)
-export
-fold : (Nat -> p -> v -> a -> a) -> a -> NatPSQ p v -> a
-fold f acc Nil                  =
-  acc
-fold f acc (Tip k' p' x')       =
-  f k' p' x' acc
-fold f acc (Bin k' p' x' m l r) =
-  let acc1 = f k' p' x' acc
-      acc2 = fold f acc1 l
-      acc3 = fold f acc2 r
-    in acc3
-
-export
-foldl : (acc -> v -> acc) -> acc -> NatPSQ p v -> acc
-foldl f acc Nil               =
-  acc
-foldl f acc (Tip _ _ v)       =
-  f acc v
-foldl f acc (Bin _ _ v _ l r) =
-  foldl f (foldl f (f acc v) l) r
-
-export
-foldr : (v -> acc -> acc) -> acc -> NatPSQ p v -> acc
-foldr f acc Nil               =
-  acc
-foldr f acc (Tip _ _ v)       =
-  f v acc
-foldr f acc (Bin _ _ v _ l r) =
-  foldr f (f v (foldr f acc r)) l
-
-
 --------------------------------------------------------------------------------
 --          Conversion
 --------------------------------------------------------------------------------
 
 ||| Build a queue from a list of (key, priority, value) tuples.
 ||| If the list contains more than one priority and value for the same key, the
-||| last priority and value for the key is retained. O(n * min(n, W))
+||| last priority and value for the key is retained. O(min(n, W))
 covering
 export
-fromList : Ord p => List (Nat, p, v) -> NatPSQ p v
-fromList = foldl (\im, (k, p, x) => insert k p x im) empty
+fromList : Hashable k => Ord k => Ord p => List (k, p, v) -> HashPSQ k p v
+fromList = foldl (\psq, (k, p, x) => insert k p x psq) empty
 
-||| Convert a queue to a list of (key, priority, value) tuples.
-||| The order of the list is not specified. O(n)
+||| Convert a queue to a list of (key, priority, value) tuples. The
+||| order of the list is not specified. O(n)
 export
-toList : NatPSQ p v -> List (Nat, p, v)
-toList Nil               = Nil
-toList (Tip k p v)       = [(k, p, v)]
-toList (Bin k p v _ l r) =
-  (k, p, v) :: toList l ++ toList r
+toList : Hashable k => Ord k => Ord p => HashPSQ k p v -> List (k, p, v)
+toList (MkHashPSQ npsq) =
+    [ (k', p', x')
+    | (_, p, (MkBucket k x opsq)) <- NatPSQ.toList npsq
+    , (k', p', x')                <- (k, p, x) :: OrdPSQ.toList opsq
+    ]
+
+||| Obtain the list of present keys in the queue. O(n)
+export
+keys : Hashable k => Ord k => Ord p => HashPSQ k p v -> List k
+keys t = [k | (k, _, _) <- toList t]
 
 --------------------------------------------------------------------------------
 --          Interfaces
 --------------------------------------------------------------------------------
-
+{-
 export
 Functor (NatPSQ p) where
   map = Data.NatPSQ.map
