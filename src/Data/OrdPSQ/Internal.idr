@@ -72,7 +72,7 @@ public export
 Show k => Show p => Show v => Show (LTree k p v) where
   show Start              = "Start"
   show (LLoser s e l m r) = "LLoser " ++
-                            "("       ++ 
+                            "("       ++
                             (show s)  ++
                             " "       ++
                             (show e)  ++
