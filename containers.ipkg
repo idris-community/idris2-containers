@@ -14,6 +14,8 @@ modules = Data.BoundedQueue
         , Data.FVect.Capacity
         , Data.HashPSQ
         , Data.HashPSQ.Internal
+        , Data.LRUCache
+        , Data.LRUCache.Internal
         , Data.Map
         , Data.Map.Internal
         , Data.NatPSQ
