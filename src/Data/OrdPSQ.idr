@@ -40,7 +40,6 @@ size (Winner _ lt _) = 1 + size' lt
 
 ||| The priority and value of a given key, or Nothing
 ||| if the key is not bound. O(log n)
-covering
 export
 lookup : Ord k => k -> OrdPSQ k p v -> Maybe (p, v)
 lookup key = go
@@ -59,12 +58,11 @@ lookup key = go
         Play tl tr             =>
           case key <= maxKey tl of
             True  =>
-              go tl
+              go (assert_smaller t tl)
             False =>
-              go tr
+              go (assert_smaller t tr)
 
 ||| Check if a key is present in the queue. O(log n)
-covering
 export
 member : Ord k => k -> OrdPSQ k p v -> Bool
 member k = isJust . lookup k
@@ -83,7 +81,6 @@ findMin (Winner (MkElem k p v) _ _) = Just (k, p, v)
 ||| If the key is already present in the queue, the associated
 ||| priority and value are replaced with the supplied priority
 ||| and value. O(log n)
-covering
 export
 insert : Ord k => Ord p => k -> p -> v -> OrdPSQ k p v -> OrdPSQ k p v
 insert key priority value = go
@@ -104,15 +101,15 @@ insert key priority value = go
         Winner e (RLoser _ e' tl m tr) m'  =>
           case key <= m of
             True  =>
-              go (Winner e tl m) `play` (Winner e' tr m')
+              go (assert_smaller t (Winner e tl m)) `play` (Winner e' tr m')
             False =>
-              (Winner e tl m) `play` go (Winner e' tr m')
+              (Winner e tl m) `play` go (assert_smaller t (Winner e' tr m'))
         Winner e (LLoser _ e' tl m tr) m'  =>
           case key <= m of
             True  =>
-              go (Winner e' tl m) `play` (Winner e tr m')
+              go (assert_smaller t (Winner e' tl m)) `play` (Winner e tr m')
             False =>
-              (Winner e' tl m) `play` go (Winner e tr m')
+              (Winner e' tl m) `play` go (assert_smaller t (Winner e tr m'))
 
 --------------------------------------------------------------------------------
 --          Traversals
@@ -188,7 +185,6 @@ foldl f z (Winner e l _) = Prelude.foldl f (Data.OrdPSQ.Internal.LTree.foldl f z
 ||| Delete a key and its priority and value from the queue.
 ||| If the key was present, the associated priority and value are returned in addition
 ||| to the updated queue. O(log n)
-covering
 export
 deleteView : Ord k => Ord p => k -> OrdPSQ k p v -> Maybe (p, v, OrdPSQ k p v)
 deleteView k psq =
@@ -204,21 +200,20 @@ deleteView k psq =
     Winner e (RLoser _ e' tl m tr) m'  =>
       case k <= m of
         True  =>
-          map (\(p, v, q) => (p, v,  q `play` (Winner e' tr m'))) (deleteView k (Winner e tl m))
+          map (\(p, v, q) => (p, v,  q `play` (Winner e' tr m'))) (deleteView k (assert_smaller psq (Winner e tl m)))
         False =>
-          map (\(p, v, q) => (p, v,  (Winner e tl m) `play` q)) (deleteView k (Winner e' tr m'))
+          map (\(p, v, q) => (p, v,  (Winner e tl m) `play` q)) (deleteView k (assert_smaller psq (Winner e' tr m')))
     Winner e (LLoser _ e' tl m tr) m'  =>
       case k <= m of
         True  =>
-          map (\(p, v, q) => (p, v, q `play` (Winner e tr m'))) (deleteView k (Winner e' tl m))
+          map (\(p, v, q) => (p, v, q `play` (Winner e tr m'))) (deleteView k (assert_smaller psq (Winner e' tl m)))
         False =>
-          map (\(p, v, q) => (p, v, (Winner e' tl m) `play` q)) (deleteView k (Winner e tr m'))
+          map (\(p, v, q) => (p, v, (Winner e' tl m) `play` q)) (deleteView k (assert_smaller psq (Winner e tr m')))
 
 ||| Insert a new key, priority and value into the queue.
 ||| If the key is already present in the queue,
 ||| then the evicted priority and value can be
 ||| found the first element of the returned tuple. O(log n)
-covering
 export
 insertView : Ord k => Ord p => k -> p -> v -> OrdPSQ k p v -> (Maybe (p, v), OrdPSQ k p v)
 insertView k p x t =
@@ -244,28 +239,29 @@ minView (Winner (MkElem k p v) t m) = Just (k, p, v, secondBest t m)
 ||| Return a list of elements ordered by key whose priorities are at most pt,
 ||| and the rest of the queue stripped of these elements.
 ||| The returned list of elements can be in any order: no guarantees there.
-covering
 export
 atMostView : Ord k => Ord p => p -> OrdPSQ k p v -> (List (k, p, v), OrdPSQ k p v)
 atMostView pt = go Nil
   where
     go : Ord a => List (a, p, c) -> OrdPSQ a p c -> (List(a, p, c), OrdPSQ a p c)
-    go acc Void                                             = (acc, Void)
-    go acc (Winner (MkElem k p v) Start                 _)  = ((k, p, v) :: acc, Void)
-    go acc (Winner e              (RLoser _ e' tl m tr) m') =
-        let (acc',  t')  = go acc  (Winner e  tl m)
-            (acc'', t'') = go acc' (Winner e' tr m')
-          in (acc'', t' `play` t'')
-    go acc (Winner e              (LLoser _ e' tl m tr) m') =
-        let (acc',  t')  = go acc  (Winner e' tl m)
-            (acc'', t'') = go acc' (Winner e  tr m')
-          in (acc'', t' `play` t'')
-    go acc t@(Winner (MkElem _ p _) _ _)                    =
-      case p > pt of
-        True  =>
-          (acc, t)
-        False =>
-          assert_total $ idris_crash "Data.OrdPSQ.atMostView: impossible case"
+    go acc psq =
+      case psq of
+        Void                                             => (acc, Void)
+        (Winner (MkElem k p v) Start                 _)  => ((k, p, v) :: acc, Void)
+        (Winner e              (RLoser _ e' tl m tr) m') =>
+          let (acc',  t')  = go acc  (assert_smaller psq (Winner e  tl m))
+              (acc'', t'') = go acc' (assert_smaller psq (Winner e' tr m'))
+            in (acc'', t' `play` t'')
+        (Winner e              (LLoser _ e' tl m tr) m') =>
+          let (acc',  t')  = go acc  (assert_smaller psq (Winner e' tl m))
+              (acc'', t'') = go acc' (assert_smaller psq (Winner e  tr m'))
+            in (acc'', t' `play` t'')
+        t@(Winner (MkElem _ p _) _ _)                    =>
+          case p > pt of
+            True  =>
+              (acc, t)
+            False =>
+              assert_total $ idris_crash "Data.OrdPSQ.atMostView: impossible case"
 
 --------------------------------------------------------------------------------
 --          Delete/Update
@@ -274,7 +270,6 @@ atMostView pt = go Nil
 ||| Delete a key, its priority, and its value from the queue.
 ||| When the key is not a member of the queue,
 ||| the original queue is returned. O(log n)
-covering
 export
 delete : Ord k => Ord p => k -> OrdPSQ k p v -> OrdPSQ k p v
 delete key = go
@@ -293,15 +288,15 @@ delete key = go
         Winner e (RLoser _ e' tl m tr) m'  =>
           case key <= m of
             True  =>
-              go (Winner e tl m) `play` (Winner e' tr m')
+              go (assert_smaller t (Winner e tl m)) `play` (Winner e' tr m')
             False =>
-              (Winner e tl m) `play` go (Winner e' tr m')
+              (Winner e tl m) `play` go (assert_smaller t (Winner e' tr m'))
         Winner e (LLoser _ e' tl m tr) m'  =>
           case key <= m of
             True  =>
-              go (Winner e' tl m) `play` (Winner e tr m')
+              go (assert_smaller t (Winner e' tl m)) `play` (Winner e tr m')
             False =>
-              (Winner e' tl m) `play` go (Winner e tr m')
+              (Winner e' tl m) `play` go (assert_smaller t (Winner e tr m'))
 
 ||| Delete the binding with the least priority, and return the
 ||| rest of the queue stripped of that binding.
@@ -319,7 +314,6 @@ deleteMin t =
 ||| absence thereof.
 ||| alter can be used to insert, delete, or update a value in a queue.
 ||| It also allows you to calculate an additional value b. O(log n)
-covering
 export
 alter : Ord k => Ord p => (Maybe (p, v) -> (b, Maybe (p, v))) -> k -> OrdPSQ k p v -> (b, OrdPSQ k p v)
 alter f k psq =
@@ -337,7 +331,6 @@ alter f k psq =
 
 ||| A variant of alter which works on the element with the minimum priority.
 ||| Unlike alter, this variant also allows you to change the key of the element. O(log n)
-covering
 export
 alterMin : Ord k => Ord p => (Maybe (k, p, v) -> (b, Maybe (k, p, v))) -> OrdPSQ k p v -> (b, OrdPSQ k p v)
 alterMin f psq =
@@ -360,7 +353,6 @@ alterMin f psq =
 ||| Build a queue from a list of (key, priority, value) tuples.
 ||| If the list contains more than one priority and value for the same key, the
 ||| last priority and value for the key is retained. O(n * log n)
-covering
 export
 fromList : Ord k => Ord p => List (k, p, v) -> OrdPSQ k p v
 fromList = foldl (\q, (k, p, v) => insert k p v q) empty
