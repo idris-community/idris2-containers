@@ -40,7 +40,6 @@ toBucket opsq =
 
 ||| Smart constructor which takes care of placing the minimum element directly
 ||| in the Bucket.
-covering
 export
 mkBucket : Ord k => Ord p => k -> p -> v -> OrdPSQI.OrdPSQ k p v -> (p, Bucket k p v)
 mkBucket k p x opsq =

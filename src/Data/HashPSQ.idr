@@ -16,7 +16,6 @@ import Data.Maybe
 --          Insertion
 --------------------------------------------------------------------------------
 
-covering
 private
 ins : Eq k => Ord k => Ord p => k -> p -> v -> Maybe (p, Bucket k p v) -> Maybe (p, Bucket k p v)
 ins k p v Nothing                        = Just (p, MkBucket k v (OrdPSQ.empty))
@@ -42,7 +41,6 @@ ins k p v (Just (p', MkBucket k' v' os)) =
 ||| If the key is already present in the queue,
 ||| the associated priority and value are
 ||| replaced with the supplied priority and value. O(min(n, W))
-covering
 export
 insert : Hashable k => Ord k => Ord p => k -> p -> v -> HashPSQ k p v -> HashPSQ k p v
 insert k p v (MkHashPSQ npsq) =
@@ -60,7 +58,6 @@ empty : HashPSQ k p v
 empty = MkHashPSQ NatPSQ.empty
 
 ||| Build a queue with one element. O(1)
-covering
 export
 singleton : Hashable k => Ord k => Ord p => k -> p -> v -> HashPSQ k p v
 singleton k p v = Data.HashPSQ.insert k p v empty
@@ -84,7 +81,6 @@ size (MkHashPSQ npsq) =
 
 ||| The priority and value of a given key, or Nothing if the
 ||| key is not bound. O(min(n ,W))
-covering
 export
 lookup : Hashable k => Ord k => Ord p => k -> HashPSQ k p v -> Maybe (p, v)
 lookup k (MkHashPSQ npsq) =
@@ -118,7 +114,6 @@ findMin (MkHashPSQ npsq) =
 --          Views
 --------------------------------------------------------------------------------
 
-covering
 private
 deleteV : Eq k => Ord k => Ord p => k -> Maybe (p, Bucket k p v) -> (Maybe (p, v), Maybe (p, Bucket k p v))
 deleteV _ Nothing                         = (Nothing, Nothing)
@@ -140,7 +135,6 @@ deleteV k (Just (p, MkBucket bk bx opsq)) =
 ||| Delete a key and its priority and value from the queue. If
 ||| the key was present, the associated priority and value are returned in
 ||| addition to the updated queue. O(min(n, W))
-covering
 export
 deleteView : Hashable k => Ord k => Ord p => k -> HashPSQ k p v -> Maybe (p, v, HashPSQ k p v)
 deleteView k (MkHashPSQ npsq) =
@@ -153,7 +147,6 @@ deleteView k (MkHashPSQ npsq) =
 ||| Insert a new key, priority and value into the queue. If the key
 ||| is already present in the queue, then the evicted priority and value can be
 ||| found the first element of the returned tuple. O(min(n, W))
-covering
 export
 insertView : Hashable k => Ord k => Ord p => k -> p -> v -> HashPSQ k p v -> (Maybe (p, v), HashPSQ k p v)
 insertView k p x t =
@@ -187,11 +180,10 @@ minView (MkHashPSQ npsq) =
 ||| Return a list of elements ordered by key whose priorities are at most pt,
 ||| and the rest of the queue stripped of these elements.
 ||| The returned list of elements can be in any order: no guarantees there.
-covering
 export
 atMostView : Hashable k => Ord k => Ord p => p -> HashPSQ k p v -> (List (k, p, v), HashPSQ k p v)
 atMostView pt (MkHashPSQ t0) =
-  let -- First we use IntPSQ.atMostView to get a collection of buckets that have
+  let -- First we use NatPSQ.atMostView to get a collection of buckets that have
       -- AT LEAST one element with a low priority.  Buckets will usually only
       -- contain a single element.
       (buckets, t1) = NatPSQ.atMostView pt t0
@@ -226,7 +218,6 @@ atMostView pt (MkHashPSQ t0) =
 
 ||| Delete a key and its priority and value from the queue.
 ||| When the key is not a member of the queue, the original queue is returned. O(min(n, W))
-covering
 export
 delete : Hashable k => Ord k => Ord p => k -> HashPSQ k p v -> HashPSQ k p v
 delete k t =
@@ -255,7 +246,6 @@ deleteMin t =
 ||| The expression, alter f k queue, alters the value x at k, or absence thereof.
 ||| alter can be used to insert, delete, or update a value in a queue.
 ||| It also allows you to calculate an additional value b. O(min(n, w))
-covering
 export
 alter : Hashable k => Ord k => Ord p => (Maybe (p, v) -> (b, Maybe (p, v))) -> k -> HashPSQ k p v -> (b, HashPSQ k p v)
 alter f k (MkHashPSQ npsq) =
@@ -288,7 +278,6 @@ alter f k (MkHashPSQ npsq) =
 ||| A variant of alter which works on the element with the
 ||| minimum priority.
 ||| Unlike alter, this variant also allows you to change the key of the element. O(min(n, W))
-covering
 export
 alterMin : Hashable k => Ord k => Ord p => (Maybe (k, p, v) -> (b, Maybe (k, p, v))) -> HashPSQ k p v -> (b, HashPSQ k p v)
 alterMin f t0 =
@@ -325,7 +314,6 @@ map f (MkHashPSQ npsq) =
 ||| Build a queue from a list of (key, priority, value) tuples.
 ||| If the list contains more than one priority and value for the same key, the
 ||| last priority and value for the key is retained. O(min(n, W))
-covering
 export
 fromList : Hashable k => Ord k => Ord p => List (k, p, v) -> HashPSQ k p v
 fromList = foldl (\psq, (k, p, x) => insert k p x psq) empty

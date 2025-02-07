@@ -454,7 +454,6 @@ foldr f acc (Bin _ _ v _ l r) =
 ||| Build a queue from a list of (key, priority, value) tuples.
 ||| If the list contains more than one priority and value for the same key, the
 ||| last priority and value for the key is retained. O(n * min(n, W))
-covering
 export
 fromList : Ord p => List (Nat, p, v) -> NatPSQ p v
 fromList = foldl (\im, (k, p, x) => insert k p x im) empty

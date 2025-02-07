@@ -58,7 +58,6 @@ trim cache@(MkLRUCache c s t q) =
       cache
 
 ||| Insert an element into the LRUCache.
-covering
 export
 insert : Hashable k => Ord k => k -> v -> LRUCache k v -> LRUCache k v
 insert key val (MkLRUCache c s t q) =
@@ -102,7 +101,6 @@ trim' cache@(MkLRUCache c s t q) =
 ||| Insert an element into the LRUCache returning the evicted element if any.
 ||| When the logical clock reaches its maximum value and all values are
 ||| evicted Nothing is returned.
-covering
 export
 insertView : Hashable k => Ord k => k -> v -> LRUCache k v -> (Maybe (k, v), LRUCache k v)
 insertView key val (MkLRUCache c s t q) =
@@ -126,7 +124,6 @@ insertView key val (MkLRUCache c s t q) =
 --------------------------------------------------------------------------------
 
 ||| Lookup an element in an LRUCache and mark it as the least recently accessed.
-covering
 export
 lookup : Hashable k => Ord k => k -> LRUCache k v -> Maybe (v, LRUCache k v)
 lookup k cache@(MkLRUCache c s t q) =
