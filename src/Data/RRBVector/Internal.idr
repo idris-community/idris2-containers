@@ -183,14 +183,14 @@ computeSizes sh arr =
     True  =>
       Balanced arr
     False =>
-      let arrnat = unsafeCreate arr.size (loop sh 0 0 arr.size (toList arr))
+      let arrnat = unsafeAlloc arr.size (loop sh 0 0 arr.size (toList arr))
         in Unbalanced arr arrnat
   where
     loop :  (sh,cur,acc,n : Nat)
          -> List (Tree a)
-         -> FromMArray n Nat (Array Nat)
+         -> WithMArray n Nat (Array Nat)
     loop sh _   acc n []        r = T1.do
-      res <- freeze r
+      res <- unsafeFreeze r
       pure $ A n res
     loop sh cur acc n (x :: xs) r =
       case tryNatToFin cur of

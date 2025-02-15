@@ -64,7 +64,7 @@ fromList xs  =
   where
     nodes : (Array a -> Tree a) -> List a -> List (Tree a)
     nodes f trees =
-      let (trees', rest) = unsafeCreate blocksize (go 0 blocksize f trees)
+      let (trees', rest) = unsafeAlloc blocksize (go 0 blocksize f trees)
         in case rest of
              []    =>
                [trees']
@@ -74,14 +74,14 @@ fromList xs  =
         go :  (cur,n : Nat)
            -> (Array a -> Tree a)
            -> List a
-           -> FromMArray n a (Tree a,List a)
+           -> WithMArray n a (Tree a,List a)
         go cur n f []        r = T1.do
-          res <- freeze r
+          res <- unsafeFreeze r
           pure $ (f $ force $ take cur $ A n res,[])
         go cur n f (x :: xs) r =
           case cur == n of
             True  => T1.do
-              res <- freeze r
+              res <- unsafeFreeze r
               pure $ (f $ A n res, x :: xs)
             False =>
               case tryNatToFin cur of
@@ -92,7 +92,7 @@ fromList xs  =
                   go (S cur) n f xs r
     nodes' : (Array (Tree a) -> Tree a) -> List (Tree a) -> List (Tree a)
     nodes' f trees =
-      let (trees', rest) = unsafeCreate blocksize (go 0 blocksize f trees)
+      let (trees', rest) = unsafeAlloc blocksize (go 0 blocksize f trees)
         in case rest of
              []    =>
                [trees']
@@ -102,14 +102,14 @@ fromList xs  =
         go :  (cur,n : Nat)
            -> (Array (Tree a) -> Tree a)
            -> List (Tree a)
-           -> FromMArray n (Tree a) (Tree a,List (Tree a))
+           -> WithMArray n (Tree a) (Tree a,List (Tree a))
         go cur n f []        r = T1.do
-          res <- freeze r
+          res <- unsafeFreeze r
           pure $ (f $ force $ take cur $ A n res,[])
         go cur n f (x :: xs) r =
           case cur == n of
             True  => T1.do
-              res <- freeze r
+              res <- unsafeFreeze r
               pure $ (f $ A n res, x :: xs)
             False =>
               case tryNatToFin cur of
