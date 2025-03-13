@@ -1,10 +1,7 @@
-|| RRB Vector Internals
+||| RRB Vector Internals
 module Data.RRBVector.Internal
 
---import Data.Array
 import Data.Array.Core
---import Data.Array.Index
---import Data.Array.Indexed
 import Data.Array.Mutable
 import Data.Bits
 import Data.List
@@ -16,6 +13,7 @@ import Derive.Prelude
 import Syntax.T1 as T1
 
 %default total
+%hide Data.Vect.Quantifiers.All.get
 %language ElabReflection
 
 --------------------------------------------------------------------------------
@@ -60,59 +58,62 @@ down :  Shift
      -> Shift
 down sh = minus sh blockshift
 
---export
---radixIndex :  Nat
---           -> Shift
---           -> Nat
---radixIndex i sh = integerToNat ((natToInteger i) `shiftR` sh .&. (natToInteger blockmask))
+export
+radixIndex :  Nat
+           -> Shift
+           -> Nat
+radixIndex i sh = integerToNat ((natToInteger i) `shiftR` sh .&. (natToInteger blockmask))
 
 export
 relaxedRadixIndex :  {n : _}
-                  -> MArray n Nat
+                  -> MArray s n Nat
                   -> Nat
                   -> Shift
-                  -> (Nat, Nat)
-relaxedRadixIndex sizes i sh =
-  run1 $ \t =>
-    let guess  # t := radixIndex i sh t
-        idx    # t := loop sizes (minus n 1) guess t
-        subidx # t := toSubIdx sizes idx t
-      in (idx, subidx) # t
+                  -> F1 s (Nat, Nat)
+relaxedRadixIndex sizes i sh t =
+  let guess      := radixIndex i sh
+      idx    # t := loop sizes guess t
+      subidx # t := toSubIdx sizes idx t
+    in (idx, subidx) # t
   where
-    toSubIdx :  (sizes : MArray n Nat)
+    toSubIdx :  (sizes : MArray s n Nat)
              -> (idx : Nat)
-             -> {0 rs : Resources}
-             -> {auto 0 p : Res sizes rs}
-             -> {auto 0 _ : LT (minus idx 1) n}
-             -> F1 rs Nat
+             -> F1 s Nat
     toSubIdx sizes Z   t = i # t
     toSubIdx sizes idx t =
-      let idx' # t := getNat sizes (minus idx 1) t
-        in minus i idx' # t
-    radixIndex :  Nat
-               -> Shift
-               -> F1 [Nat] Nat
-    radixIndex i sh t = 
-      let radixindex # t := integerToNat ((natToInteger i) `shiftR` sh .&. (natToInteger blockmask))
-        in radixindex # t
-    loop :  (sizes : MArray n Nat)
-         -> (n', idx : Nat)
-         -> {0 rs : Resources}
-         -> {auto 0 p : Res sizes rs}
-         -> {auto 0 _ : LT idx n}
-         -> {auto 0 _ : LTE (S n') n}
-         -> F1 rs Nat
-    loop sizes (S n') idx t =
-      case n' < idx of
+      case idx == 0 of
         True  =>
-          idx # t
+          i # t
         False =>
-          let current # t := getNat sizes n' t
+          let idx' := tryNatToFin $ minus idx 1
+            in case idx' of
+                 Nothing    =>
+                   (assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex: index out of bounds") # t
+                 Just idx'' =>
+                   let idx''' # t := get sizes idx'' t
+                     in minus i idx''' # t
+    loop :  (sizes : MArray s n Nat)
+         -> (idx : Nat)
+         -> F1 s Nat
+    loop size idx t =
+      case tryNatToFin idx of
+        Nothing   =>
+          (assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex.loop: index out of bounds") # t
+        Just idx' =>
+          let current # t := get sizes idx' t
             in case i < current of
                  True  =>
-                   n' # t
+                   idx # t
                  False =>
-                   loop sizes n' idx t
+                   loop sizes (plus idx 1) t
+
+
+          --let current # t := getNat sizes n' t
+          --  in case i < current of
+          --       True  =>
+          --         n' # t
+          --       False =>
+          --         loop sizes n' idx t
     {-
     loop :  Nat
          -> F1 [MArray n Nat] Nat
@@ -145,9 +146,9 @@ relaxedRadixIndex sizes i sh =
 ||| An internal tree representation.
 public export
 data Tree : (bsize : Nat) -> (usize : Nat) -> (lsize : Nat) -> Type -> Type where
-  Balanced   : MArray bsize (Tree bsize usize lsize a) -> Tree bsize usize lsize a
-  Unbalanced : MArray usize (Tree bsize usize lsize a) -> MArray usize Nat -> Tree bsize usize lsize a
-  Leaf       : MArray lsize a -> Tree bsize usize lsize a
+  Balanced   : MArray s bsize (Tree bsize usize lsize a) -> Tree bsize usize lsize a
+  Unbalanced : MArray s usize (Tree bsize usize lsize a) -> MArray s usize Nat -> Tree bsize usize lsize a
+  Leaf       : MArray s lsize a -> Tree bsize usize lsize a
 
 --public export
 --Eq a => Eq (Tree bsize usize lsize a) where
@@ -199,15 +200,15 @@ showTreeRep (Leaf elems)         =
 
 export
 singleton :  a
-          -> (1 t : T1 rs)
-          -> Res1 (MArray 1 a) (\x => x::rs)
+          -> F1 s (MArray s 1 a)
 singleton x t =
-  newMArray 1 x t
+  let arr # t := marray1 1 x t 
+    in arr # t
 
 export
 treeToArray :  Tree bsize usize lsize a
-            -> Either (MArray bsize (Tree bsize usize lsize a))
-                      (MArray usize (Tree bsize usize lsize a))
+            -> Either (MArray s bsize (Tree bsize usize lsize a))
+                      (MArray s usize (Tree bsize usize lsize a))
 treeToArray (Balanced arr)     = Left arr
 treeToArray (Unbalanced arr _) = Right arr
 treeToArray (Leaf _)           = assert_total $ idris_crash "Data.RRBVector.Internal.treeToArray: leaf"
