@@ -107,31 +107,6 @@ relaxedRadixIndex sizes i sh t =
                  False =>
                    loop sizes (plus idx 1) t
 
-
-          --let current # t := getNat sizes n' t
-          --  in case i < current of
-          --       True  =>
-          --         n' # t
-          --       False =>
-          --         loop sizes n' idx t
-    {-
-    loop :  Nat
-         -> F1 [MArray n Nat] Nat
-    loop idx t =
-      let current # t := getNat sizes 
-      let current # t := case tryNatToFin idx of
-                           Nothing   =>
-                             assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex.loop: index out of bounds"
-                           Just idx' =>
-                             --at sizes.arr idx' -- idx will always be in range for a well-formed tree
-                             get sizes idx' t -- idx will always be in range for a well-formed tree
-        in case i < current of
-             True  =>
-               idx # t
-             False =>
-               assert_total $ loop (plus idx 1) # t
-  -}
-
 --------------------------------------------------------------------------------
 --          Internal Tree Representation
 --------------------------------------------------------------------------------
