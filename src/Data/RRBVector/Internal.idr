@@ -120,10 +120,10 @@ relaxedRadixIndex sizes i sh t =
 
 ||| An internal tree representation.
 public export
-data Tree : (bsize : Nat) -> (usize : Nat) -> (lsize : Nat) -> Type -> Type where
-  Balanced   : MArray s bsize (Tree bsize usize lsize a) -> Tree bsize usize lsize a
-  Unbalanced : MArray s usize (Tree bsize usize lsize a) -> MArray s usize Nat -> Tree bsize usize lsize a
-  Leaf       : MArray s lsize a -> Tree bsize usize lsize a
+data Tree : (s : Type) -> (bsize : Nat) -> (usize : Nat) -> (lsize : Nat) -> Type -> Type where
+  Balanced   : MArray s bsize (Tree s bsize usize lsize a) -> Tree s bsize usize lsize a
+  Unbalanced : MArray s usize (Tree s bsize usize lsize a) -> MArray s usize Nat -> Tree s bsize usize lsize a
+  Leaf       : MArray s lsize a -> Tree s bsize usize lsize a
 
 --public export
 --Eq a => Eq (Tree bsize usize lsize a) where
@@ -181,15 +181,15 @@ singleton x t =
     in arr # t
 
 export
-treeToArray :  Tree bsize usize lsize a
-            -> Either (MArray s bsize (Tree bsize usize lsize a))
-                      (MArray s usize (Tree bsize usize lsize a))
+treeToArray :  Tree s bsize usize lsize a
+            -> Either (MArray s bsize (Tree s bsize usize lsize a))
+                      (MArray s usize (Tree s bsize usize lsize a))
 treeToArray (Balanced arr)     = Left arr
 treeToArray (Unbalanced arr _) = Right arr
 treeToArray (Leaf _)           = assert_total $ idris_crash "Data.RRBVector.Internal.treeToArray: leaf"
 
 export
-treeBalanced :  Tree bsize usize lsize a
+treeBalanced :  Tree s bsize usize lsize a
              -> Bool
 treeBalanced (Balanced _)     = True
 treeBalanced (Unbalanced _ _) = False
@@ -197,31 +197,44 @@ treeBalanced (Leaf _)         = True
 
 ||| Computes the size of a tree with shift.
 export
-treeSize :  Shift
-         -> Tree bsize usize lsize a
-         -> Nat
-treeSize = go 0
+treeSize :  {bsize : _}
+         -> {usize : _}
+         -> {lsize : _}
+         -> Shift
+         -> Tree s bsize usize lsize a
+         -> F1 s Nat
+treeSize t =
+  go 0 t
   where
-    go : Shift -> Shift -> Tree a -> Nat
-    go acc _  (Leaf arr)             =
-      plus acc lsize
-    go acc _  (Unbalanced arr sizes) =
-      let i = case tryNatToFin $ minus usize 1 of
-                Nothing =>
-                  assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds"
-                Just i' =>
-                  i'
-        in plus acc (at sizes.arr i)
-    go acc sh (Balanced arr)         =
-      let i  = minus bsize 1
-          i' = case tryNatToFin i of
-                 Nothing  =>
-                   assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds"
-                 Just i'' =>
-                   i''
-        in go (plus acc (mult i (integerToNat (1 `shiftL` sh))))
-              (down sh)
-              (assert_smaller arr (at arr.arr i'))
+    go :  {bsize : _}
+       -> {usize : _}
+       -> {lsize : _}
+       -> Shift
+       -> Shift
+       -> Tree s bsize usize lsize a
+       -> F1 s Nat
+    go acc _ (Leaf arr)             t =
+      plus acc lsize # t
+    go acc _ (Unbalanced arr sizes) t =
+      let i := tryNatToFin $ minus usize 1
+        in case i of
+             Nothing =>
+               (assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds") # t
+             Just i' =>
+               let i'' # t := get sizes i' t
+                 in plus acc i'' # t
+    go acc sh (Balanced arr) t =
+      let i  := minus bsize 1
+          i' := tryNatToFin i
+        in case i' of
+             Nothing  =>
+               (assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds") # t
+             Just i'' =>
+               let i''' # t := get arr i'' t
+                 in go (plus acc (mult i (integerToNat (1 `shiftL` sh))))
+                       (down sh)
+                       i'''
+                       t
 
 ||| Turns an array into a tree node by computing the sizes of its subtrees.
 ||| sh is the shift of the resulting tree.
