@@ -2,6 +2,7 @@
 module Data.RRBVector.Internal
 
 import Data.Array.Core
+import Data.Array.Indexed
 import Data.Array.Mutable
 import Data.Bits
 import Data.List
@@ -10,7 +11,6 @@ import Data.Linear.Token
 import Data.Nat
 import Data.String
 import Derive.Prelude
-import Syntax.T1 as T1
 
 %default total
 %hide Data.Vect.Quantifiers.All.get
@@ -125,12 +125,47 @@ data Tree : (s : Type) -> (bsize : Nat) -> (usize : Nat) -> (lsize : Nat) -> Typ
   Unbalanced : MArray s usize (Tree s bsize usize lsize a) -> MArray s usize Nat -> Tree s bsize usize lsize a
   Leaf       : MArray s lsize a -> Tree s bsize usize lsize a
 
---public export
---Eq a => Eq (Tree bsize usize lsize a) where
---  (Balanced x)      == (Balanced y)      = assert_total $ heq x.arr y.arr
---  (Unbalanced x x') == (Unbalanced y y') = assert_total $ heq x.arr y.arr && heq x'.arr y'.arr
---  (Leaf x)          == (Leaf y)          = heq x.arr y.arr
---  _                 == _                 = False
+public export
+Eq a => Eq (Tree s bsize usize lsize a) where
+  (Balanced x)      == (Balanced y)      = do
+    xi <-
+      run1 $ \t =>    
+        let xi # t := freeze x t
+          in xi # t
+    yi <-
+      run1 $ \t =>
+        let yi # t := freeze y t
+          in yi # t
+    assert_total $ heq xi.arr yi.arr
+  (Unbalanced x x') == (Unbalanced y y') = do
+    xi <-
+      run1 $ \t =>
+        let xi # t := freeze x t
+          in xi # t
+    yi <-
+      run1 $ \t =>
+        let yi # t := freeze y t
+          in yi # t
+    x'i <-
+      run1 $ \t =>
+        let x'i # t := freeze x' t
+          in x'i # t
+    y'i <-
+      run1 $ \t =>
+        let y'i # t := freeze y' t
+          in y'i # t
+    assert_total $ heq xi.arr yi.arr && heq x'i.arr y'i.arr
+  (Leaf x)          == (Leaf y)          = do 
+    xi <-
+      run1 $ \t =>
+        let xi # t := freeze x t
+          in xi # t
+    yi <-
+      run1 $ \t =>
+        let yi # t := freeze y t
+          in yi # t
+    heq xi.arr yi.arr    
+  _                 == _                 = False
 
 {-
 public export
