@@ -348,15 +348,15 @@ log2 x =
 ||| A relaxed radix balanced vector (RRB-Vector).
 ||| It supports fast indexing, iteration, concatenation and splitting.
 public export
-data RRBVector : (bsize : Nat) -> (usize : Nat) -> (lsize : Nat) -> Type -> Type where
+data RRBVector : (s : Type) -> (bsize : Nat) -> (usize : Nat) -> (lsize : Nat) -> Type -> Type where
   Root  :  Nat   -- size
         -> Shift -- shift (blockshift * height)
-        -> (Tree bsize usize lsize a)
-        -> RRBVector bsize usize lsize a
-  Empty : RRBVector bsize usize lsize a
+        -> (Tree s bsize usize lsize a)
+        -> RRBVector s bsize usize lsize a
+  Empty : RRBVector s bsize usize lsize a
 
 public export
-Eq a => Eq (Tree bsize usize lsize a) => Eq (RRBVector bsize usize lsize a) where
+Eq a => Eq (Tree s bsize usize lsize a) => Eq (RRBVector s bsize usize lsize a) where
   (Root n s t) == (Root n' s' t') = n == n' && s == s' && t == t'
   Empty        == Empty           = True
   _            == _               = False
