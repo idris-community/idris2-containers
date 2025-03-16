@@ -105,7 +105,7 @@ relaxedRadixIndex sizes i sh t =
                  True  =>
                    idx # t
                  False =>
-                   loop sizes (plus idx 1) t
+                   (assert_total $ loop sizes (plus idx 1)) t
 
 --------------------------------------------------------------------------------
 --          Internal Tree Representation
@@ -182,59 +182,8 @@ treeSize t =
                let i''' # t := get arr i'' t
                  in go (plus acc (mult i (integerToNat (1 `shiftL` sh))))
                        (down sh)
-                       i'''
+                       (assert_smaller arr i''')
                        t
-
-||| Turns an array into a tree node by computing the sizes of its subtrees.
-||| sh is the shift of the resulting tree.
-export
-computeSizes :  Shift
-             -> Array (Tree a)
-             -> Tree a
-computeSizes sh arr =
-  case isBalanced of
-    True  =>
-      Balanced arr
-    False =>
-      let arrnat = unsafeCreate arr.size (loop sh 0 0 arr.size (toList arr))
-        in Unbalanced arr arrnat
-  where
-    loop :  (sh,cur,acc,n : Nat)
-         -> List (Tree a)
-         -> FromMArray n Nat (Array Nat)
-    loop sh _   acc n []        r = T1.do
-      res <- freeze r
-      pure $ A n res
-    loop sh cur acc n (x :: xs) r =
-      case tryNatToFin cur of
-        Nothing   =>
-          assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.go: can't convert Nat to Fin"
-        Just cur' =>
-          let acc' = plus acc (treeSize (down sh) x)
-            in T1.do set r cur' acc'
-                     assert_total $ loop sh (S cur) acc' n xs r
-    maxsize : Integer
-    maxsize = 1 `shiftL` sh -- the maximum size of a subtree
-    len : Nat
-    len = arr.size
-    lenM1 : Nat
-    lenM1 = minus len 1
-    isBalanced : Bool
-    isBalanced = go 0
-      where
-        go :  Nat
-           -> Bool
-        go i =
-          let subtree = case tryNatToFin i of
-                          Nothing =>
-                            assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.isBalanced: can't convert Nat to Fin"
-                          Just i' =>
-                            at arr.arr i'
-            in case i < lenM1 of
-                 True  =>
-                   assert_total $ (natToInteger $ treeSize (down sh) subtree) == maxsize && go (plus i 1)
-                 False =>
-                   treeBalanced subtree
 
 export
 countTrailingZeros :  Nat
