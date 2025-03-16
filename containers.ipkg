@@ -12,6 +12,7 @@ depends    = base         >= 0.6.0
 modules = Data.Map
         , Data.Map.Internal
         , Data.RRBVector
+        , Data.RRBVector1
         , Data.RRBVector.Internal
         , Data.RRBVector1.Internal
         , Data.Set
