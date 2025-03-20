@@ -1,4 +1,4 @@
-||| Relaxed Radix Balanced Vectors (RRB-Vectors)
+||| Relaxed Radix Balanced Vectors (RRBVector)
 module Data.RRBVector
 
 import public Data.RRBVector.Internal

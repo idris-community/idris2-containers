@@ -1,14 +1,11 @@
-||| Linear Relaxed Radix Balanced Vectors (RRB-Vectors)
+||| Linear Relaxed Radix Balanced Vectors (RRBVector1)
 module Data.RRBVector1
 
 import public Data.RRBVector1.Internal
 
---import Control.Monad.ST
---import Data.Array
 import Data.Array.Core
 import Data.Array.Index
 import Data.Array.Mutable
---import Data.Array.Indexed
 import Data.Bits
 import Data.Maybe
 import Data.List
@@ -16,7 +13,6 @@ import Data.List1
 import Data.SnocList
 import Data.Vect
 import Data.Zippable
---import Syntax.T1 as T1
 
 %hide Prelude.null
 %hide Prelude.Ops.infixr.(<|)
@@ -54,7 +50,6 @@ singleton x t =
     in Root 1 0 (Leaf newarr) # t
 
 {-
-
 ||| Create a new vector from a list. O(n)
 export
 fromList : List a -> RRBVector a
@@ -130,47 +125,69 @@ fromList xs  =
           Root (treeSize sh tree) sh tree
         trees' =>
           iterateNodes (up sh) (assert_smaller trees trees')
+-}
 
 ||| Creates a vector of length n with every element set to x. O(log n)
 export
-replicate : Nat -> a -> RRBVector a
-replicate n x =
+replicate : Nat -> a -> F1 s (RRBVector1 s bsize usize lsize a)
+replicate n x t =
   case compare n 0 of
     LT =>
-      Empty
+      Empty # t
     EQ =>
-      Empty
+      Empty # t
     GT =>
       case compare n blocksize of
         LT =>
-          Root n 0 (Leaf $ A n $ fill n x)
+          let newarr # t := marray1 n x t
+            in Root n 0 (Leaf newarr) # t
         EQ =>
-          Root n 0 (Leaf $ A n $ fill n x)
+          let newarr # t := marray1 n x t
+            in Root n 0 (Leaf newarr) # t
         GT =>
-          let size' = integerToNat ((natToInteger $ minus n 1) .&. (natToInteger $ plus blockmask 1))
-            in iterateNodes blockshift
-                            (Leaf $ A blocksize $ fill blocksize x)
-                            (Leaf $ A size' $ fill size' x)
+          let size' := integerToNat ((natToInteger $ minus n 1) .&. (natToInteger $ plus blockmask 1))
+              newarr1 # t := marray1 blocksize x t
+              newarr2 # t := marray1 size' x t
+              tree1       := Leaf newarr1
+              tree2       := Leaf newarr2
+            in ( iterateNodes blockshift
+                              tree1
+                              tree2
+               ) # t
   where
-    iterateNodes : Shift -> Tree a -> Tree a -> RRBVector a
-    iterateNodes sh full rest =
-      let subtreesm1  = (natToInteger $ minus n 1) `shiftR` sh
-          restsize    = integerToNat (subtreesm1 .&. (natToInteger blockmask))
-          rest'       = Balanced $ A (plus restsize 1) $ append (fill restsize full) (fill 1 rest)
+    iterateNodes :  (sh : Shift)
+                 -> (full : Tree1 s bsize usize lsize a)
+                 -> (rest : Tree1 s bsize usize lsize a)
+                 -> F1 s (RRBVector1 s (restsize+1) usize lsize a)
+    iterateNodes sh full rest t =
+      let subtreesm1  := (natToInteger $ minus n 1) `shiftR` blockshift
+          restsize    := integerToNat (subtreesm1 .&. (natToInteger blockmask))
+          mappend1 # t := marray1 restsize full t
+          mappend2 # t := marray1 1 rest t
+          rest'    # t := mappend mappend1 mappend2 t
+          rest''       := Balanced rest' 
         in case compare subtreesm1 (natToInteger blocksize) of
              LT =>
-               Root n sh rest'
+               Root n sh rest'' # t
              EQ =>
-               let full' = Balanced (A blocksize $ fill blocksize full)
-                 in iterateNodes (up sh) (assert_smaller full full') (assert_smaller rest rest')
+               let newarr # t := marray1 blocksize full t
+                   full'      := Balanced newarr
+                 in iterateNodes (up sh)
+                                 (assert_smaller full full')
+                                 (assert_smaller rest rest'')
+                                 t
              GT =>
-               let full' = Balanced (A blocksize $ fill blocksize full)
-                 in iterateNodes (up sh) (assert_smaller full full') (assert_smaller rest rest')
+               let newarr # t := marray1 blocksize full t
+                   full'      := Balanced newarr
+                 in iterateNodes (up sh)
+                                 (assert_smaller full full')
+                                 (assert_smaller rest rest'')
+                                 t
 
 --------------------------------------------------------------------------------
---          Creating Lists from RRB-Vectors
+--          Creating Lists from linear RRB-Vectors
 --------------------------------------------------------------------------------
-
+{-
 ||| Convert a vector to a list. O(n)
 export
 toList : RRBVector a -> List a
