@@ -129,7 +129,9 @@ fromList xs  =
 
 ||| Creates a vector of length n with every element set to x. O(log n)
 export
-replicate : Nat -> a -> F1 s (RRBVector1 s bsize usize lsize a)
+replicate :  Nat
+          -> a
+          -> F1 s (RRBVector1 s bsize usize lsize a)
 replicate n x t =
   case compare n 0 of
     LT =>
@@ -158,14 +160,14 @@ replicate n x t =
     iterateNodes :  (sh : Shift)
                  -> (full : Tree1 s bsize usize lsize a)
                  -> (rest : Tree1 s bsize usize lsize a)
-                 -> F1 s (RRBVector1 s (restsize+1) usize lsize a)
+                 -> F1 s (RRBVector1 s ?foo usize lsize a)
     iterateNodes sh full rest t =
-      let subtreesm1  := (natToInteger $ minus n 1) `shiftR` blockshift
-          restsize    := integerToNat (subtreesm1 .&. (natToInteger blockmask))
+      let subtreesm1   := (natToInteger $ minus n 1) `shiftR` sh
+          restsize     := integerToNat (subtreesm1 .&. (natToInteger blockmask))
           mappend1 # t := marray1 restsize full t
           mappend2 # t := marray1 1 rest t
           rest'    # t := mappend mappend1 mappend2 t
-          rest''       := Balanced rest' 
+          rest''       := Balanced rest'
         in case compare subtreesm1 (natToInteger blocksize) of
              LT =>
                Root n sh rest'' # t
