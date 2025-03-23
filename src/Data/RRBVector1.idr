@@ -39,12 +39,12 @@ infixl 5 |>
 
 ||| The empty vector. O(1)
 export
-empty : F1 s (RRBVector1 s bsize usize lsize a)
+empty : F1 s (RRBVector1 s bsize bsize' usize usize' lsize a)
 empty t = Empty # t
 
 ||| A vector with a single element. O(1)
 export
-singleton : a -> F1 s (RRBVector1 s bsize usize 1 a)
+singleton : a -> F1 s (RRBVector1 s bsize bsize' usize usize' 1 a)
 singleton x t =
   let newarr # t := marray1 1 x t
     in Root 1 0 (Leaf newarr) # t
@@ -131,7 +131,7 @@ fromList xs  =
 export
 replicate :  Nat
           -> a
-          -> F1 s (RRBVector1 s bsize usize lsize a)
+          -> F1 s (RRBVector1 s ?p ?q ?r ?s ?t a)
 replicate n x t =
   case compare n 0 of
     LT =>
@@ -147,7 +147,7 @@ replicate n x t =
           let newarr # t := marray1 n x t
             in Root n 0 (Leaf newarr) # t
         GT =>
-          let size' := integerToNat ((natToInteger $ minus n 1) .&. (natToInteger $ plus blockmask 1))
+          let size'       := integerToNat ((natToInteger $ minus n 1) .&. (natToInteger $ plus blockmask 1))
               newarr1 # t := marray1 blocksize x t
               newarr2 # t := marray1 size' x t
               tree1       := Leaf newarr1
@@ -158,9 +158,9 @@ replicate n x t =
                ) # t
   where
     iterateNodes :  (sh : Shift)
-                 -> (full : Tree1 s bsize usize lsize a)
-                 -> (rest : Tree1 s bsize usize lsize a)
-                 -> F1 s (RRBVector1 s ?foo usize lsize a)
+                 -> (full : Tree1 s ?a ?b ?c ?d ?e a)
+                 -> (rest : Tree1 s ?f ?g ?h ?i ?j a)
+                 -> F1 s (RRBVector1 s ?k ?l ?m ?n ?o a)
     iterateNodes sh full rest t =
       let subtreesm1   := (natToInteger $ minus n 1) `shiftR` sh
           restsize     := integerToNat (subtreesm1 .&. (natToInteger blockmask))
@@ -172,15 +172,15 @@ replicate n x t =
              LT =>
                Root n sh rest'' # t
              EQ =>
-               let newarr # t := marray1 blocksize full t
-                   full'      := Balanced newarr
+               let newarr # t  := marray1 blocksize full t
+                   full'       := Balanced newarr
                  in iterateNodes (up sh)
                                  (assert_smaller full full')
                                  (assert_smaller rest rest'')
                                  t
              GT =>
-               let newarr # t := marray1 blocksize full t
-                   full'      := Balanced newarr
+               let newarr # t  := marray1 blocksize full t
+                   full'       := Balanced newarr
                  in iterateNodes (up sh)
                                  (assert_smaller full full')
                                  (assert_smaller rest rest'')
