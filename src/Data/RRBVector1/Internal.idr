@@ -88,7 +88,7 @@ relaxedRadixIndex sizes i sh t =
           let idx' := tryNatToFin $ minus idx 1
             in case idx' of
                  Nothing    =>
-                   (assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex: index out of bounds") # t
+                   (assert_total $ idris_crash "Data.RRBVector1.Internal.relaxedRadixIndex: index out of bounds") # t
                  Just idx'' =>
                    let idx''' # t := get sizes idx'' t
                      in minus i idx''' # t
@@ -98,7 +98,7 @@ relaxedRadixIndex sizes i sh t =
     loop size idx t =
       case tryNatToFin idx of
         Nothing   =>
-          (assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex.loop: index out of bounds") # t
+          (assert_total $ idris_crash "Data.RRBVector1.Internal.relaxedRadixIndex.loop: index out of bounds") # t
         Just idx' =>
           let current # t := get sizes idx' t
             in case i < current of
@@ -113,10 +113,10 @@ relaxedRadixIndex sizes i sh t =
 
 ||| A linear internal tree representation.
 public export
-data Tree1 : (s : Type) -> (bsize : Nat) -> (bsize' : Nat) -> (usize : Nat) -> (usize' : Nat) -> (lsize : Nat) -> Type -> Type where
-  Balanced   : MArray s bsize (Tree1 s bsize' bsize' usize usize' lsize a) -> Tree1 s bsize bsize' usize usize' lsize a
-  Unbalanced : MArray s usize (Tree1 s bsize bsize' usize' usize' lsize a) -> MArray s usize Nat -> Tree1 s bsize bsize' usize usize' lsize a
-  Leaf       : MArray s lsize a -> Tree1 s bsize bsize' usize usize' lsize a
+data Tree1 : (s : Type) -> (bsize : Nat) -> (usize : Nat) -> (lsize : Nat) -> Type -> Type where
+  Balanced   : MArray s bsize (Tree1 s bsize usize lsize a) -> Tree1 s bsize usize lsize a
+  Unbalanced : MArray s usize (Tree1 s bsize usize lsize a) -> MArray s usize Nat -> Tree1 s bsize usize lsize a
+  Leaf       : MArray s lsize a -> Tree1 s bsize usize lsize a
 
 --------------------------------------------------------------------------------
 --          Tree Utilities
@@ -130,15 +130,15 @@ singleton x t =
     in arr # t
 
 export
-treeToArray :  Tree1 s bsize bsize' usize usize' lsize a
-            -> Either (MArray s bsize (Tree1 s bsize' bsize' usize usize' lsize a))
-                      (MArray s usize (Tree1 s bsize bsize' usize' usize' lsize a))
+treeToArray :  Tree1 s bsize usize lsize a
+            -> Either (MArray s bsize (Tree1 s bsize usize lsize a))
+                      (MArray s usize (Tree1 s bsize usize lsize a))
 treeToArray (Balanced arr)     = Left arr
 treeToArray (Unbalanced arr _) = Right arr
-treeToArray (Leaf _)           = assert_total $ idris_crash "Data.RRBVector.Internal.treeToArray: leaf"
+treeToArray (Leaf _)           = assert_total $ idris_crash "Data.RRBVector1.Internal.treeToArray: leaf"
 
 export
-treeBalanced :  Tree1 s bsize bsize' usize usize' lsize a
+treeBalanced :  Tree1 s bsize usize lsize a
              -> Bool
 treeBalanced (Balanced _)     = True
 treeBalanced (Unbalanced _ _) = False
@@ -147,24 +147,20 @@ treeBalanced (Leaf _)         = True
 ||| Computes the size of a tree with shift.
 export
 treeSize :  {bsize : _}
-         -> {bsize' : _}
          -> {usize : _}
-         -> {usize' : _}
          -> {lsize : _}
          -> Shift
-         -> Tree1 s bsize bsize' usize usize' lsize a
+         -> Tree1 s bsize usize lsize a
          -> F1 s Nat
 treeSize t =
   go 0 t
   where
     go :  {bsize : _}
-       -> {bsize' : _}
        -> {usize : _}
-       -> {usize' : _}
        -> {lsize : _}
        -> Shift
        -> Shift
-       -> Tree1 s bsize bsize' usize usize' lsize a
+       -> Tree1 s bsize usize lsize a
        -> F1 s Nat
     go acc _ (Leaf arr)             t =
       plus acc lsize # t
@@ -172,7 +168,7 @@ treeSize t =
       let i := tryNatToFin $ minus usize 1
         in case i of
              Nothing =>
-               (assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds") # t
+               (assert_total $ idris_crash "Data.RRBVector1.Internal.treeSize: index out of bounds") # t
              Just i' =>
                let i'' # t := get sizes i' t
                  in plus acc i'' # t
@@ -181,7 +177,7 @@ treeSize t =
           i' := tryNatToFin i
         in case i' of
              Nothing  =>
-               (assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds") # t
+               (assert_total $ idris_crash "Data.RRBVector1.Internal.treeSize: index out of bounds") # t
              Just i'' =>
                let i''' # t := get arr i'' t
                  in go (plus acc (mult i (integerToNat (1 `shiftL` sh))))
@@ -205,7 +201,7 @@ countTrailingZeros x =
         False =>
           case tryNatToFin i of
             Nothing =>
-              assert_total $ idris_crash "Data.RRBVector.Internal.countTrailingZeros: can't convert Nat to Fin"
+              assert_total $ idris_crash "Data.RRBVector1.Internal.countTrailingZeros: can't convert Nat to Fin"
             Just i' =>
               case testBit (the Int (cast x)) i' of
                 True  =>
@@ -235,7 +231,7 @@ log2 x =
             False =>
               case tryNatToFin i of
                 Nothing =>
-                  assert_total $ idris_crash "Data.RRBVector.Internal.log2: can't convert Nat to Fin"
+                  assert_total $ idris_crash "Data.RRBVector1.Internal.log2: can't convert Nat to Fin"
                 Just i' =>
                   case testBit (the Int (cast x)) i' of
                     True  =>
@@ -250,9 +246,9 @@ log2 x =
 ||| A linear relaxed radix balanced vector (RRB-Vector).
 ||| It supports fast indexing, iteration, concatenation and splitting.
 public export
-data RRBVector1 : (s : Type) -> (bsize : Nat) -> (bsize' : Nat) -> (usize : Nat) -> (usize' : Nat) -> (lsize : Nat) -> Type -> Type where
+data RRBVector1 : (s : Type) -> (bsize : Nat) -> (usize : Nat) -> (lsize : Nat) -> Type -> Type where
   Root  :  Nat   -- size
         -> Shift -- shift (blockshift * height)
-        -> (Tree1 s bsize bsize' usize usize' lsize a)
-        -> RRBVector1 s bsize bsize' usize usize' lsize a
-  Empty : RRBVector1 s bsize bsize' usize usize' lsize a
+        -> (Tree1 s bsize usize lsize a)
+        -> RRBVector1 s bsize usize lsize a
+  Empty : RRBVector1 s bsize usize lsize a
