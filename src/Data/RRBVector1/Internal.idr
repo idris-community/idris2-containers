@@ -113,10 +113,10 @@ relaxedRadixIndex sizes i sh t =
 
 ||| A linear internal tree representation.
 public export
-data Tree1 : (s : Type) -> (bsize : Nat) -> (usize : Nat) -> (lsize : Nat) -> Type -> Type where
-  Balanced   : MArray s bsize (Tree1 s bsize usize lsize a) -> Tree1 s bsize usize lsize a
-  Unbalanced : MArray s usize (Tree1 s bsize usize lsize a) -> MArray s usize Nat -> Tree1 s bsize usize lsize a
-  Leaf       : MArray s lsize a -> Tree1 s bsize usize lsize a
+data Tree1 : (s : Type) -> Type -> Type where
+  Balanced   : (b : Nat) -> (b ** MArray s b (Tree1 s a)) -> Tree1 s a
+  Unbalanced : (u : Nat) -> (u ** MArray s u (Tree1 s a)) -> MArray s u Nat -> Tree1 s a
+  Leaf       : (l : Nat) -> (l ** MArray s l a) -> Tree1 s a
 
 --------------------------------------------------------------------------------
 --          Tree Utilities
@@ -130,50 +130,44 @@ singleton x t =
     in arr # t
 
 export
-treeToArray :  Tree1 s bsize usize lsize a
-            -> Either (MArray s bsize (Tree1 s bsize usize lsize a))
-                      (MArray s usize (Tree1 s bsize usize lsize a))
-treeToArray (Balanced arr)     = Left arr
-treeToArray (Unbalanced arr _) = Right arr
-treeToArray (Leaf _)           = assert_total $ idris_crash "Data.RRBVector1.Internal.treeToArray: leaf"
+treeToArray :  Tree1 s a
+            -> Either (b ** MArray s b (Tree1 s a))
+                      (u ** MArray s u (Tree1 s a))
+treeToArray (Balanced   _ arr)   = Left arr
+treeToArray (Unbalanced _ arr _) = Right arr
+treeToArray (Leaf       _ _)     = assert_total $ idris_crash "Data.RRBVector1.Internal.treeToArray: leaf"
 
 export
-treeBalanced :  Tree1 s bsize usize lsize a
+treeBalanced :  Tree1 s a
              -> Bool
-treeBalanced (Balanced _)     = True
-treeBalanced (Unbalanced _ _) = False
-treeBalanced (Leaf _)         = True
+treeBalanced (Balanced   _ _)   = True
+treeBalanced (Unbalanced _ _ _) = False
+treeBalanced (Leaf       _ _ )  = True
 
 ||| Computes the size of a tree with shift.
 export
-treeSize :  {bsize : _}
-         -> {usize : _}
-         -> {lsize : _}
-         -> Shift
-         -> Tree1 s bsize usize lsize a
+treeSize :  Shift
+         -> Tree1 s a
          -> F1 s Nat
 treeSize t =
   go 0 t
   where
-    go :  {bsize : _}
-       -> {usize : _}
-       -> {lsize : _}
+    go :  Shift
        -> Shift
-       -> Shift
-       -> Tree1 s bsize usize lsize a
+       -> Tree1 s a
        -> F1 s Nat
-    go acc _ (Leaf arr)             t =
-      plus acc lsize # t
-    go acc _ (Unbalanced arr sizes) t =
-      let i := tryNatToFin $ minus usize 1
+    go acc _ (Leaf       l (_ ** arr))       t =
+      plus acc l # t
+    go acc _ (Unbalanced u (_ ** arr) sizes) t =
+      let i := tryNatToFin $ minus u 1
         in case i of
              Nothing =>
                (assert_total $ idris_crash "Data.RRBVector1.Internal.treeSize: index out of bounds") # t
              Just i' =>
                let i'' # t := get sizes i' t
                  in plus acc i'' # t
-    go acc sh (Balanced arr) t =
-      let i  := minus bsize 1
+    go acc sh (Balanced  b (_ ** arr))       t =
+      let i  := minus b 1
           i' := tryNatToFin i
         in case i' of
              Nothing  =>
@@ -246,9 +240,9 @@ log2 x =
 ||| A linear relaxed radix balanced vector (RRB-Vector).
 ||| It supports fast indexing, iteration, concatenation and splitting.
 public export
-data RRBVector1 : (s : Type) -> (bsize : Nat) -> (usize : Nat) -> (lsize : Nat) -> Type -> Type where
-  Root  :  Nat   -- size
-        -> Shift -- shift (blockshift * height)
-        -> (Tree1 s bsize usize lsize a)
-        -> RRBVector1 s bsize usize lsize a
-  Empty : RRBVector1 s bsize usize lsize a
+data RRBVector1 : (s : Type) -> Type -> Type where
+  Root :  Nat   -- size
+       -> Shift -- shift (blockshift * height)
+       -> (Tree1 s a)
+       -> RRBVector1 s a
+  Empty : RRBVector1 s a
