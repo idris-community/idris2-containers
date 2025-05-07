@@ -243,6 +243,6 @@ public export
 data RRBVector1 : (s : Type) -> Type -> Type where
   Root :  Nat   -- size
        -> Shift -- shift (blockshift * height)
-       -> (Tree1 s a)
+       -> Tree1 s a
        -> RRBVector1 s a
   Empty : RRBVector1 s a
