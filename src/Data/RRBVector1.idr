@@ -239,13 +239,13 @@ null : RRBVector1 s a -> F1 s Bool
 null Empty t = True # t
 null _     t = False # t
 
-{-
 ||| Return the size of a vector. O(1)
 export
-length : RRBVector a -> Nat
-length Empty        = 0
-length (Root s _ _) = s
+length : RRBVector1 s a -> F1 s Nat
+length Empty        t = 0 # t
+length (Root s _ _) t = s # t
 
+{-
 --------------------------------------------------------------------------------
 --          Indexing
 --------------------------------------------------------------------------------
