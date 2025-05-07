@@ -228,17 +228,18 @@ foldr f acc = go
     go : RRBVector a -> b
     go Empty           = acc
     go (Root _ _ tree) = assert_total $ foldrTree tree acc
-
+-}
 --------------------------------------------------------------------------------
 --          Query
 --------------------------------------------------------------------------------
 
 ||| Is the vector empty? O(1)
 export
-null : RRBVector a -> Bool
-null Empty = True
-null _     = False
+null : RRBVector1 s a -> F1 s Bool
+null Empty t = True # t
+null _     t = False # t
 
+{-
 ||| Return the size of a vector. O(1)
 export
 length : RRBVector a -> Nat
