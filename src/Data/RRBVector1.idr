@@ -39,15 +39,15 @@ infixl 5 |>
 
 ||| The empty vector. O(1)
 export
-empty : F1 s (RRBVector1 s bsize bsize' usize usize' lsize a)
+empty : F1 s (RRBVector1 s a)
 empty t = Empty # t
 
 ||| A vector with a single element. O(1)
 export
-singleton : a -> F1 s (RRBVector1 s bsize bsize' usize usize' 1 a)
+singleton : a -> F1 s (RRBVector1 s a)
 singleton x t =
   let newarr # t := marray1 1 x t
-    in Root 1 0 (Leaf newarr) # t
+    in Root 1 0 (Leaf 1 (1 ** newarr)) # t
 
 {-
 ||| Create a new vector from a list. O(n)
@@ -131,7 +131,7 @@ fromList xs  =
 export
 replicate :  Nat
           -> a
-          -> F1 s (RRBVector1 s ?p ?q ?r ?s ?t a)
+          -> F1 s (RRBVector1 s a)
 replicate n x t =
   case compare n 0 of
     LT =>
@@ -142,45 +142,45 @@ replicate n x t =
       case compare n blocksize of
         LT =>
           let newarr # t := marray1 n x t
-            in Root n 0 (Leaf newarr) # t
+            in Root n 0 (Leaf n (n ** newarr)) # t
         EQ =>
           let newarr # t := marray1 n x t
-            in Root n 0 (Leaf newarr) # t
+            in Root n 0 (Leaf n (n ** newarr)) # t
         GT =>
           let size'       := integerToNat ((natToInteger $ minus n 1) .&. (natToInteger $ plus blockmask 1))
               newarr1 # t := marray1 blocksize x t
               newarr2 # t := marray1 size' x t
-              tree1       := Leaf newarr1
-              tree2       := Leaf newarr2
-            in ( iterateNodes blockshift
-                              tree1
-                              tree2
-               ) # t
+              tree1       := Leaf blocksize (blocksize ** newarr1)
+              tree2       := Leaf size' (size' ** newarr2)
+            in iterateNodes blockshift
+                            tree1
+                            tree2
+                            t
   where
     iterateNodes :  (sh : Shift)
-                 -> (full : Tree1 s ?a ?b ?c ?d ?e a)
-                 -> (rest : Tree1 s ?f ?g ?h ?i ?j a)
-                 -> F1 s (RRBVector1 s ?k ?l ?m ?n ?o a)
+                 -> (full : Tree1 s a)
+                 -> (rest : Tree1 s a)
+                 -> F1 s (RRBVector1 s a)
     iterateNodes sh full rest t =
       let subtreesm1   := (natToInteger $ minus n 1) `shiftR` sh
           restsize     := integerToNat (subtreesm1 .&. (natToInteger blockmask))
           mappend1 # t := marray1 restsize full t
           mappend2 # t := marray1 1 rest t
           rest'    # t := mappend mappend1 mappend2 t
-          rest''       := Balanced rest'
+          rest''       := Balanced (plus restsize 1) ((plus restsize 1) ** rest')
         in case compare subtreesm1 (natToInteger blocksize) of
              LT =>
-               Root n sh rest'' # t
+               (Root n sh rest'') # t
              EQ =>
-               let newarr # t  := marray1 blocksize full t
-                   full'       := Balanced newarr
+               let newarr # t := marray1 blocksize full t
+                   full'      := Balanced blocksize (blocksize ** newarr)
                  in iterateNodes (up sh)
                                  (assert_smaller full full')
                                  (assert_smaller rest rest'')
                                  t
              GT =>
-               let newarr # t  := marray1 blocksize full t
-                   full'       := Balanced newarr
+               let newarr # t := marray1 blocksize full t
+                   full'      := Balanced blocksize (blocksize ** newarr)
                  in iterateNodes (up sh)
                                  (assert_smaller full full')
                                  (assert_smaller rest rest'')
