@@ -225,7 +225,7 @@ length (Root s _ _) = s
 --          Indexing
 --------------------------------------------------------------------------------
 
-||| The element at the index or Nothing if the index is out of range. O (log n)
+||| The element at the index or Nothing if the index is out of range. O(log n)
 export
 lookup : Nat -> RRBVector a -> Maybe a
 lookup _ Empty               = Nothing

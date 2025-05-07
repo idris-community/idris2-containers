@@ -44,7 +44,8 @@ empty t = Empty # t
 
 ||| A vector with a single element. O(1)
 export
-singleton : a -> F1 s (RRBVector1 s a)
+singleton :  a
+          -> F1 s (RRBVector1 s a)
 singleton x t =
   let newarr # t := marray1 1 x t
     in Root 1 0 (Leaf 1 (1 ** newarr)) # t
@@ -235,68 +236,80 @@ foldr f acc = go
 
 ||| Is the vector empty? O(1)
 export
-null : RRBVector1 s a -> F1 s Bool
+null :  RRBVector1 s a
+     -> F1 s Bool
 null Empty t = True # t
 null _     t = False # t
 
 ||| Return the size of a vector. O(1)
 export
-length : RRBVector1 s a -> F1 s Nat
+length :  RRBVector1 s a
+       -> F1 s Nat
 length Empty        t = 0 # t
 length (Root s _ _) t = s # t
 
-{-
 --------------------------------------------------------------------------------
 --          Indexing
 --------------------------------------------------------------------------------
 
-||| The element at the index or Nothing if the index is out of range. O (log n)
+||| The element at the index or Nothing if the index is out of range. O(log n)
 export
-lookup : Nat -> RRBVector a -> Maybe a
-lookup _ Empty               = Nothing
-lookup i (Root size sh tree) =
+lookup :  Nat
+       -> RRBVector1 s a
+       -> F1 s (Maybe a)
+lookup _ Empty               t = Nothing # t
+lookup i (Root size sh tree) t =
   case compare i 0 of
     LT =>
-      Nothing -- index out of range
+      Nothing # t -- index out of range
     GT =>
       case compare i size of
         EQ =>
-          Nothing -- index out of range
+          Nothing # t -- index out of range
         GT =>
-          Nothing -- index out of range
+          Nothing # t -- index out of range
         LT =>
-          Just $ lookupTree i sh tree
+          let lookup' # t := lookupTree i sh tree t
+            in Just lookup' # t
     EQ =>
       case compare i size of
         EQ =>
-          Nothing -- index out of range
+          Nothing # t -- index out of range
         GT =>
-          Nothing -- index out of range
+          Nothing # t -- index out of range
         LT =>
-          Just $ lookupTree i sh tree
+          let lookup' # t := lookupTree i sh tree t
+            in Just lookup' # t
   where
-    lookupTree : Nat -> Nat -> Tree a -> a
-    lookupTree i sh (Balanced arr)         =
+    lookupTree :  Nat
+               -> Nat
+               -> Tree1 s a
+               -> F1 s a
+    lookupTree i sh (Balanced _ (_ ** arr))         t =
       case tryNatToFin (radixIndex i sh) of
         Nothing =>
-          assert_total $ idris_crash "Data.RRBVector.lookup: can't convert Nat to Fin"
+          (assert_total $ idris_crash "Data.RRBVector.lookup: can't convert Nat to Fin") # t
         Just i' =>
-          assert_total $ lookupTree i (down sh) (at arr.arr i')
-    lookupTree i sh (Unbalanced arr sizes) =
-      let (idx, subidx) = relaxedRadixIndex sizes i sh
+          let i'' # t := get arr i' t
+            in assert_total $ lookupTree i (down sh) i'' t
+    lookupTree i sh (Unbalanced _ (_ ** arr) sizes) t =
+      let (idx, subidx) # t := relaxedRadixIndex sizes i sh t
         in case tryNatToFin idx of
-             Nothing   =>
-               assert_total $ idris_crash "Data.RRBVector.lookup: can't convert Nat to Fin"
-             Just idx' =>
-               assert_total $ lookupTree subidx (down sh) (at arr.arr idx')
-    lookupTree i _ (Leaf arr)              =
+             Nothing =>
+               (assert_total $ idris_crash "Data.RRBVector.lookup: can't convert Nat to Fin") # t
+             Just i' =>
+               let i'' # t := get arr i' t
+                 in assert_total $ lookupTree subidx (down sh) i'' t
+    lookupTree i _  (Leaf _ (_ ** arr))             t =
       let i' = integerToNat ((natToInteger i) .&. (natToInteger blockmask))
         in case tryNatToFin i' of
-             Nothing =>
-               assert_total $ idris_crash "Data.RRBVector.lookup: can't convert Nat to Fin"
+             Nothing  =>
+               (assert_total $ idris_crash "Data.RRBVector.lookup: can't convert Nat to Fin") # t
              Just i'' =>
-               at arr.arr i''
+               let i''' # t := get arr i'' t
+                 in i''' # t
 
+{-
 ||| The element at the index.
 ||| Calls 'idris_crash' if the index is out of range. O(log n)
 export
