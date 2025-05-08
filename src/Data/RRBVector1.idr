@@ -14,6 +14,8 @@ import Data.SnocList
 import Data.Vect
 import Data.Zippable
 
+%hide Data.List.lookup
+%hide Data.Vect.lookup
 %hide Prelude.null
 %hide Prelude.Ops.infixr.(<|)
 %hide Prelude.Ops.infixl.(|>)
@@ -309,13 +311,21 @@ lookup i (Root size sh tree) t =
                let i''' # t := get arr i'' t
                  in i''' # t
 
-{-
 ||| The element at the index.
 ||| Calls 'idris_crash' if the index is out of range. O(log n)
 export
-index : Nat -> RRBVector a -> a
-index i = fromMaybe (assert_total $ idris_crash "Data.RRBVector.index: index out of range") . lookup i
+index :  Nat
+      -> RRBVector1 s a
+      -> F1 s a
+index i v t =
+  let lookup' # t := lookup i v t
+    in case lookup' of
+         Nothing       =>
+           (assert_total $ idris_crash "Data.RRBVector.index: index out of range") # t
+         Just lookup'' =>
+           lookup'' # t
 
+{-
 ||| A flipped version of lookup. O(log n)
 export
 (!?) : RRBVector a -> Nat -> Maybe a
