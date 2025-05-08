@@ -195,14 +195,22 @@ replicate n x t =
 {-
 ||| Convert a vector to a list. O(n)
 export
-toList : RRBVector a -> List a
-toList Empty           = []
-toList (Root _ _ tree) = treeToList tree
+toList :  RRBVector1 s a
+       -> F1 s (List a)
+toList Empty           t = Nil # t
+toList (Root _ _ tree) t = treeToList tree t
   where
-    treeToList : Tree a -> List a
-    treeToList (Balanced trees)     = assert_total $ concat (map treeToList (toList trees))
-    treeToList (Unbalanced trees _) = assert_total $ concat (map treeToList (toList trees))
-    treeToList (Leaf arr)           = toList arr
+    treeToList :  Tree1 s a
+               -> F1 s (List a)
+    treeToList (Balanced b (b' ** arr))    t =
+      let arr' # t := freeze arr t
+        in assert_total $ concat (map treeToList (toList arr')) t
+    treeToList (Unbalanced _ (_ ** arr) _) t =
+      let arr' # t := freeze arr t
+        in assert_total $ concat (map treeToList (toList arr')) t
+    treeToList (Leaf _ (_ ** arr))         t =
+      let arr' # t := freeze arr t
+        in toList arr' # t
 
 --------------------------------------------------------------------------------
 --          Folds
@@ -473,36 +481,40 @@ adjust i f v@(Root size sh tree) t =
              Just i'' =>
                let () # t := modify arr i'' f t
                  in (Leaf l (l' ** arr)) # t
-{-
-private
-normalize : RRBVector a -> RRBVector a
-normalize v@(Root size sh (Balanced arr))     =
-  case compare arr.size 1 of
-    LT =>
-      v
-    EQ =>
-      case tryNatToFin 0 of
-        Nothing =>
-          assert_total $ idris_crash "Data.RRBVector.normalize: can't convert Nat to Fin"
-        Just i  =>
-          assert_total $ normalize $ Root size (down sh) (at arr.arr i)
-    GT =>
-      v
-normalize v@(Root size sh (Unbalanced arr _)) =
-  case compare arr.size 1 of
-    LT =>
-      v
-    EQ =>
-      case tryNatToFin 0 of
-        Nothing =>
-          assert_total $ idris_crash "Data.RRBVector.normalize: can't convert Nat to Fin"
-        Just i  =>
-          assert_total $ normalize $ Root size (down sh) (at arr.arr i)
-    GT =>
-      v
-normalize v                                   =
-  v
 
+private
+normalize :  RRBVector1 s a
+          -> F1 s (RRBVector1 s a)
+normalize v@(Root size sh (Balanced b (b' ** arr)))         t =
+  case compare b 1 of
+    LT =>
+      v # t
+    EQ =>
+      case tryNatToFin 0 of
+        Nothing =>
+          (assert_total $ idris_crash "Data.RRBVector.normalize: can't convert Nat to Fin") # t
+        Just i  =>
+          let arr' # t := get arr i t
+            in assert_total $ (normalize (Root size (down sh) arr') t)
+    GT =>
+      v # t
+normalize v@(Root size sh (Unbalanced u (u' ** arr) sizes)) t =
+  case compare u 1 of
+    LT =>
+      v # t
+    EQ =>
+      case tryNatToFin 0 of
+        Nothing =>
+          (assert_total $ idris_crash "Data.RRBVector.normalize: can't convert Nat to Fin") # t
+        Just i  =>
+          let arr' # t := get arr i t
+            in assert_total $ (normalize (Root size (down sh) arr') t)
+    GT =>
+      v # t
+normalize v                                                 t =
+  v # t
+
+{-
 ||| The initial i is n - 1 (the index of the last element in the new tree).
 private
 takeTree : Nat -> Shift -> Tree a -> Tree a
