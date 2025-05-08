@@ -332,12 +332,15 @@ export
      -> F1 s (Maybe a)
 (!?) t = flip lookup t
 
-{-
+
 ||| A flipped version of index. O(log n)
 export
-(!!) : RRBVector a -> Nat -> a
-(!!) = flip index
+(!!) :  RRBVector1 s a
+     -> Nat
+     -> F1 s a
+(!!) t = flip index t
 
+{-
 ||| Update the element at the index with a new element.
 ||| If the index is out of range, the original vector is returned. O (log n)
 export
