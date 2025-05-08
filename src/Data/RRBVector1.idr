@@ -359,7 +359,7 @@ update i x v@(Root size sh tree) t =
         GT =>
           v # t -- index out of range
         LT =>
-          let update' # t := assert_total $ updateTree i sh tree t
+          let update' # t := updateTree i sh tree t
             in ( Root size
                       sh
                       update'
@@ -371,7 +371,7 @@ update i x v@(Root size sh tree) t =
         GT =>
           v # t -- index out of range
         LT =>
-          let update' # t := assert_total $ updateTree i sh tree t
+          let update' # t := updateTree i sh tree t
             in ( Root size
                       sh
                       update'
@@ -411,26 +411,30 @@ update i x v@(Root size sh tree) t =
 ||| Adjust the element at the index by applying the function to it.
 ||| If the index is out of range, the original vector is returned. O(log n)
 export
-adjust : Nat -> (a -> a) -> RRBVector a -> RRBVector a
-adjust _ _ Empty                 = Empty
-adjust i f v@(Root size sh tree) =
+adjust :  Nat
+       -> (a -> a)
+       -> RRBVector1 s a
+       -> F1 s (RRBVector1 s a)
+adjust _ _ Empty                 t = Empty # t
+adjust i f v@(Root size sh tree) t =
   case compare i 0 of
     LT =>
-      v -- index out of range
+      v # t -- index out of range
     GT =>
       case compare i size of
         EQ =>
-          v -- index out of range
+          v # t -- index out of range
         GT =>
-          v -- index out of range
+          v # t -- index out of range
         LT =>
+          let adjust' # t := assert_total $ adjustTree i sh tree t
           Root size sh (adjustTree i sh tree)
     EQ =>
       case compare i size of
         EQ =>
-          v -- index out of range
+          v # t -- index out of range
         GT =>
-          v -- index out of range
+          v # t -- index out of range
         LT =>
           Root size sh (adjustTree i sh tree)
   where
