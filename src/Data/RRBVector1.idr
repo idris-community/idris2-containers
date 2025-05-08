@@ -325,12 +325,14 @@ index i v t =
          Just lookup'' =>
            lookup'' # t
 
-{-
 ||| A flipped version of lookup. O(log n)
 export
-(!?) : RRBVector a -> Nat -> Maybe a
-(!?) = flip lookup
+(!?) :  RRBVector1 s a
+     -> Nat
+     -> F1 s (Maybe a)
+(!?) t = flip lookup t
 
+{-
 ||| A flipped version of index. O(log n)
 export
 (!!) : RRBVector a -> Nat -> a
