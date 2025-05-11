@@ -97,6 +97,7 @@ relaxedRadixIndex sizes i sh =
              False =>
                assert_total $ loop sizes (plus idx 1)
 
+{-
 export
 relaxedRadixIndex1 :  {n : _}
                    -> MArray s n Nat
@@ -139,6 +140,7 @@ relaxedRadixIndex1 sizes i sh t =
                    idx # t
                  False =>
                    (assert_total $ loop1 sizes (plus idx 1)) t
+-}
 
 --------------------------------------------------------------------------------
 --          Internal Tree Representation
@@ -148,7 +150,7 @@ relaxedRadixIndex1 sizes i sh t =
 public export
 data Tree1 : (s : Type) -> Type -> Type where
   Balanced   : (b : Nat) -> (b ** MArray s b (Tree1 s a)) -> Tree1 s a
-  Unbalanced : (u : Nat) -> (u ** MArray s u (Tree1 s a)) -> MArray s u Nat -> Tree1 s a
+  Unbalanced : (u : Nat) -> (u ** MArray s u (Tree1 s a)) -> Array Nat -> Tree1 s a
   Leaf       : (l : Nat) -> (l ** MArray s l a) -> Tree1 s a
 
 --------------------------------------------------------------------------------
@@ -189,16 +191,15 @@ treeSize t =
        -> Shift
        -> Tree1 s a
        -> F1 s Nat
-    go acc _ (Leaf       l (_ ** arr))       t =
+    go acc _  (Leaf       l (_ ** arr))       t =
       plus acc l # t
-    go acc _ (Unbalanced u (_ ** arr) sizes) t =
+    go acc _  (Unbalanced u (_ ** arr) sizes) t =
       let i := tryNatToFin $ minus u 1
         in case i of
              Nothing =>
                (assert_total $ idris_crash "Data.RRBVector1.Internal.treeSize: index out of bounds") # t
              Just i' =>
-               let i'' # t := get sizes i' t
-                 in plus acc i'' # t
+               (plus acc (at sizes.arr i')) # t
     go acc sh (Balanced  b (_ ** arr))       t =
       let i  := minus b 1
           i' := tryNatToFin i
@@ -225,10 +226,11 @@ computeSizes sh arr t =
          True  =>
            (Balanced n (n ** arr)) # t
          False =>
-           let arrnat  # t := unsafeMArray1 n t
-               arr'    # t := freeze arr t
-               arrnat' # t := loop sh 0 0 n (toList arr') arrnat t
-             in (Unbalanced n (n ** arr) arrnat') # t
+           let arrnat   # t := unsafeMArray1 n t
+               arr'     # t := freeze arr t
+               arrnat'  # t := loop sh 0 0 n (toList arr') arrnat t
+               arrnat'' # t := freeze arrnat' t
+             in (Unbalanced n (n ** arr) (A n arrnat'')) # t
   where
     loop :  (sh, cur, acc, n : Nat)
          -> List (Tree1 s a)
