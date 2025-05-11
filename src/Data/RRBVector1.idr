@@ -42,7 +42,8 @@ infixl 5 |>
 ||| The empty vector. O(1)
 export
 empty : F1 s (RRBVector1 s a)
-empty t = Empty # t
+empty t =
+  Empty # t
 
 ||| A vector with a single element. O(1)
 export
@@ -248,15 +249,19 @@ foldr f acc = go
 export
 null :  RRBVector1 s a
      -> F1 s Bool
-null Empty t = True # t
-null _     t = False # t
+null Empty t =
+  True # t
+null _     t =
+  False # t
 
 ||| Return the size of a vector. O(1)
 export
 length :  RRBVector1 s a
        -> F1 s Nat
-length Empty        t = 0 # t
-length (Root s _ _) t = s # t
+length Empty        t =
+  0 # t
+length (Root s _ _) t =
+  s # t
 
 --------------------------------------------------------------------------------
 --          Indexing
