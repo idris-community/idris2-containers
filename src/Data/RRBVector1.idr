@@ -51,7 +51,7 @@ singleton :  a
           -> F1 s (RRBVector1 s a)
 singleton x t =
   let newarr # t := marray1 1 x t
-    in Root 1 0 (Leaf 1 (1 ** newarr)) # t
+    in Root 1 0 (Leaf {lsize=1} (1 ** newarr)) # t
 
 {-
 ||| Create a new vector from a list. O(n)
@@ -146,16 +146,16 @@ replicate n x t =
       case compare n blocksize of
         LT =>
           let newarr # t := marray1 n x t
-            in Root n 0 (Leaf n (n ** newarr)) # t
+            in Root n 0 (Leaf {lsize=n} (n ** newarr)) # t
         EQ =>
           let newarr # t := marray1 n x t
-            in Root n 0 (Leaf n (n ** newarr)) # t
+            in Root n 0 (Leaf {lsize=n} (n ** newarr)) # t
         GT =>
           let size'       := integerToNat ((natToInteger $ minus n 1) .&. (natToInteger $ plus blockmask 1))
               newarr1 # t := marray1 blocksize x t
               newarr2 # t := marray1 size' x t
-              tree1       := Leaf blocksize (blocksize ** newarr1)
-              tree2       := Leaf size' (size' ** newarr2)
+              tree1       := Leaf {lsize=blocksize} (blocksize ** newarr1)
+              tree2       := Leaf {lsize=size'} (size' ** newarr2)
             in iterateNodes blockshift
                             tree1
                             tree2
@@ -171,20 +171,20 @@ replicate n x t =
           mappend1 # t := marray1 restsize full t
           mappend2 # t := marray1 1 rest t
           rest'    # t := mappend mappend1 mappend2 t
-          rest''       := Balanced (plus restsize 1) ((plus restsize 1) ** rest')
+          rest''       := Balanced {bsize=plus restsize 1} ((plus restsize 1) ** rest')
         in case compare subtreesm1 (natToInteger blocksize) of
              LT =>
                (Root n sh rest'') # t
              EQ =>
                let newarr # t := marray1 blocksize full t
-                   full'      := Balanced blocksize (blocksize ** newarr)
+                   full'      := Balanced {bsize=blocksize} (blocksize ** newarr)
                  in iterateNodes (up sh)
                                  (assert_smaller full full')
                                  (assert_smaller rest rest'')
                                  t
              GT =>
                let newarr # t := marray1 blocksize full t
-                   full'      := Balanced blocksize (blocksize ** newarr)
+                   full'      := Balanced {bsize=blocksize} (blocksize ** newarr)
                  in iterateNodes (up sh)
                                  (assert_smaller full full')
                                  (assert_smaller rest rest'')
@@ -300,14 +300,14 @@ lookup i (Root size sh tree) t =
                -> Nat
                -> Tree1 s a
                -> F1 s a
-    lookupTree i sh (Balanced _ (_ ** arr))         t =
+    lookupTree i sh (Balanced (_ ** arr))         t =
       case tryNatToFin (radixIndex i sh) of
         Nothing =>
           (assert_total $ idris_crash "Data.RRBVector.lookup.lookupTree: can't convert Nat to Fin") # t
         Just i' =>
           let i'' # t := get arr i' t
             in assert_total $ lookupTree i (down sh) i'' t
-    lookupTree i sh (Unbalanced _ (_ ** arr) sizes) t =
+    lookupTree i sh (Unbalanced (_ ** arr) sizes) t =
       let (idx, subidx) := relaxedRadixIndex sizes i sh
         in case tryNatToFin idx of
              Nothing =>
@@ -315,7 +315,7 @@ lookup i (Root size sh tree) t =
              Just i' =>
                let i'' # t := get arr i' t
                  in assert_total $ lookupTree subidx (down sh) i'' t
-    lookupTree i _  (Leaf _ (_ ** arr))             t =
+    lookupTree i _  (Leaf (_ ** arr))             t =
       let i' = integerToNat ((natToInteger i) .&. (natToInteger blockmask))
         in case tryNatToFin i' of
              Nothing  =>
@@ -394,31 +394,31 @@ update i x v@(Root size sh tree) t =
                -> Nat
                -> Tree1 s a
                -> F1 s (Tree1 s a)
-    updateTree i sh (Balanced b (b' ** arr))         t =
+    updateTree i sh (Balanced (b ** arr))         t =
       case tryNatToFin (radixIndex i sh) of
         Nothing =>
           (assert_total $ idris_crash "Data.RRBVector.update.updateTree: can't convert Nat to Fin") # t
         Just i' =>
-          let newtree # t := assert_total $ updateTree i (down sh) (Balanced b (b' ** arr)) t
+          let newtree # t := assert_total $ updateTree i (down sh) (Balanced {bsize=b} (b ** arr)) t
               ()      # t := set arr i' newtree t
-            in (Balanced b (b' ** arr)) # t
-    updateTree i sh (Unbalanced u (u' ** arr) sizes) t =
+            in (Balanced {bsize=b} (b ** arr)) # t
+    updateTree i sh (Unbalanced (u ** arr) sizes) t =
       let (idx, subidx) := relaxedRadixIndex sizes i sh
         in case tryNatToFin idx of
              Nothing   =>
                (assert_total $ idris_crash "Data.RRBVector.update.updateTree: can't convert Nat to Fin") # t
              Just idx' =>
-               let newtree # t := assert_total $ updateTree subidx (down sh) (Unbalanced u (u' ** arr) sizes) t
+               let newtree # t := assert_total $ updateTree subidx (down sh) (Unbalanced (u ** arr) sizes) t
                    ()      # t := set arr idx' newtree t
-                 in (Unbalanced u (u' ** arr) sizes) # t
-    updateTree i _  (Leaf l (l' ** arr))             t =
+                 in (Unbalanced (u ** arr) sizes) # t
+    updateTree i _  (Leaf (l ** arr))             t =
       let i' = integerToNat ((natToInteger i) .&. (natToInteger blockmask))
         in case tryNatToFin i' of
              Nothing =>
                (assert_total $ idris_crash "Data.RRBVector.update: can't convert Nat to Fin") # t
              Just i'' =>
                let () # t := set arr i'' x t
-                 in (Leaf l (l' ** arr)) # t
+                 in (Leaf {lsize=l} (l ** arr)) # t
 
 ||| Adjust the element at the index by applying the function to it.
 ||| If the index is out of range, the original vector is returned. O(log n)
@@ -461,36 +461,36 @@ adjust i f v@(Root size sh tree) t =
                -> Nat
                -> Tree1 s a
                -> F1 s (Tree1 s a)
-    adjustTree i sh (Balanced b (b' ** arr))         t =
+    adjustTree i sh (Balanced (b ** arr))         t =
       case tryNatToFin (radixIndex i sh) of
         Nothing =>
           (assert_total $ idris_crash "Data.RRBVector.adjust: can't convert Nat to Fin") # t
         Just i' =>
-          let newtree # t := assert_total $ adjustTree i (down sh) (Balanced b (b' ** arr)) t
+          let newtree # t := assert_total $ adjustTree i (down sh) (Balanced {bsize=b} (b ** arr)) t
               ()      # t := set arr i' newtree t
-            in (Balanced b (b' ** arr)) # t
-    adjustTree i sh (Unbalanced u (u' ** arr) sizes) t =
+            in (Balanced {bsize=b} (b ** arr)) # t
+    adjustTree i sh (Unbalanced (u ** arr) sizes) t =
       let (idx, subidx) := relaxedRadixIndex sizes i sh
         in case tryNatToFin idx of
              Nothing   =>
                (assert_total $ idris_crash "Data.RRBVector.adjust: can't convert Nat to Fin") # t
              Just idx' =>
-               let newtree # t := assert_total $ adjustTree subidx (down sh) (Unbalanced u (u' ** arr) sizes) t
+               let newtree # t := assert_total $ adjustTree subidx (down sh) (Unbalanced (u ** arr) sizes) t
                    ()      # t := set arr idx' newtree t
-                 in (Unbalanced u (u' ** arr) sizes) # t
-    adjustTree i _  (Leaf l (l' ** arr))             t =
+                 in (Unbalanced (u ** arr) sizes) # t
+    adjustTree i _  (Leaf (l ** arr))             t =
       let i' = integerToNat ((natToInteger i) .&. (natToInteger blockmask))
         in case tryNatToFin i' of
              Nothing =>
                (assert_total $ idris_crash "Data.RRBVector.adjust: can't convert Nat to Fin") # t
              Just i'' =>
                let () # t := modify arr i'' f t
-                 in (Leaf l (l' ** arr)) # t
+                 in (Leaf {lsize=l} (l ** arr)) # t
 
 private
 normalize :  RRBVector1 s a
           -> F1 s (RRBVector1 s a)
-normalize v@(Root size sh (Balanced b (b' ** arr)))         t =
+normalize v@(Root size sh (Balanced (b ** arr)))         t =
   case compare b 1 of
     LT =>
       v # t
@@ -503,7 +503,7 @@ normalize v@(Root size sh (Balanced b (b' ** arr)))         t =
             in assert_total $ (normalize (Root size (down sh) arr') t)
     GT =>
       v # t
-normalize v@(Root size sh (Unbalanced u (u' ** arr) sizes)) t =
+normalize v@(Root size sh (Unbalanced (u ** arr) sizes)) t =
   case compare u 1 of
     LT =>
       v # t
@@ -525,7 +525,7 @@ takeTree :  Nat
          -> Shift
          -> Tree1 s a
          -> F1 s (Tree1 s a)
-takeTree i sh (Balanced b (b' ** arr)) with (radixIndex i sh) | ((plus (radixIndex i sh) 1) <= b') proof eq
+takeTree i sh (Balanced (b ** arr)) with (radixIndex i sh) | ((plus (radixIndex i sh) 1) <= b) proof eq
   _ | i' | True  = \t =>
     case tryNatToFin i' of
       Nothing  =>
@@ -535,10 +535,10 @@ takeTree i sh (Balanced b (b' ** arr)) with (radixIndex i sh) | ((plus (radixInd
             newtree  # t := get arr' i'' t
             newtree' # t := assert_total $ takeTree i (down sh) newtree t
             ()       # t := set arr' i'' newtree' t
-          in (Balanced (plus (radixIndex i sh) 1) ((plus (radixIndex i sh) 1) ** arr')) # t
+          in (Balanced {bsize=(plus (radixIndex i sh) 1)} ((plus (radixIndex i sh) 1) ** arr')) # t
   _ | _  | False = \t =>
     (assert_total $ idris_crash "Data.RRBVector1.takeTree: index out of bounds") # t
-takeTree i sh (Unbalanced u (u' ** arr) sizes) with (relaxedRadixIndex sizes i sh) | ((plus (fst (relaxedRadixIndex sizes i sh)) 1) <= u') proof eq
+takeTree i sh (Unbalanced (u ** arr) sizes) with (relaxedRadixIndex sizes i sh) | ((plus (fst (relaxedRadixIndex sizes i sh)) 1) <= u) proof eq
   _ | (idx, subidx) | True  = \t =>
     case tryNatToFin idx of
       Nothing   =>
@@ -552,12 +552,12 @@ takeTree i sh (Unbalanced u (u' ** arr) sizes) with (relaxedRadixIndex sizes i s
           in newtree'' # t
   _ | _             | False = \t =>
     (assert_total $ idris_crash "Data.RRBVector1.takeTree: index out of bounds") # t
-takeTree i _ (Leaf l (l' ** arr)) with (integerToNat (((natToInteger i) .&. (natToInteger blockmask)) + 1) <= l') proof eq
+takeTree i _ (Leaf (l ** arr)) with (integerToNat (((natToInteger i) .&. (natToInteger blockmask)) + 1) <= l) proof eq
   _ | True  = \t =>
-    case ((integerToNat (((natToInteger i) .&. (natToInteger blockmask)) + 1)) <= l') of
+    case ((integerToNat (((natToInteger i) .&. (natToInteger blockmask)) + 1)) <= l) of
       True  =>
         let arr' # t := mtake arr (integerToNat (((natToInteger i) .&. (natToInteger blockmask)) + 1)) @{lteOpReflectsLTE _ _ eq} t
-          in (Leaf (integerToNat (((natToInteger i) .&. (natToInteger blockmask)) + 1)) ((integerToNat (((natToInteger i) .&. (natToInteger blockmask)) + 1)) ** arr')) # t
+          in (Leaf {lsize=(integerToNat (((natToInteger i) .&. (natToInteger blockmask)) + 1))} ((integerToNat (((natToInteger i) .&. (natToInteger blockmask)) + 1)) ** arr')) # t
       False =>
         (assert_total $ idris_crash "Data.RRBVector1.takeTree: index out of bounds") # t
   _ | False = \t =>
