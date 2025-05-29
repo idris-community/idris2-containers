@@ -14,9 +14,16 @@ import Data.SnocList
 import Data.Vect
 import Data.Zippable
 
+%hide Data.Array.Core.take
+%hide Data.List.drop
 %hide Data.List.lookup
+%hide Data.List.take
+%hide Data.Vect.drop
 %hide Data.Vect.lookup
+%hide Data.Vect.take
+%hide Data.Vect.Stream.take
 %hide Prelude.null
+%hide Prelude.take
 %hide Prelude.Ops.infixr.(<|)
 %hide Prelude.Ops.infixl.(|>)
 
@@ -345,7 +352,6 @@ export
      -> F1 s (Maybe a)
 (!?) t = flip lookup t
 
-
 ||| A flipped version of index. O(log n)
 export
 (!!) :  RRBVector1 s a
@@ -625,7 +631,7 @@ export
 drop :  Nat
      -> RRBVector1 s a
      -> F1 s (RRBVector1 s a)
-drop _ Empty                 t = Empty # t
+drop _ Empty                 t = empty t
 drop n v@(Root size sh tree) t =
   case compare n 0 of
     LT =>
@@ -672,67 +678,77 @@ splitAt n v@(Root size sh tree) t =
 --          Deconstruction
 --------------------------------------------------------------------------------
 
-{-
 ||| The first element and the vector without the first element, or 'Nothing' if the vector is empty. O(log n)
 export
-viewl : RRBVector a -> Maybe (a, RRBVector a)
-viewl Empty             = Nothing
-viewl v@(Root _ _ tree) =
-  let tail = drop 1 v
-    in Just (headTree tree, tail)
+viewl :  RRBVector1 s a
+      -> F1 s (Maybe (a, RRBVector1 s a))
+viewl Empty             t = Nothing # t
+viewl v@(Root _ _ tree) t =
+  let tail # t := drop 1 v t
+      head # t := headTree tree t
+    in (Just (head, tail)) # t
   where
-    headTree : Tree a -> a
-    headTree (Balanced arr)     =
+    headTree :  Tree1 s a
+             -> F1 s a
+    headTree (Balanced (_ ** arr))     t =
       case tryNatToFin 0 of
         Nothing   =>
-          assert_total $ idris_crash "Data.RRBVector.viewl: can't convert Nat to Fin"
+          (assert_total $ idris_crash "Data.RRBVector.viewl: can't convert Nat to Fin") # t
         Just zero =>
-          assert_total $ headTree (at arr.arr zero)
-    headTree (Unbalanced arr _) =
+          let headtree # t := get arr zero t
+            in assert_total $ headTree headtree t
+    headTree (Unbalanced (_ ** arr) _) t =
       case tryNatToFin 0 of
         Nothing   =>
-          assert_total $ idris_crash "Data.RRBVector.viewl: can't convert Nat to Fin"
+          (assert_total $ idris_crash "Data.RRBVector.viewl: can't convert Nat to Fin") # t
         Just zero =>
-          assert_total $ headTree (at arr.arr zero)
-    headTree (Leaf arr)         =
+          let headtree # t := get arr zero t
+            in assert_total $ headTree headtree t
+    headTree (Leaf (_ ** arr))         t =
       case tryNatToFin 0 of
         Nothing   =>
-          assert_total $ idris_crash "Data.RRBVector.viewl: can't convert Nat to Fin"
+          (assert_total $ idris_crash "Data.RRBVector.viewl: can't convert Nat to Fin") # t
         Just zero =>
-          at arr.arr zero
+          get arr zero t
 
 ||| The vector without the last element and the last element, or 'Nothing' if the vector is empty. O(log n)
 export
-viewr : RRBVector a -> Maybe (RRBVector a, a)
-viewr Empty                = Nothing
-viewr v@(Root size _ tree) =
-  let init = take (minus size 1) v
-    in Just (init, lastTree tree)
+viewr :  RRBVector1 s a
+      -> F1 s (Maybe (RRBVector1 s a, a))
+viewr Empty                t = Nothing # t
+viewr v@(Root size _ tree) t =
+  let init # t := take (minus size 1) v t
+      last # t := lastTree tree t
+    in (Just (init, last)) # t
   where
-    lastTree : Tree a -> a
-    lastTree (Balanced arr)     =
+    lastTree :  Tree1 s a
+             -> F1 s a
+    lastTree (Balanced (_ ** arr))     t =
       case tryNatToFin (minus size 1) of
         Nothing   =>
-          assert_total $ idris_crash "Data.RRBVector.viewr: can't convert Nat to Fin"
+          (assert_total $ idris_crash "Data.RRBVector.viewr: can't convert Nat to Fin") # t
         Just last =>
-          assert_total $ lastTree (at arr.arr last)
-    lastTree (Unbalanced arr _) =
+          let lasttree # t := get arr last t
+            in assert_total $ lastTree lasttree t
+    lastTree (Unbalanced (_ ** arr) _) t =
       case tryNatToFin (minus size 1) of
         Nothing   =>
-          assert_total $ idris_crash "Data.RRBVector.viewr: can't convert Nat to Fin"
+          (assert_total $ idris_crash "Data.RRBVector.viewr: can't convert Nat to Fin") # t
         Just last =>
-          assert_total $ lastTree (at arr.arr last)
-    lastTree (Leaf arr)         =
+          let lasttree # t := get arr last t
+            in assert_total $ lastTree lasttree t
+    lastTree (Leaf (_ ** arr))         t =
       case tryNatToFin (minus size 1) of
         Nothing   =>
-          assert_total $ idris_crash "Data.RRBVector.viewr: can't convert Nat to Fin"
+          (assert_total $ idris_crash "Data.RRBVector.viewr: can't convert Nat to Fin") # t
         Just last =>
-          at arr.arr last
+          get arr last t
 
 --------------------------------------------------------------------------------
 --          Transformation
 --------------------------------------------------------------------------------
 
+{-
 ||| Apply the function to every element. O(n)
 export
 map : (a -> b) -> RRBVector a -> RRBVector b
@@ -746,37 +762,6 @@ map f (Root size sh tree) = Root size sh (mapTree tree)
       assert_total $ Unbalanced (map mapTree arr) sizes
     mapTree (Leaf arr)             =
       Leaf (map f arr)
-
-||| Reverse the vector. O(n)
-export
-reverse : RRBVector a -> RRBVector a
-reverse v =
-  case compare (length v) 1 of
-    LT =>
-      v
-    EQ =>
-      v
-    GT =>
-      case fromList $ toList v of
-        Nothing =>
-          assert_total $ idris_crash "Data.RRBVector.reverse: can't convert to List1"
-        Just v' =>
-          fromList $ forget $ reverse v'
-
-||| Take two vectors and return a vector of corresponding pairs.
-||| If one input is longer, excess elements are discarded from the right end. O(min(n1,n2))
-export
-zip : RRBVector a -> RRBVector b -> RRBVector (a, b)
-zip v1 v2 =
-  case fromList $ toList v1 of
-    Nothing  =>
-      assert_total $ idris_crash "Data.RRBVector.zip: can't convert to List1"
-    Just v1' =>
-      case fromList $ toList v2 of
-        Nothing  =>
-          assert_total $ idris_crash "Data.RRBVector.zip: can't convert to List1"
-        Just v2' =>
-          fromList $ forget $ zip v1' v2'
 
 --------------------------------------------------------------------------------
 --          Concatenation
