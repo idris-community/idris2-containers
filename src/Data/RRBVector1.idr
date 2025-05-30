@@ -751,21 +751,22 @@ viewr v@(Root size _ tree) t =
 ||| Apply the function to every element. O(n)
 export
 map :  (F1 s a -> F1 s b)
+    -> (F1 s (Tree1 s a) -> F1 s (Tree1 s b))
     -> RRBVector1 s a
     -> F1 s (RRBVector1 s b)
-map _ Empty               t = empty t
-map f (Root size sh tree) t =
+map _ _  Empty               t = empty t
+map f f' (Root size sh tree) t =
   let maptree # t := mapTree tree t
     in (Root size sh maptree) # t
   where
     mapTree :  Tree1 s a
             -> F1 s (Tree1 s b)
     mapTree (Balanced (b ** arr))         t =
-      let newtree # t := assert_total $ mapTree (Balanced {bsize=b} (b ** arr)) t
-        in newtree # t
+      let newtree # t := mmap f' arr t
+        in (Balanced {bsize=b} (b ** newtree)) # t
     mapTree (Unbalanced (u ** arr) sizes) t =
-      let newtree # t := assert_total $ mapTree (Unbalanced (u ** arr) sizes) t
-        in newtree # t
+      let newtree # t := mmap f' arr t
+        in (Unbalanced (u ** newtree) sizes) # t
     mapTree (Leaf (l ** arr))             t =
       let arr' # t := mmap f arr t
         in (Leaf {lsize=l} (l ** arr')) # t
