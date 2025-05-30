@@ -762,11 +762,11 @@ map f f' (Root size sh tree) t =
     mapTree :  Tree1 s a
             -> F1 s (Tree1 s b)
     mapTree (Balanced (b ** arr))         t =
-      let newtree # t := mmap f' arr t
-        in (Balanced {bsize=b} (b ** newtree)) # t
+      let arr' # t := mmap f' arr t
+        in (Balanced {bsize=b} (b ** arr')) # t
     mapTree (Unbalanced (u ** arr) sizes) t =
-      let newtree # t := mmap f' arr t
-        in (Unbalanced (u ** newtree) sizes) # t
+      let arr' # t := mmap f' arr t
+        in (Unbalanced (u ** arr') sizes) # t
     mapTree (Leaf (l ** arr))             t =
       let arr' # t := mmap f arr t
         in (Leaf {lsize=l} (l ** arr')) # t
