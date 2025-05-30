@@ -748,25 +748,33 @@ viewr v@(Root size _ tree) t =
 --          Transformation
 --------------------------------------------------------------------------------
 
-{-
 ||| Apply the function to every element. O(n)
 export
-map : (a -> b) -> RRBVector a -> RRBVector b
-map _ Empty               = Empty
-map f (Root size sh tree) = Root size sh (mapTree tree)
+map :  (F1 s a -> F1 s b)
+    -> RRBVector1 s a
+    -> F1 s (RRBVector1 s b)
+map _ Empty               t = empty t
+map f (Root size sh tree) t =
+  let maptree # t := mapTree tree t
+    in (Root size sh maptree) # t
   where
-    mapTree : Tree a -> Tree b
-    mapTree (Balanced arr)         =
-      assert_total $ Balanced (map mapTree arr)
-    mapTree (Unbalanced arr sizes) =
-      assert_total $ Unbalanced (map mapTree arr) sizes
-    mapTree (Leaf arr)             =
-      Leaf (map f arr)
+    mapTree :  Tree1 s a
+            -> F1 s (Tree1 s b)
+    mapTree (Balanced (b ** arr))         t =
+      let newtree # t := assert_total $ mapTree (Balanced {bsize=b} (b ** arr)) t
+        in newtree # t
+    mapTree (Unbalanced (u ** arr) sizes) t =
+      let newtree # t := assert_total $ mapTree (Unbalanced (u ** arr) sizes) t
+        in newtree # t
+    mapTree (Leaf (l ** arr))             t =
+      let arr' # t := mmap f arr t
+        in (Leaf {lsize=l} (l ** arr')) # t
 
 --------------------------------------------------------------------------------
 --          Concatenation
 --------------------------------------------------------------------------------
 
+{-
 ||| Create a new tree with shift sh.
 private
 newBranch : a -> Shift -> Tree a
