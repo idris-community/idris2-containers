@@ -15,6 +15,7 @@ import Data.Vect
 import Data.Zippable
 
 %hide Data.Array.Core.take
+%hide Data.Linear.(::)
 %hide Data.List.drop
 %hide Data.List.lookup
 %hide Data.List.take
@@ -22,10 +23,12 @@ import Data.Zippable
 %hide Data.Vect.lookup
 %hide Data.Vect.take
 %hide Data.Vect.Stream.take
+%hide Data.Vect.(::)
 %hide Prelude.null
 %hide Prelude.take
 %hide Prelude.Ops.infixr.(<|)
 %hide Prelude.Ops.infixl.(|>)
+%hide Prelude.Stream.(::)
 
 %default total
 
@@ -60,83 +63,72 @@ singleton x t =
   let newarr # t := marray1 1 x t
     in Root 1 0 (Leaf {lsize=1} (1 ** newarr)) # t
 
-{-
 ||| Create a new vector from a list. O(n)
 export
-fromList : List a -> RRBVector a
-fromList []  = Empty
-fromList [x] = singleton x
-fromList xs  =
-  case nodes Leaf xs of
-    [tree] =>
-      Root (treeSize 0 tree) 0 tree -- tree is a single leaf
-    xs'    =>
-      assert_smaller xs (iterateNodes blockshift xs')
+fromList :  List a
+         -> F1 s (RRBVector1 s a)
+fromList []  t = empty t
+fromList [x] t = singleton x t
+fromList xs  t =
+  let trees # t := nodes xs Lin t
+    in case trees of
+         [tree] =>
+           let treesize # t := treeSize 0 tree t
+             in (Root treesize 0 tree) # t
+         xs'    =>
+           assert_smaller xs (iterateNodes blockshift xs' t)
   where
-    nodes : (Array a -> Tree a) -> List a -> List (Tree a)
-    nodes f trees =
-      let (trees', rest) = unsafeAlloc blocksize (go 0 blocksize f trees)
-        in case rest of
-             []    =>
-               [trees']
-             rest' =>
-               (trees' :: nodes f (assert_smaller trees rest'))
-      where
-        go :  (cur,n : Nat)
-           -> (Array a -> Tree a)
-           -> List a
-           -> WithMArray n a (Tree a,List a)
-        go cur n f []        r = T1.do
-          res <- unsafeFreeze r
-          pure $ (f $ force $ take cur $ A n res,[])
-        go cur n f (x :: xs) r =
-          case cur == n of
-            True  => T1.do
-              res <- unsafeFreeze r
-              pure $ (f $ A n res, x :: xs)
-            False =>
-              case tryNatToFin cur of
-                Nothing   =>
-                  assert_total $ idris_crash "Data.RRBVector.fromList.node: can't convert Nat to Fin"
-                Just cur' => T1.do
-                  set r cur' x
-                  go (S cur) n f xs r
-    nodes' : (Array (Tree a) -> Tree a) -> List (Tree a) -> List (Tree a)
-    nodes' f trees =
-      let (trees', rest) = unsafeAlloc blocksize (go 0 blocksize f trees)
-        in case rest of
-             []    =>
-               [trees']
-             rest' =>
-               (trees' :: nodes' f (assert_smaller trees rest'))
-      where
-        go :  (cur,n : Nat)
-           -> (Array (Tree a) -> Tree a)
-           -> List (Tree a)
-           -> WithMArray n (Tree a) (Tree a,List (Tree a))
-        go cur n f []        r = T1.do
-          res <- unsafeFreeze r
-          pure $ (f $ force $ take cur $ A n res,[])
-        go cur n f (x :: xs) r =
-          case cur == n of
-            True  => T1.do
-              res <- unsafeFreeze r
-              pure $ (f $ A n res, x :: xs)
-            False =>
-              case tryNatToFin cur of
-                Nothing   =>
-                  assert_total $ idris_crash "Data.RRBVector.fromList.node': can't convert Nat to Fin"
-                Just cur' => T1.do
-                  set r cur' x
-                  go (S cur) n f xs r
-    iterateNodes : Nat -> List (Tree a) -> RRBVector a
-    iterateNodes sh trees =
-      case nodes' Balanced trees of
-        [tree] =>
-          Root (treeSize sh tree) sh tree
-        trees' =>
-          iterateNodes (up sh) (assert_smaller trees trees')
--}
+    nodes :  List a
+          -> SnocList (Tree1 s a)
+          -> F1 s (List (Tree1 s a))
+    nodes l sl with (splitAt blocksize l) | ((length (fst (splitAt blocksize l))) <= (length l)) proof eq
+      _ | (cl, cl') | True  = \t =>
+        let trees'  # t := unsafeMArray1 (length l) t
+            ()      # t := writeList trees' l t
+            trees'' # t := mtake trees' (length (fst (splitAt blocksize l))) @{lteOpReflectsLTE _ _ eq} t
+          in case cl' of
+               []   =>
+                 let trees''' := Leaf {lsize=(length (fst (splitAt blocksize l)))} ((length (fst (splitAt blocksize l))) ** trees'')
+                     sl'      := sl :< trees'''
+                   in (sl' <>> []) # t
+               cl'' =>
+                 let trees''' := Leaf {lsize=(length (fst (splitAt blocksize l)))} ((length (fst (splitAt blocksize l))) ** trees'')
+                     sl'      := sl :< trees'''
+                   in (nodes (assert_smaller l cl'') sl') t
+      _ | _         | False = \t =>
+        (assert_total $ idris_crash "Data.RRBVector1.fromList.nodes: index out of bounds") # t
+    nodes' :  Nat
+           -> List (Tree1 s a)
+           -> SnocList (Tree1 s a)
+           -> F1 s (List (Tree1 s a))
+    nodes' sh l sl with (splitAt blocksize l) | ((length (fst (splitAt blocksize l))) <= (length l)) proof eq
+      _ | (cl, cl') | True  = \t =>
+        let trees'  # t := unsafeMArray1 (length l) t
+            ()      # t := writeList trees' l t
+            trees'' # t := mtake trees' (length (fst (splitAt blocksize l))) @{lteOpReflectsLTE _ _ eq} t
+          in case cl' of
+               []   =>
+                 let trees''' := Balanced {bsize=(length (fst (splitAt blocksize l)))} ((length (fst (splitAt blocksize l))) ** trees'')
+                     sl'      := sl :< trees'''
+                   in (sl' <>> []) # t
+               cl'' =>
+                 let trees''' := Balanced {bsize=(length (fst (splitAt blocksize l)))} ((length (fst (splitAt blocksize l))) ** trees'')
+                     sl'      := sl :< trees'''
+                   in (nodes' sh (assert_smaller l cl'') sl') t
+      _ | _         | False = \t =>
+        (assert_total $ idris_crash "Data.RRBVector1.fromList.nodes': index out of bounds") # t
+    iterateNodes :  Nat
+                 -> List (Tree1 s a)
+                 -> F1 s (RRBVector1 s a)
+    iterateNodes sh trees t =
+      let trees' # t := nodes' sh trees Lin t
+        in case trees' of
+             [tree]  =>
+               let treesize # t := treeSize sh tree t
+                 in (Root treesize sh tree) # t
+             trees'' =>
+               iterateNodes (up sh) (assert_smaller trees trees'') t
+
 
 ||| Creates a vector of length n with every element set to x. O(log n)
 export
