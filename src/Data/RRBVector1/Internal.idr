@@ -123,6 +123,13 @@ singleton x t =
     in arr # t
 
 export
+singleton' :  Tree1 s a
+           -> F1 s (MArray s 1 (Tree1 s a))
+singleton' tree t =
+  let tree' # t := marray1 1 tree t
+    in tree' # t
+
+export
 treeToArray :  Tree1 s a
             -> Either (bsize ** MArray s bsize (Tree1 s a))
                       (usize ** MArray s usize (Tree1 s a))

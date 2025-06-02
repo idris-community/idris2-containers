@@ -19,6 +19,8 @@ import Data.Zippable
 %hide Data.List.drop
 %hide Data.List.lookup
 %hide Data.List.take
+%hide Data.List.singleton
+%hide Data.List1.singleton
 %hide Data.Vect.drop
 %hide Data.Vect.lookup
 %hide Data.Vect.take
@@ -188,57 +190,6 @@ replicate n x t =
                                  (assert_smaller rest rest'')
                                  t
 
---------------------------------------------------------------------------------
---          Creating Lists from linear RRB-Vectors
---------------------------------------------------------------------------------
-{-
-||| Convert a vector to a list. O(n)
-export
-toList :  RRBVector1 s a
-       -> F1 s (List a)
-toList Empty           t = Nil # t
-toList (Root _ _ tree) t = treeToList tree t
-  where
-    treeToList :  Tree1 s a
-               -> F1 s (List a)
-    treeToList (Balanced b (b' ** arr))    t =
-      let arr' # t := freeze arr t
-        in assert_total $ concat (map treeToList (toList arr')) t
-    treeToList (Unbalanced _ (_ ** arr) _) t =
-      let arr' # t := freeze arr t
-        in assert_total $ concat (map treeToList (toList arr')) t
-    treeToList (Leaf _ (_ ** arr))         t =
-      let arr' # t := freeze arr t
-        in toList arr' # t
-
---------------------------------------------------------------------------------
---          Folds
---------------------------------------------------------------------------------
-
-export
-foldl : (b -> a -> b) -> b -> RRBVector a -> b
-foldl f acc = go
-  where
-    foldlTree : b -> Tree a -> b
-    foldlTree acc' (Balanced arr)     = assert_total $ foldl foldlTree acc' arr
-    foldlTree acc' (Unbalanced arr _) = assert_total $ foldl foldlTree acc' arr
-    foldlTree acc' (Leaf arr)         = assert_total $ foldl f acc' arr
-    go : RRBVector a -> b
-    go Empty           = acc
-    go (Root _ _ tree) = assert_total $ foldlTree acc tree
-
-export
-foldr : (a -> b -> b) -> b -> RRBVector a -> b
-foldr f acc = go
-  where
-    foldrTree : Tree a -> b -> b
-    foldrTree (Balanced arr) acc'     = assert_total $ foldr foldrTree acc' arr
-    foldrTree (Unbalanced arr _) acc' = assert_total $ foldr foldrTree acc' arr
-    foldrTree (Leaf arr) acc'         = assert_total $ foldr f acc' arr
-    go : RRBVector a -> b
-    go Empty           = acc
-    go (Root _ _ tree) = assert_total $ foldrTree tree acc
--}
 --------------------------------------------------------------------------------
 --          Query
 --------------------------------------------------------------------------------
@@ -766,13 +717,33 @@ map f f' (Root size sh tree) t =
 --          Concatenation
 --------------------------------------------------------------------------------
 
-{-
 ||| Create a new tree with shift sh.
 private
-newBranch : a -> Shift -> Tree a
-newBranch x 0  = Leaf (singleton x)
-newBranch x sh = assert_total $ Balanced (singleton $ newBranch x (down sh))
+newBranch :  a
+          -> Shift
+          -> F1 s (Tree1 s a)
+newBranch x 0  t =
+  let x' # t := Data.RRBVector1.Internal.singleton x t
+    in (Leaf {lsize=1} (1 ** x')) # t
+newBranch x sh t =
+  let branch # t := assert_total $ newBranch x (down sh) t
+      x'     # t := Data.RRBVector1.Internal.singleton branch t
+    in (Balanced {bsize=1} (1 ** x')) # t
 
+||| Create a new tree with shift sh.
+private
+newBranch' :  Tree1 s a
+           -> Shift
+           -> F1 s (Tree1 s a)
+newBranch' tree 0  t =
+  let tree' # t := singleton' tree t
+    in (Balanced {bsize=1} (1 ** tree')) # t
+newBranch' tree sh t =
+  let branch  # t := assert_total $ newBranch' tree (down sh) t
+      tree'   # t := singleton' branch t
+    in (Balanced {bsize=1} (1 ** tree')) # t
+
+{-
 ||| Add an element to the left end of the vector. O(log n)
 export
 (<|) : a -> RRBVector a -> RRBVector a
