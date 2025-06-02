@@ -129,7 +129,6 @@ fromList xs  t =
              trees'' =>
                iterateNodes (up sh) (assert_smaller trees trees'') t
 
-
 ||| Creates a vector of length n with every element set to x. O(log n)
 export
 replicate :  Nat
