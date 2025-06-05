@@ -5,6 +5,7 @@ import public Data.RRBVector1.Internal
 
 import Data.Array.Core
 import Data.Array.Index
+import Data.Array.Indexed
 import Data.Array.Mutable
 import Data.Bits
 import Data.Maybe
@@ -15,6 +16,7 @@ import Data.Vect
 import Data.Zippable
 
 %hide Data.Array.Core.take
+%hide Data.Array.Indexed.drop
 %hide Data.Linear.(::)
 %hide Data.List.drop
 %hide Data.List.lookup
@@ -189,6 +191,89 @@ replicate n x t =
                                  (assert_smaller full full')
                                  (assert_smaller rest rest'')
                                  t
+
+--------------------------------------------------------------------------------
+--          Creating linear lists from linear RRB-Vectors
+--------------------------------------------------------------------------------
+
+mutual
+  {-
+  private
+  treeToTree :  F1 s (Tree1 s a)
+             -> F1 s (Tree1 s b)
+  treeToTree (Balanced (_ ** arr))     t =
+    treeToList' arr t
+  treeToTree (Unbalanced (_ ** arr) _) t =
+    treeToList' arr t
+  treeToTree l@(Leaf (_ ** arr))       t =
+    l # t
+
+  private
+  treeToList'' :  MArray s n (Tree1 s a)
+               -> F1 s (MArray s n (Tree1 s b))
+  treeToList'' arr t =
+     mmap treeToTree arr t
+
+  -}
+
+  private
+  mapTreeToList :  MArray s n (Tree1 s a)
+                -> F1 s (List a)
+  mapTreeToList f p t =
+    let tft # t := unsafeMArray1 n t
+     in go 0 n tft t
+    where
+      go :  (m, x : Nat)
+         -> (q : MArray s n a)
+         -> {auto v : Ix x n}
+         -> {auto 0 prf : LTE m $ ixToNat v}
+         -> F1 s (m ** MArray s m a)
+      go m Z     q t =
+        q # t
+      go m (S j) q t =
+        let j' # t := getIx p j t
+         in case j' of
+              (Balanced (_ ** arr))         =>
+                let () # t := setNat q m @{curLT v prf} j' t
+                  in go (S m) j q t
+              (Unbalanced (_ ** arr) sizes) =>
+                let () # t := setNat q m @{curLT v prf} j' t
+                  in go (S m) j q t
+              (Leaf (_ ** arr))             =>
+                let arr' # t := freeze arr t
+                  in toList arr' # t
+
+  private
+  treeToList' : -- (F1 s (Tree1 s a) -> F1 s (List a))
+                 Tree1 s a
+              -> F1 s (List a)
+  treeToList' (Balanced (_ ** arr))     t =
+    treeToList arr t
+  treeToList' (Unbalanced (_ ** arr) _) t =
+    treeToList arr t
+  treeToList' (Leaf (_ ** arr))         t =
+    let arr' # t := freeze arr t
+      in toList arr' # t
+
+  private
+  treeToList :  MArray s n (Tree1 s a)
+             -> F1 s (List a)
+  treeToList arr t =
+    mapTreeToList arr t
+
+||| Convert a vector to a list. O(n)
+export
+toList :  RRBVector1 s a
+       -> F1 s (List a)
+toList Empty                                t =
+  [] # t
+toList (Root _ _ (Balanced (_ ** arr)))     t =
+  treeToList arr t
+toList (Root _ _ (Unbalanced (_ ** arr) _)) t =
+  treeToList arr t
+toList (Root _ _ (Leaf (_ ** arr)))         t =
+  let arr' # t := freeze arr t
+    in toList arr' # t
 
 --------------------------------------------------------------------------------
 --          Query
