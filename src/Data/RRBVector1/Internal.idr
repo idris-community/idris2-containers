@@ -119,15 +119,13 @@ export
 singleton :  a
           -> F1 s (MArray s 1 a)
 singleton x t =
-  let arr # t := marray1 1 x t 
-    in arr # t
+  marray1 1 x t
 
 export
 singleton' :  Tree1 s a
            -> F1 s (MArray s 1 (Tree1 s a))
 singleton' tree t =
-  let tree' # t := marray1 1 tree t
-    in tree' # t
+  marray1 1 tree t
 
 export
 treeToArray :  Tree1 s a
@@ -166,16 +164,15 @@ treeSize t =
              Just i' =>
                (plus acc (at sizes i')) # t
     go acc sh (Balanced  (b ** arr))        t =
-      let i  := minus b 1
-          i' := tryNatToFin i
-        in case i' of
-             Nothing  =>
+      let i := minus b 1
+        in case tryNatToFin i of
+             Nothing =>
                (assert_total $ idris_crash "Data.RRBVector1.Internal.treeSize: index out of bounds") # t
-             Just i'' =>
-               let i''' # t := get arr i'' t
+             Just i' =>
+               let i'' # t := get arr i' t
                  in go (plus acc (mult i (integerToNat (1 `shiftL` sh))))
                        (down sh)
-                       (assert_smaller arr i''')
+                       (assert_smaller arr i'')
                        t
 
 ||| Turns an array into a tree node by computing the sizes of its subtrees.
@@ -191,27 +188,31 @@ computeSizes sh arr t =
          True  =>
            (Balanced {bsize=n} (n ** arr)) # t
          False =>
-           let arrnat   # t := unsafeMArray1 n t
-               arr'     # t := freeze arr t
-               arrnat'  # t := loop sh 0 0 n (toList arr') arrnat t
-               arrnat'' # t := freeze arrnat' t
-             in (Unbalanced {usize=n} (n ** arr) arrnat'') # t
+           let arrnat # t := createArrNat arr t
+             in (Unbalanced {usize=n} (n ** arr) arrnat) # t
   where
-    loop :  (sh, cur, acc, n : Nat)
-         -> List (Tree1 s a)
-         -> MArray s n Nat
-         -> F1 s (MArray s n Nat)
-    loop sh _   acc n []        arr t =
-      arr # t
-    loop sh cur acc n (x :: xs) arr t =
-      case tryNatToFin cur of
-        Nothing   =>
-          (assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.go: can't convert Nat to Fin") # t
-        Just cur' =>
-          let treesize # t := treeSize (down sh) x t
+    createArrNat :  MArray s n (Tree1 s a)
+                 -> F1 s (IArray n Nat)
+    createArrNat arr t =
+      let tant # t := unsafeMArray1 n t
+        in go 0 n 0 tant t
+      where
+        go :  (m, x, acc : Nat)
+           -> (an : MArray s n Nat)
+           -> {auto v : Ix x n}
+           -> F1 s (IArray n Nat)
+        go m Z     acc an t =
+          freeze an t
+        go m (S j) acc an t =
+          let j'       # t := getIx arr j t
+              treesize # t := treeSize (down sh) j' t
               acc'         := plus acc treesize
-              ()       # t := set arr cur' acc' t
-            in assert_total $ loop sh (S cur) acc' n xs arr t
+            in case tryNatToFin m of
+                 Nothing =>
+                   (assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.createArrNat.go: can't convert Nat to Fin") # t
+                 Just m' =>
+                   let () # t := set an m' acc' t
+                     in go (S m) j acc' an t
     maxsize : Integer
     maxsize = 1 `shiftL` sh -- the maximum size of a subtree
     lenM1 : Nat
@@ -237,11 +238,7 @@ computeSizes sh arr t =
                      True  =>
                        let go'      # t := assert_total $ go arr (plus i 1) t
                            treesize # t := treeSize (down sh) subtree t
-                         in case go' of
-                              False =>
-                                treeBalanced subtree # t
-                              True  =>
-                                (assert_total $ natToInteger treesize == maxsize && go') # t
+                         in (natToInteger treesize == maxsize && go') # t
                      False =>
                        treeBalanced subtree # t
 

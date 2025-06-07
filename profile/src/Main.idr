@@ -1,15 +1,23 @@
 module Main
 
+import Data.Linear.Ref1
+import Data.Linear.Token
 import Data.List
 import Data.Map as M
 import Data.RRBVector as V
+import Data.RRBVector1 as V1
 import Data.RRBVector.Internal
+import Data.RRBVector1.Internal
 import Data.SortedMap as SM
 import Data.Set as S
 import Data.Seq.Unsized as SU
 import Data.SortedSet as SS
 import Profile
 
+%hide Data.Fin.fromInteger
+-- %hide Prelude.fromInteger
+%hide Profile.Types.fromInteger
+%hide Profile.Types.Scalar.fromInteger
 %hide Prelude.Ops.infixr.(<|)
 %hide Prelude.Ops.infixl.(|>)
 
@@ -321,6 +329,20 @@ consRRBVector n = do
   let v = 18 <| v
   19 <| v
 
+consRRBVector1 : Nat -> F1 s (RRBVector1 s Nat)
+consRRBVector1 n t =
+  let v # t := V1.fromList [0..n] t
+      v # t := (V1.(<|) 10 v) t
+      v # t := (V1.(<|) 11 v) t
+      v # t := (V1.(<|) 12 v) t
+      v # t := (V1.(<|) 13 v) t
+      v # t := (V1.(<|) 14 v) t
+      v # t := (V1.(<|) 15 v) t
+      v # t := (V1.(<|) 16 v) t
+      v # t := (V1.(<|) 17 v) t
+      v # t := (V1.(<|) 18 v) t
+    in v # t
+
 consSeqUnsized : Nat -> Seq Nat
 consSeqUnsized n = do
   let s = SU.fromList [0..n]
@@ -377,13 +399,13 @@ appendSeqUnsized n = do
 indexRRBVector : Nat -> Maybe ()
 indexRRBVector n = do
   let v = V.fromList [0..n]
-  for_ (id v) $ \v' =>
+  for_ (Prelude.id v) $ \v' =>
     V.lookup v' v
 
 indexSeqUnsized : Nat -> Maybe ()
 indexSeqUnsized n = do
   let s = SU.fromList [0..n]
-  for_ (id s) $ \s' =>
+  for_ (Prelude.id s) $ \s' =>
     SU.index s' s
 
 mapRRBVector : Nat -> RRBVector Nat
@@ -614,6 +636,132 @@ bench = Group "containers"
       ]
   ]
 
+covering
+main' : IO ()
+main' = do
+  let v = V.fromList [0..9]
+      v = V.(<|) 10 v
+      v = V.(<|) 11 v
+      v = V.(<|) 12 v
+      v = V.(<|) 13 v
+      v = V.(<|) 14 v
+      v = V.(<|) 15 v
+      v = V.(<|) 16 v
+      v = V.(<|) 17 v
+      v = V.(<|) 18 v 
+      v = V.(<|) 19 v
+      v = V.(<|) 20 v
+      v = V.(<|) 21 v
+      v = V.(<|) 22 v
+      v = V.(<|) 23 v
+      v = V.(<|) 24 v
+      v = V.(<|) 25 v
+      v = V.(<|) 26 v
+      v = V.(<|) 27 v
+      v = V.(<|) 28 v
+      v = V.(<|) 29 v
+      v = V.(<|) 30 v
+      v = V.(<|) 31 v
+      v = V.(|>) v 10
+      v = V.(|>) v 11
+      v = V.(|>) v 12
+      v = V.(|>) v 13
+      v = V.(|>) v 14
+      v = V.(|>) v 15
+      v = V.(|>) v 16
+      v = V.(|>) v 17
+      v = V.(|>) v 18
+      v = V.(|>) v 19
+      v = V.(|>) v 20
+      v = V.(|>) v 21
+      v = V.(|>) v 22
+      v = V.(|>) v 23
+      v = V.(|>) v 24
+      v = V.(|>) v 25
+      v = V.(|>) v 26
+      v = V.(|>) v 26
+      v = V.(|>) v 27
+      v = V.(|>) v 28
+      v = V.(|>) v 29
+      v = V.(|>) v 30
+      v = V.(|>) v 31
+--  pure ()
+      v = V.toList v
+  putStrLn $ show v
+
+covering
+main1 : F1' World
+main1 t =
+  let v # t := V1.fromList [0..9] t
+      v # t := (V1.(<|) 10 v) t
+      v # t := (V1.(<|) 11 v) t
+      v # t := (V1.(<|) 12 v) t
+      v # t := (V1.(<|) 13 v) t
+      v # t := (V1.(<|) 14 v) t
+      v # t := (V1.(<|) 15 v) t
+      v # t := (V1.(<|) 16 v) t
+      v # t := (V1.(<|) 17 v) t
+      v # t := (V1.(<|) 18 v) t
+      v # t := (V1.(<|) 19 v) t
+      v # t := (V1.(<|) 20 v) t
+      v # t := (V1.(<|) 21 v) t
+      v # t := (V1.(<|) 22 v) t
+      v # t := (V1.(<|) 23 v) t
+      v # t := (V1.(<|) 24 v) t
+      v # t := (V1.(<|) 25 v) t
+      v # t := (V1.(<|) 26 v) t
+      v # t := (V1.(<|) 27 v) t
+      v # t := (V1.(<|) 28 v) t
+      v # t := (V1.(<|) 29 v) t
+      v # t := (V1.(<|) 30 v) t
+      v # t := (V1.(<|) 31 v) t
+      v # t := (V1.(<|) 32 v) t
+      v # t := (V1.(<|) 33 v) t
+      v # t := (V1.(<|) 34 v) t
+      v # t := (V1.(<|) 35 v) t
+      v # t := (V1.(<|) 36 v) t
+      v # t := (V1.(|>) v 11) t
+      v # t := (V1.(|>) v 11) t
+      v # t := (V1.(|>) v 12) t
+      v # t := (V1.(|>) v 13) t
+      v # t := (V1.(|>) v 14) t
+      v # t := (V1.(|>) v 15) t
+      v # t := (V1.(|>) v 16) t
+      v # t := (V1.(|>) v 17) t
+      v # t := (V1.(|>) v 18) t
+      v # t := (V1.(|>) v 19) t
+      v # t := (V1.(|>) v 20) t
+      v # t := (V1.(|>) v 21) t
+      v # t := (V1.(|>) v 22) t
+      v # t := (V1.(|>) v 23) t
+      v # t := (V1.(|>) v 24) t
+      v # t := (V1.(|>) v 25) t
+      v # t := (V1.(|>) v 26) t
+      v # t := (V1.(|>) v 27) t
+      v # t := (V1.(|>) v 28) t
+      v # t := (V1.(|>) v 29) t
+      v # t := (V1.(|>) v 30) t
+      v # t := (V1.(|>) v 31) t
+      v # t := (V1.(|>) v 32) t
+      v # t := (V1.(|>) v 33) t
+      v # t := (V1.(|>) v 34) t
+      v # t := (V1.(|>) v 35) t
+      v # t := (V1.(|>) v 36) t
+      v # t := (V1.(<|) 37 v) t
+      v # t := (V1.(<|) 38 v) t
+      v # t := (V1.(<|) 39 v) t
+      v # t := (V1.(<|) 40 v) t
+      v # t := (V1.(<|) 41 v) t
+      v # t := (V1.(|>) v 37) t
+      v # t := (V1.(|>) v 38) t
+      v # t := (V1.(|>) v 39) t
+      v # t := (V1.(|>) v 40) t
+      v # t := (V1.(|>) v 41) t
+--    in () # t
+      v # t := V1.toList v t
+    in ioToF1 (putStrLn $ show v) t
+
 partial
 main : IO ()
-main = runDefault (const True) Details show bench
+main = runIO main1
+--runDefault (const True) Details show bench
