@@ -610,8 +610,7 @@ take n v@(Root size sh tree) t =
       case compare n size of
         LT =>
           let tt  # t := takeTree (minus n 1) sh tree t
-              tt' # t := normalize (Root n sh tt) t
-            in tt' # t
+            in normalize (Root n sh tt) t 
         EQ =>
           v # t
         GT =>
@@ -634,8 +633,7 @@ drop n v@(Root size sh tree) t =
       case compare n size of
         LT =>
           let dt  # t := dropTree n sh tree t
-              dt' # t := normalize (Root (minus size n) sh dt) t
-            in dt' # t
+            in normalize (Root (minus size n) sh dt) t
         EQ =>
           empty t
         GT =>
@@ -1099,3 +1097,82 @@ export
       let arr'  # t := marray1 1 x t
           arr'' # t := mappend arr arr' t
         in (Leaf {lsize=(plus l 1)} ((plus l 1) ** arr'')) # t
+
+||| Concatenates two vectors. O(log(max(n1,n2)))
+export
+(><) :  RRBVector1 s a
+     -> RRBVector1 s a
+     -> F1 s (RRBVector1 s a)
+(Empty                >< v)                    t =
+  v # t
+(v                    >< Empty)                t =
+  v # t
+(Root size1 sh1 tree1 >< Root size2 sh2 tree2) t =
+  let upmaxshift =: case compare sh1 sh2 of
+                      LT =>
+                        up sh2
+                      EQ =>
+                        up sh1
+                      GT =>
+                        up sh1
+      newarr  # t := mergeTrees tree1 sh1 tree2 sh2 t
+      newarr' # t := computeSizes upmaxshift newarr t
+    in normalize $ Root (plus size1 size2) upmaxshift newarr' t
+  where
+    takeArr :  {n : Nat}
+            -> MArray s n (Tree1 s a)
+            -> MArray s blocksize (Tree1 s a)
+    takeArr arr t with (n `minus` blocksize) <= n) proof eq
+      _ | True  = \t =>
+        mtake arr blocksize @{lteOpReflectsLTE _ _ eq} t
+      _ | False = \t => 
+        (assert_total $ idris_crash "Data.RRBVector1.(><).takeArr: index out of bounds") # t
+    mergeTrees :  Tree1 s a
+               -> Nat
+               -> Tree1 s a
+               -> Nat
+               -> MArray s n (Tree1 s a)
+    mergeTrees tree1@(Leaf (l1 ** arr1)) _   tree2@(Leaf (l2 ** arr2)) _   t =
+      case compare l1 blocksize of
+        LT =>
+          let arr' # t := mappend arr1 arr2 t
+              arrs'    := plus l1 l2
+            in case compare arrs' blocksize of
+                 LT =>
+                   let newtree := Leaf {lsize=arrs'} (arrs' ** arr')
+                     in Data.RRBVector1.Internal.singleton' newtree t
+                 EQ =>
+                   let newtree := Leaf {lsize=arrs'} (arrs' ** arr')
+                     in Data.RRBVector1.Internal.singleton' newtree t
+                 GT =>
+                   let left  # t := takeArr arr' t
+                       right # t := mdrop blocksize arr' t
+                       lefttree  := Leaf {lsize=blocksize} (blocksize ** left)
+
+
+
+A (plus arr1.size arr2.size) (append arr1.arr arr2.arr)
+            in case compare arr'.size blocksize of
+                 LT =>
+                   singleton $ Leaf arr'
+                 EQ =>
+                   singleton $ Leaf arr'
+                 GT =>
+                   let (left, right) = (take blocksize arr',drop blocksize arr')
+                       lefttree      = Leaf left
+                       righttree     = Leaf right
+                     in A 2 $ fromPairs 2 lefttree [(1,righttree)]
+        EQ =>
+          A 2 $ fromPairs 2 tree1 [(1,tree2)]
+        GT =>
+          let arr' = A (plus arr1.size arr2.size) (append arr1.arr arr2.arr)
+            in case compare arr'.size blocksize of
+                 LT =>
+                   singleton $ Leaf arr'
+                 EQ =>
+                   singleton $ Leaf arr'
+                 GT =>
+                   let (left, right) = (take blocksize arr',drop blocksize arr')
+                       lefttree      = Leaf left
+                       righttree     = Leaf right
+                     in A 2 $ fromPairs 2 lefttree [(1,righttree)]
