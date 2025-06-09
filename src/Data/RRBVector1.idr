@@ -494,10 +494,10 @@ normalize v@(Root size sh (Balanced (b ** arr)))         t =
       v # t
     EQ =>
       case tryNatToFin 0 of
-        Nothing =>
+        Nothing   =>
           (assert_total $ idris_crash "Data.RRBVector.normalize: can't convert Nat to Fin") # t
-        Just i  =>
-          let arr' # t := get arr i t
+        Just zero =>
+          let arr' # t := get arr zero t
             in assert_total $ (normalize (Root size (down sh) arr') t)
     GT =>
       v # t
@@ -507,10 +507,10 @@ normalize v@(Root size sh (Unbalanced (u ** arr) sizes)) t =
       v # t
     EQ =>
       case tryNatToFin 0 of
-        Nothing =>
+        Nothing   =>
           (assert_total $ idris_crash "Data.RRBVector.normalize: can't convert Nat to Fin") # t
-        Just i  =>
-          let arr' # t := get arr i t
+        Just zero =>
+          let arr' # t := get arr zero t
             in assert_total $ (normalize (Root size (down sh) arr') t)
     GT =>
       v # t
@@ -1119,6 +1119,128 @@ export
       newarr' # t := computeSizes upmaxshift newarr t
     in normalize $ Root (plus size1 size2) upmaxshift newarr' t
   where
+    viewlArr :  MArray s n (Tree1 s a)
+             -> F1 s (Tree1 s a, MArray s n (Tree1 s a))
+    viewlArr arr t =
+      case tryNatToFin 0 of
+        Nothing   =>
+          (assert_total $ idris_crash "Data.RRBVector1.(><).viewlArr: can't convert Nat to Fin") # t
+        Just zero =>
+          let arr'  # t := get arr zero t
+              arr'' # t := mdrop 1 arr t
+            in (arr', arr'') # t
+    viewrArr :  {n : Nat}
+             -> MArray s n (Tree1 s a)
+             -> F1 s (MArray s n (Tree1 s a), Tree1 s a)
+    viewrArr with (minus n 1) <= n) proof eq
+      _ | True  = \t =>
+        case tryNatToFin $ minus n 1 of
+          Nothing   =>
+            assert_total $ idris_crash "Data.RRBVector.(><).viewrArr: can't convert Nat to Fin"
+          Just last =>
+            let arr'  # t := get arr last t
+                arr'' # t := mtake arr (minus n 1) @{lteOpReflectsLTE _ _ eq} t
+              in (arr'', arr') # t
+      _ | False = \t =>
+        (assert_total $ idris_crash "Data.RRBVector1.(><).viewlArr: index out of bounds") # t
+    mergeRebalanceInternal :  Shift
+                           -> MArray s n (Tree1 s a)
+                           -> MArray s n (Tree1 s a)
+                           -> MArray s n (Tree1 s a)
+                           -> (Tree1 s a -> MArray s n (Tree1 s a))
+                           -> (MArray s n (Tree1 s a) -> Tree1 s a)
+                           -> F1 s (MArray s n (Tree1 s a)
+    mergeRebalanceInternal sh left center right extract construct t =
+      let nodecounter      # t := ref1 0 t
+          subtreecounter   # t := ref1 0 t
+          newnode          # t := unsafeMArray1 0 t
+          newsubtree       # t := unsafeMArray1 0 t
+          newroot          # t := unsafeMArray1 0 t
+          centerright      # t := mappend center right t
+          leftcenterright  # t := mappend left centerright t
+        in go 0 (length  Lin t
+      where
+        go :  (m, x : Nat)
+           -> (sl : SnocList a)
+           -> {auto v : Ix x n}
+           -> {auto 0 prf : LTE m $ ixToNat v}
+           -> F1 s (List a)
+        go m Z     sl t =
+          (sl <>> []) # t
+        go m (S j) sl t =
+          let j' # t := getIx arr j t
+            in case j' of
+                 (Balanced (b ** arr'))     =>
+                   let arr'' # t := assert_total $ treeToList (b ** arr') t
+                       sl'       := sl <>< arr''
+                     in go (S m) j sl' t
+                 (Unbalanced (u ** arr') _) =>
+                   let arr'' # t := assert_total $ treeToList (u ** arr') t
+                       sl'       := sl <>< arr''
+                     in go (S m) j sl' t
+                 (Leaf (_ ** arr'))         =>
+                   let arr'' # t := freeze arr' t
+                       arr'''    := toList arr''
+                       sl'       := sl <>< arr'''
+                     in go (S m) j sl' t
+
+
+
+
+
+
+          ()          # t := traverse1_ (go nodecounter subtreecounter newnode newsubtree newroot) lcr t
+          newnode'    # t := read1 newnode t
+          newsubtree' # t := 
+          ()          # t := mod1 newsubtree (\y => y :<
+                                             ) t
+
+
+      where
+        go :  Ref1 s Nat
+           -> Ref1 s Nat
+           -> MArray s n (Tree1 s a)
+           -> MArray s n (Tree1 s a)
+           -> MArray s n (Tree1 s a)
+           -> Tree1 s a
+           -> F1' s
+        go nodecounter' subtreecounter' newnode' newsubtree' newroot' lcr' t =
+          let extractedlcr'  # t := extract lcr' t
+              nodecounter''  # t := read1 nodecounter' t
+            in case nodecounter'' == (natToInteger blocksize) of
+                 True  =>
+                   let newsubtree'' # t := mappend newsubtree' newnode' t
+                       newnode''    # t := 
+
+
+
+    mergeRebalance' :  Shift
+                    -> MArray s n (Tree1 s a)
+                    -> MArray s n (Tree1 s a)
+                    -> MArray s n (Tree1 s a)
+                    -> (Tree1 s a -> MArray s n (Tree1 s a))
+                    -> (MArray s n (Tree1 s a) -> Tree1 s a)
+                    -> F1 s (MArray s n (Tree1 s a))
+    mergeRebalance' sh left center right extract construct t =
+      let nodecounter      # t := ref1 0 t
+          subtreecounter   # t := ref1 0 t
+          newnode          # t := unsafeMArray1 0 t
+          newsubtree       # t := unsafeMArray1 0 t
+          newroot          # t := unsafeMArray1 0 t
+          centerright      # t := mappend center right t
+          leftcenterright  # t := mappend left centerright t
+        in mergeRebalanceInternal leftcenterright
+                                  nodecounter
+                                  subtreecounter
+                                  newnode
+                                  newsubtree
+                                  newroot
+                                  extract
+                                  construct
+                                  t
+
+
+
     takeArr :  {n : Nat}
             -> MArray s n (Tree1 s a)
             -> MArray s blocksize (Tree1 s a)
@@ -1148,31 +1270,89 @@ export
                    let left  # t := takeArr arr' t
                        right # t := mdrop blocksize arr' t
                        lefttree  := Leaf {lsize=blocksize} (blocksize ** left)
-
-
-
-A (plus arr1.size arr2.size) (append arr1.arr arr2.arr)
-            in case compare arr'.size blocksize of
-                 LT =>
-                   singleton $ Leaf arr'
-                 EQ =>
-                   singleton $ Leaf arr'
-                 GT =>
-                   let (left, right) = (take blocksize arr',drop blocksize arr')
-                       lefttree      = Leaf left
-                       righttree     = Leaf right
-                     in A 2 $ fromPairs 2 lefttree [(1,righttree)]
+                       righttree := Leaf {lsize=(minus (plus l1 l2) blocksize)} ((minus (plus l1 l2) blocksize) ** right)
+                       newlist   := [lefttree, righttree]
+                       arr'' # t := unsafeMArray1 (length newlist) t
+                       ()    # t := writeList arr'' newlist t
+                     in arr'' # t
         EQ =>
-          A 2 $ fromPairs 2 tree1 [(1,tree2)]
+          let newlist  := [tree1, tree2]
+              arr' # t := unsafeMArray1 (length newlist) t
+              ()   # t := writeList arr' newlist t
+            in arr' # t
         GT =>
-          let arr' = A (plus arr1.size arr2.size) (append arr1.arr arr2.arr)
-            in case compare arr'.size blocksize of
+          let arr' # t := mappend arr1 arr2 t
+              arrs'    := plus l1 l2
+            in case compare arrs' blocksize of
                  LT =>
-                   singleton $ Leaf arr'
+                   let newtree := Leaf {lsize=arrs'} (arrs' ** arr')
+                     in Data.RRBVector1.Internal.singleton' newtree t
                  EQ =>
-                   singleton $ Leaf arr'
+                   let newtree := Leaf {lsize=arrs'} (arrs' ** arr')
+                     in Data.RRBVector1.Internal.singleton' newtree t
                  GT =>
-                   let (left, right) = (take blocksize arr',drop blocksize arr')
-                       lefttree      = Leaf left
-                       righttree     = Leaf right
-                     in A 2 $ fromPairs 2 lefttree [(1,righttree)]
+                   let left  # t := takeArr arr' t
+                       right # t := mdrop blocksize arr' t
+                       lefttree  := Leaf {lsize=blocksize} (blocksize ** left)
+                       righttree := Leaf {lsize=(minus (plus l1 l2) blocksize)} ((minus (plus l1 l2) blocksize) ** right)
+                       newlist   := [lefttree, righttree]
+                       arr'' # t := unsafeMArray1 (length newlist) t
+                       ()    # t := writeList arr'' newlist t
+                     in arr'' # t
+    mergeTrees tree1                     sh1 tree2                     sh2 t =
+      case compare sh1 sh2 of
+        LT =>
+          let right # t := treeToArray tree2 t
+            in case right of
+                 Left  (_ ** arr) =>
+                   let (righthead, righttail) # t := viewlArr arr t
+                       merged                 # t := assert_total $ mergeTrees tree1 sh1 righthead (down sh2) t
+                       emptyarr               # t := unsafeMArray1 0 t
+                     in mergeRebalance sh2 emptyarr merged righttail t
+                 Right (_ ** arr) =>
+                   let (righthead, righttail) # t := viewlArr arr t
+                       merged                 # t := assert_total $ mergeTrees tree1 sh1 righthead (down sh2) t
+                       emptyarr               # t := unsafeMArray1 0 t
+                     in mergeRebalance sh2 emptyarr merged righttail t
+        EQ =>
+          let left # t := treeToArray tree1 t
+            in case left of
+                 Left  (_ ** arr) =>
+                   let right # t := treeToArray tree2 t
+                     in case right of
+                          Left  (_ ** arr') =>
+                            let (leftinit, leftlast)   # t := viewrArr arr t
+                                (righthead, righttail) # t := viewlArr arr' t
+                                merged                 # t := assert_total $ mergeTrees leftlast (down sh1) righthead (down sh2) t
+                              in mergeRebalance sh1 leftinit merged righttail t
+                          Right (_ ** arr') =>
+                            let (leftinit, leftlast)   # t := viewrArr arr t
+                                (righthead, righttail) # t := viewlArr arr' t
+                                merged                 # t := assert_total $ mergeTrees leftlast (down sh1) righthead (down sh2) t
+                              in mergeRebalance sh1 leftinit merged righttail t
+                 Right (_ ** arr) =>
+                   let right # t := treeToArray tree2 t
+                     in case right of
+                          Left  (_ ** arr') =>
+                            let (leftinit, leftlast)   # t := viewrArr arr t
+                                (righthead, righttail) # t := viewlArr arr' t
+                                merged                 # t := assert_total $ mergeTrees leftlast (down sh1) righthead (down sh2) t
+                              in mergeRebalance sh1 leftinit merged righttail t
+                          Right (_ ** arr') =>
+                            let (leftinit, leftlast)   # t := viewrArr arr t
+                                (righthead, righttail) # t := viewlArr arr' t
+                                merged                 # t := assert_total $ mergeTrees leftlast (down sh1) righthead (down sh2) t
+                              in mergeRebalance sh1 leftinit merged righttail t
+        GT =>
+          let left # t := treeToArray tree1 t
+            in case left of
+                 Left  (_ ** arr) =>
+                   let (leftinit, leftlast) # t := viewrArr arr t
+                       merged               # t := assert_total $ mergeTrees leftlast (down sh1) tree2 t
+                       emptyarr             # t := unsafeMArray1 0 t
+                     in mergeRebalance sh1 leftinit merged emptyarr t
+                 Right (_ ** arr) =>
+                   let (leftinit, leftlast) # t := viewrArr arr t
+                       merged               # t := assert_total $ mergeTrees leftlast (down sh1) tree2 t
+                       emptyarr             # t := unsafeMArray1 0 t
+                     in mergeRebalance sh1 leftinit merged emptyarr t
