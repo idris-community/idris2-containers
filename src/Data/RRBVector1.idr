@@ -1458,14 +1458,10 @@ export
                        lefttree  := Leaf {lsize=blocksize} (blocksize ** left)
                        righttree := Leaf {lsize=(minus (plus l1 l2) blocksize)} ((minus (plus l1 l2) blocksize) ** right)
                        newlist   := [lefttree, righttree]
-                       arr'' # t := unsafeMArray1 (length newlist) t
-                       ()    # t := writeList arr'' newlist t
-                     in arr'' # t
+                     in newlist # t
         EQ =>
           let newlist  := [tree1, tree2]
-              arr' # t := unsafeMArray1 (length newlist) t
-              ()   # t := writeList arr' newlist t
-            in arr' # t
+            in newlist # t
         GT =>
           let arr' # t := mappend arr1 arr2 t
               arrs'    := plus l1 l2
@@ -1482,9 +1478,7 @@ export
                        lefttree  := Leaf {lsize=blocksize} (blocksize ** left)
                        righttree := Leaf {lsize=(minus (plus l1 l2) blocksize)} ((minus (plus l1 l2) blocksize) ** right)
                        newlist   := [lefttree, righttree]
-                       arr'' # t := unsafeMArray1 (length newlist) t
-                       ()    # t := writeList arr'' newlist t
-                     in arr'' # t
+                     in newlist # t
     mergeTrees tree1                     sh1 tree2                     sh2 t =
       case compare sh1 sh2 of
         LT =>
