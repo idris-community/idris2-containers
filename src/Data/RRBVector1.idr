@@ -1240,7 +1240,19 @@ export
                                   t
 
 
-
+    mergeRebalance :  Shift
+                   -> MArray s n (Tree1 s a)
+                   -> MArray s n (Tree1 s a)
+                   -> MArray s n (Tree1 s a)
+                   -> MArray s n (Tree1 s a)
+    mergeRebalance sh left center right t =
+      case compare sh blockshift of
+        LT =>
+          mergeRebalance' sh left center right t
+        EQ =>
+          mergeRebalance'' sh left center right t
+        GT =>
+          mergeRebalance' sh left center right t
     takeArr :  {n : Nat}
             -> MArray s n (Tree1 s a)
             -> MArray s blocksize (Tree1 s a)
