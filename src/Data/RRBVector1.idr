@@ -1432,7 +1432,7 @@ export
                -> Tree1 s a
                -> Nat
                -> F1 s (List (Tree1 s a))
-    mergeTrees tree1@(Leaf (l1 ** arr1)) _   tree2@(Leaf (l2 ** arr2)) _   with (blocksize <= n) proof eq
+    mergeTrees tree1@(Leaf (l1 ** arr1)) _   tree2@(Leaf (l2 ** arr2)) _   with (blocksize <= (plus l1 l2)) proof eq
       _ | True  = \t =>
         case compare l1 blocksize of
           LT =>
@@ -1440,10 +1440,10 @@ export
               in case compare (plus l1 l2) blocksize of
                    LT =>
                      let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
-                       in Data.RRBVector1.Internal.singleton' newtree t
+                       in [newtree] # t 
                    EQ =>
                      let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
-                       in Data.RRBVector1.Internal.singleton' newtree t
+                       in [newtree] # t 
                    GT =>
                      let left  # t := mtake arr' blocksize @{lteOpReflectsLTE _ _ eq} t
                          right # t := mdrop blocksize arr' t
@@ -1459,10 +1459,10 @@ export
               in case compare (plus l1 l2) blocksize of
                    LT =>
                      let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
-                       in Data.RRBVector1.Internal.singleton' newtree t
+                       in [newtree] # t
                    EQ =>
                      let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
-                       in Data.RRBVector1.Internal.singleton' newtree t
+                       in [newtree] # t
                    GT =>
                      let left  # t := mtake arr' blocksize @{lteOpReflectsLTE _ _ eq} t
                          right # t := mdrop blocksize arr' t
