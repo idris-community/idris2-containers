@@ -1437,7 +1437,7 @@ export
         case compare l1 blocksize of
           LT =>
             let arr' # t := mappend arr1 arr2 t
-              in case compare arrs' blocksize of
+              in case compare (plus l1 l2) blocksize of
                    LT =>
                      let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
                        in Data.RRBVector1.Internal.singleton' newtree t
@@ -1452,11 +1452,11 @@ export
                          newlist   := [lefttree, righttree]
                        in newlist # t
           EQ =>
-            let newlist  := [tree1, tree2]
+            let newlist := [tree1, tree2]
               in newlist # t
           GT =>
             let arr' # t := mappend arr1 arr2 t
-              in case compare arrs' blocksize of
+              in case compare (plus l1 l2) blocksize of
                    LT =>
                      let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
                        in Data.RRBVector1.Internal.singleton' newtree t
