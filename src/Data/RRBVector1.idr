@@ -1224,7 +1224,7 @@ export
                                          ()              # t := mod1 subtreecounter' (\y => y + 1) t
                                        in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
                           False =>
-                            let newnode'' # t := marray1 1 x t
+                            let newnode'' # t := marray1 1 arr t
                                 ()        # t := mod1 newnode' (\y => y :< newnode'') t
                                 ()        # t := mod1 nodecounter' (\y => y + 1) t
                               in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
@@ -1265,7 +1265,7 @@ export
                                          ()           # t := mod1 subtreecounter' (\y => y + 1) t
                                        in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
                           False =>
-                            let newnode'' # t := marray1 1 x t
+                            let newnode'' # t := marray1 1 arr t
                                 ()        # t := mod1 newnode' (\y => y :< newnode'') t
                                 ()        # t := mod1 nodecounter' (\y => y + 1) t
                               in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
@@ -1358,7 +1358,7 @@ export
                                          ()              # t := mod1 subtreecounter' (\y => y + 1) t
                                        in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
                           False =>
-                            let newnode'' # t := marray1 1 x t
+                            let newnode'' # t := marray1 1 arr t
                                 ()        # t := mod1 newnode' (\y => y :< newnode'') t
                                 ()        # t := mod1 nodecounter' (\y => y + 1) t
                               in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
@@ -1399,7 +1399,7 @@ export
                                          ()           # t := mod1 subtreecounter' (\y => y + 1) t
                                        in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
                           False =>
-                            let newnode'' # t := marray1 1 x t
+                            let newnode'' # t := marray1 1 arr t
                                 ()        # t := mod1 newnode' (\y => y :< newnode'') t
                                 ()        # t := mod1 nodecounter' (\y => y + 1) t
                               in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
@@ -1418,7 +1418,7 @@ export
                    -> MArray s n (Tree1 s a)
                    -> MArray s n (Tree1 s a)
                    -> MArray s n (Tree1 s a)
-                   -> List (Tree1 s a)
+                   -> F1 s (List (Tree1 s a))
     mergeRebalance sh left center right t =
       case compare sh blockshift of
         LT =>
@@ -1427,62 +1427,55 @@ export
           mergeRebalance'' sh left center right t
         GT =>
           mergeRebalance' sh left center right t
-    takeArr :  {n : Nat}
-            -> MArray s n (Tree1 s a)
-            -> MArray s Data.RRBVector1.Internal.blocksize (Tree1 s a)
-    takeArr arr t with ((n `minus` blocksize) <= n) proof eq
-      _ | True  = \t =>
-        mtake arr blocksize @{lteOpReflectsLTE _ _ eq} t
-      _ | False = \t => 
-        (assert_total $ idris_crash "Data.RRBVector1.(><).takeArr: index out of bounds") # t
     mergeTrees :  Tree1 s a
                -> Nat
                -> Tree1 s a
                -> Nat
-               -> List (Tree1 s a)
-    mergeTrees tree1@(Leaf (l1 ** arr1)) _   tree2@(Leaf (l2 ** arr2)) _   t =
-      case compare l1 blocksize of
-        LT =>
-          let arr' # t := mappend arr1 arr2 t
-              arrs'    := plus l1 l2
-            in case compare arrs' blocksize of
-                 LT =>
-                   let newtree := Leaf {lsize=arrs'} (arrs' ** arr')
-                     in Data.RRBVector1.Internal.singleton' newtree t
-                 EQ =>
-                   let newtree := Leaf {lsize=arrs'} (arrs' ** arr')
-                     in Data.RRBVector1.Internal.singleton' newtree t
-                 GT =>
-                   let left  # t := takeArr arr' t
-                       right # t := mdrop blocksize arr' t
-                       lefttree  := Leaf {lsize=blocksize} (blocksize ** left)
-                       righttree := Leaf {lsize=(minus (plus l1 l2) blocksize)} ((minus (plus l1 l2) blocksize) ** right)
-                       newlist   := [lefttree, righttree]
-                     in newlist # t
-        EQ =>
-          let newlist  := [tree1, tree2]
-            in newlist # t
-        GT =>
-          let arr' # t := mappend arr1 arr2 t
-              arrs'    := plus l1 l2
-            in case compare arrs' blocksize of
-                 LT =>
-                   let newtree := Leaf {lsize=arrs'} (arrs' ** arr')
-                     in Data.RRBVector1.Internal.singleton' newtree t
-                 EQ =>
-                   let newtree := Leaf {lsize=arrs'} (arrs' ** arr')
-                     in Data.RRBVector1.Internal.singleton' newtree t
-                 GT =>
-                   let left  # t := takeArr arr' t
-                       right # t := mdrop blocksize arr' t
-                       lefttree  := Leaf {lsize=blocksize} (blocksize ** left)
-                       righttree := Leaf {lsize=(minus (plus l1 l2) blocksize)} ((minus (plus l1 l2) blocksize) ** right)
-                       newlist   := [lefttree, righttree]
-                     in newlist # t
+               -> F1 s (List (Tree1 s a))
+    mergeTrees tree1@(Leaf (l1 ** arr1)) _   tree2@(Leaf (l2 ** arr2)) _   with (blocksize <= n) proof eq
+      _ | True  = \t =>
+        case compare l1 blocksize of
+          LT =>
+            let arr' # t := mappend arr1 arr2 t
+              in case compare arrs' blocksize of
+                   LT =>
+                     let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
+                       in Data.RRBVector1.Internal.singleton' newtree t
+                   EQ =>
+                     let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
+                       in Data.RRBVector1.Internal.singleton' newtree t
+                   GT =>
+                     let left  # t := mtake arr' blocksize @{lteOpReflectsLTE _ _ eq} t
+                         right # t := mdrop blocksize arr' t
+                         lefttree  := Leaf {lsize=blocksize} (blocksize ** left)
+                         righttree := Leaf {lsize=(minus (plus l1 l2) blocksize)} ((minus (plus l1 l2) blocksize) ** right)
+                         newlist   := [lefttree, righttree]
+                       in newlist # t
+          EQ =>
+            let newlist  := [tree1, tree2]
+              in newlist # t
+          GT =>
+            let arr' # t := mappend arr1 arr2 t
+              in case compare arrs' blocksize of
+                   LT =>
+                     let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
+                       in Data.RRBVector1.Internal.singleton' newtree t
+                   EQ =>
+                     let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
+                       in Data.RRBVector1.Internal.singleton' newtree t
+                   GT =>
+                     let left  # t := mtake arr' blocksize @{lteOpReflectsLTE _ _ eq} t
+                         right # t := mdrop blocksize arr' t
+                         lefttree  := Leaf {lsize=blocksize} (blocksize ** left)
+                         righttree := Leaf {lsize=(minus (plus l1 l2) blocksize)} ((minus (plus l1 l2) blocksize) ** right)
+                         newlist   := [lefttree, righttree]
+                       in newlist # t
+      _ | False = \t =>
+        (assert_total $ idris_crash "Data.RRBVector1.(><).mergeTrees: index out of bounds") # t
     mergeTrees tree1                     sh1 tree2                     sh2 t =
       case compare sh1 sh2 of
         LT =>
-          let right # t := treeToArray tree2 t
+          let right := treeToArray tree2
             in case right of
                  Left  (_ ** arr) =>
                    let (righthead, righttail) # t := viewlArr arr t
@@ -1495,10 +1488,10 @@ export
                        emptyarr               # t := unsafeMArray1 0 t
                      in mergeRebalance sh2 emptyarr merged righttail t
         EQ =>
-          let left # t := treeToArray tree1 t
+          let left := treeToArray tree1
             in case left of
                  Left  (_ ** arr) =>
-                   let right # t := treeToArray tree2 t
+                   let right := treeToArray tree2
                      in case right of
                           Left  (_ ** arr') =>
                             let (leftinit, leftlast)   # t := viewrArr arr t
@@ -1511,7 +1504,7 @@ export
                                 merged                 # t := assert_total $ mergeTrees leftlast (down sh1) righthead (down sh2) t
                               in mergeRebalance sh1 leftinit merged righttail t
                  Right (_ ** arr) =>
-                   let right # t := treeToArray tree2 t
+                   let right := treeToArray tree2
                      in case right of
                           Left  (_ ** arr') =>
                             let (leftinit, leftlast)   # t := viewrArr arr t
@@ -1524,7 +1517,7 @@ export
                                 merged                 # t := assert_total $ mergeTrees leftlast (down sh1) righthead (down sh2) t
                               in mergeRebalance sh1 leftinit merged righttail t
         GT =>
-          let left # t := treeToArray tree1 t
+          let left := treeToArray tree1
             in case left of
                  Left  (_ ** arr) =>
                    let (leftinit, leftlast) # t := viewrArr arr t
