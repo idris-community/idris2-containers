@@ -9,6 +9,7 @@ import Data.Array.Indexed
 import Data.Array.Mutable
 import Data.Bits
 import Data.Maybe
+import Data.Linear.Ref1
 import Data.List
 import Data.List1
 import Data.SnocList
@@ -205,7 +206,6 @@ treeToList (n ** arr) t =
     go :  (m, x : Nat)
        -> (sl : SnocList a)
        -> {auto v : Ix x n}
-       -> {auto 0 prf : LTE m $ ixToNat v}
        -> F1 s (List a)
     go m Z     sl t =
       (sl <>> []) # t
@@ -1108,19 +1108,22 @@ export
 (v                    >< Empty)                t =
   v # t
 (Root size1 sh1 tree1 >< Root size2 sh2 tree2) t =
-  let upmaxshift =: case compare sh1 sh2 of
+  let upmaxshift := case compare sh1 sh2 of
                       LT =>
                         up sh2
                       EQ =>
                         up sh1
                       GT =>
                         up sh1
-      newarr  # t := mergeTrees tree1 sh1 tree2 sh2 t
-      newarr' # t := computeSizes upmaxshift newarr t
-    in normalize $ Root (plus size1 size2) upmaxshift newarr' t
+      arr   # t := mergeTrees tree1 sh1 tree2 sh2 t
+      arr'  # t := unsafeMArray1 (length arr) t
+      ()    # t := writeList arr' arr t
+      arr'' # t := computeSizes upmaxshift arr' t
+    in normalize $ Root (plus size1 size2) upmaxshift arr'' t
   where
-    viewlArr :  MArray s n (Tree1 s a)
-             -> F1 s (Tree1 s a, MArray s n (Tree1 s a))
+    viewlArr :  {n : Nat}
+             -> MArray s n (Tree1 s a)
+             -> F1 s (Tree1 s a, MArray s (n `minus` 1) (Tree1 s a))
     viewlArr arr t =
       case tryNatToFin 0 of
         Nothing   =>
@@ -1131,132 +1134,303 @@ export
             in (arr', arr'') # t
     viewrArr :  {n : Nat}
              -> MArray s n (Tree1 s a)
-             -> F1 s (MArray s n (Tree1 s a), Tree1 s a)
-    viewrArr with (minus n 1) <= n) proof eq
+             -> F1 s (MArray s (n `minus` 1) (Tree1 s a), Tree1 s a)
+    viewrArr arr with ((minus n 1) <= n) proof eq
       _ | True  = \t =>
         case tryNatToFin $ minus n 1 of
           Nothing   =>
-            assert_total $ idris_crash "Data.RRBVector.(><).viewrArr: can't convert Nat to Fin"
+            (assert_total $ idris_crash "Data.RRBVector.(><).viewrArr: can't convert Nat to Fin") # t
           Just last =>
             let arr'  # t := get arr last t
                 arr'' # t := mtake arr (minus n 1) @{lteOpReflectsLTE _ _ eq} t
               in (arr'', arr') # t
       _ | False = \t =>
         (assert_total $ idris_crash "Data.RRBVector1.(><).viewlArr: index out of bounds") # t
-    mergeRebalanceInternal :  Shift
-                           -> MArray s n (Tree1 s a)
-                           -> MArray s n (Tree1 s a)
-                           -> MArray s n (Tree1 s a)
-                           -> (Tree1 s a -> MArray s n (Tree1 s a))
-                           -> (MArray s n (Tree1 s a) -> Tree1 s a)
-                           -> F1 s (MArray s n (Tree1 s a)
-    mergeRebalanceInternal sh left center right extract construct t =
-      let nodecounter      # t := ref1 0 t
-          subtreecounter   # t := ref1 0 t
-          newnode          # t := unsafeMArray1 0 t
-          newsubtree       # t := unsafeMArray1 0 t
-          newroot          # t := unsafeMArray1 0 t
-          centerright      # t := mappend center right t
-          leftcenterright  # t := mappend left centerright t
-        in go 0 (length  Lin t
+    mergeRebalanceInternal' :  {n : Nat}
+                            -> Shift
+                            -> MArray s n (Tree1 s a)
+                            -> F1 s (List (Tree1 s a))
+    mergeRebalanceInternal' sh lcr t =
+      let nodecounter    # t := ref1 0 t
+          subtreecounter # t := ref1 0 t
+          newnode        # t := ref1 Lin t
+          newsubtree     # t := ref1 Lin t
+          newroot        # t := ref1 Lin t
+        in go 0 n nodecounter subtreecounter newnode newsubtree newroot t
       where
         go :  (m, x : Nat)
-           -> (sl : SnocList a)
+           -> MArray s n (Tree1 s a)
+           -> Ref s Nat
+           -> Ref s Nat
+           -> Ref s (SnocList (Tree1 s a))
+           -> Ref s (SnocList (Tree1 s a))
+           -> Ref s (SnocList (Tree1 s a))
            -> {auto v : Ix x n}
-           -> {auto 0 prf : LTE m $ ixToNat v}
-           -> F1 s (List a)
-        go m Z     sl t =
-          (sl <>> []) # t
-        go m (S j) sl t =
-          let j' # t := getIx arr j t
-            in case j' of
-                 (Balanced (b ** arr'))     =>
-                   let arr'' # t := assert_total $ treeToList (b ** arr') t
-                       sl'       := sl <>< arr''
-                     in go (S m) j sl' t
-                 (Unbalanced (u ** arr') _) =>
-                   let arr'' # t := assert_total $ treeToList (u ** arr') t
-                       sl'       := sl <>< arr''
-                     in go (S m) j sl' t
-                 (Leaf (_ ** arr'))         =>
-                   let arr'' # t := freeze arr' t
-                       arr'''    := toList arr''
-                       sl'       := sl <>< arr'''
-                     in go (S m) j sl' t
-
-
-
-
-
-
-          ()          # t := traverse1_ (go nodecounter subtreecounter newnode newsubtree newroot) lcr t
-          newnode'    # t := read1 newnode t
-          newsubtree' # t := 
-          ()          # t := mod1 newsubtree (\y => y :<
-                                             ) t
-
-
-      where
-        go :  Ref1 s Nat
-           -> Ref1 s Nat
-           -> MArray s n (Tree1 s a)
-           -> MArray s n (Tree1 s a)
-           -> MArray s n (Tree1 s a)
-           -> Tree1 s a
-           -> F1' s
-        go nodecounter' subtreecounter' newnode' newsubtree' newroot' lcr' t =
-          let extractedlcr'  # t := extract lcr' t
-              nodecounter''  # t := read1 nodecounter' t
-            in case nodecounter'' == (natToInteger blocksize) of
-                 True  =>
-                   let newsubtree'' # t := mappend newsubtree' newnode' t
-                       newnode''    # t := 
-
-
-
+           -> F1 s (List (Tree1 s a))
+        go m Z     arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t =
+          let newnode''       # t := read1 newnode' t
+              newnode'''          := the (List (Tree1 s a)) (cast newnode'')
+              newnode''''     # t := unsafeMArray1 (length newnode''') t
+              ()              # t := writeList newnode'''' newnode''' t
+              newnode'''''    # t := computeSizes (down sh) newnode'''' t
+              ()              # t := mod1 newsubtree' (\y => y :< newnode''''') t
+              newsubtree''    # t := read1 newsubtree' t
+              newsubtree'''       := the (List (Tree1 s a)) (cast newsubtree'')
+              newsubtree''''  # t := unsafeMArray1 (length newsubtree''') t
+              ()              # t := writeList newsubtree'''' newsubtree''' t
+              newsubtree''''' # t := computeSizes sh newsubtree'''' t
+              ()              # t := mod1 newroot' (\y => y :< newsubtree''''') t
+              newroot''       # t := read1 newroot' t
+              newroot'''          := the (List (Tree1 s a)) (cast newroot'')
+            in newroot''' # t
+        go m (S j) arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t =
+          let j'  # t := getIx arr j t
+              j''     := treeToArray j'
+            in case j'' of
+                 Left  (b ** arr) =>
+                   let nodecounter'' # t := read1 nodecounter' t
+                     in case nodecounter'' == blocksize of
+                          True  =>
+                            let subtreecounter'' # t := read1 subtreecounter' t
+                              in case subtreecounter'' == blocksize of
+                                   True  =>
+                                     let newnode''       # t := read1 newnode' t
+                                         newnode'''          := the (List (Tree1 s a)) (cast newnode'')
+                                         newnode''''     # t := unsafeMArray1 (length newnode''') t
+                                         ()              # t := writeList newnode'''' newnode''' t
+                                         newnode'''''    # t := computeSizes (down sh) newnode'''' t
+                                         ()              # t := mod1 newsubtree' (\y => y :< newnode''''') t
+                                         ()              # t := write1 newnode' Lin t
+                                         ()              # t := write1 nodecounter' 0 t
+                                         ()              # t := mod1 subtreecounter' (\y => y + 1) t
+                                         newsubtree''    # t := read1 newsubtree' t
+                                         newsubtree'''       := the (List (Tree1 s a)) (cast newsubtree'')
+                                         newsubtree''''  # t := unsafeMArray1 (length newsubtree''') t
+                                         ()              # t := writeList newsubtree'''' newsubtree''' t
+                                         newsubtree''''' # t := computeSizes sh newsubtree'''' t
+                                         ()              # t := mod1 newroot' (\y => y :< newsubtree''''') t
+                                         ()              # t := write1 newsubtree' Lin t
+                                         ()              # t := write1 subtreecounter' 0 t
+                                       in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
+                                   False =>
+                                     let newnode''       # t := read1 newnode t
+                                         newnode'''          := the (List (Tree1 s a)) (cast newnode'')
+                                         newnode''''     # t := unsafeMArray1 (length newnode''') t
+                                         ()              # t := writeList newnode'''' newnode''' t
+                                         newnode'''''    # t := computeSizes (down sh) newnode'''' t
+                                         ()              # t := mod1 newsubtree' (\y => y :< newnode''''') t
+                                         ()              # t := write1 newnode' Lin t
+                                         ()              # t := write1 nodecounter' 0 t 
+                                         ()              # t := mod1 subtreecounter' (\y => y + 1) t
+                                       in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
+                          False =>
+                            let newnode'' # t := marray1 1 x t
+                                ()        # t := mod1 newnode' (\y => y :< newnode'') t
+                                ()        # t := mod1 nodecounter' (\y => y + 1) t
+                              in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
+                 Right (u ** arr) =>
+                   let nodecounter'' # t := read1 nodecounter t
+                     in case nodecounter'' == blocksize of
+                          True  =>
+                            let subtreecounter'' # t := read1 subtreecounter' t
+                              in case subtreecounter'' == blocksize of
+                                   True  =>
+                                     let newnode''       # t := read1 newnode' t
+                                         newnode'''          := the (List (Tree1 s a)) (cast newnode'')
+                                         newnode''''     # t := unsafeMArray1 (length newnode''') t
+                                         ()              # t := writeList newnode'''' newnode''' t
+                                         newnode'''''    # t := computeSizes (down sh) newnode'''' t
+                                         ()              # t := mod1 newsubtree' (\y => y :< newnode''''') t
+                                         ()              # t := write1 newnode' Lin t
+                                         ()              # t := write1 nodecounter' 0 t
+                                         ()              # t := mod1 subtreecounter' (\y => y + 1) t
+                                         newsubtree''    # t := read1 newsubtree' t
+                                         newsubtree'''       := the (List (Tree1 s a)) (cast newsubtree'')
+                                         newsubtree''''  # t := unsafeMArray1 (length newsubtree''') t
+                                         ()              # t := writeList newsubtree'''' newsubtree''' t
+                                         newsubtree''''' # t := computeSizes sh newsubtree'''' t
+                                         ()              # t := mod1 newroot' (\y => y :< newsubtree''''') t
+                                         ()              # t := write1 newsubtree' Lin t
+                                         ()              # t := write1 subtreecounter' 0 t
+                                       in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
+                                   False =>
+                                     let newnode''    # t := read1 newnode t
+                                         newnode'''       := the (List (Tree1 s a)) (cast newnode'')
+                                         newnode''''  # t := unsafeMArray1 (length newnode''') t
+                                         ()           # t := writeList newnode'''' newnode''' t
+                                         newnode''''' # t := computeSizes (down sh) newnode'''' t
+                                         ()           # t := mod1 newsubtree' (\y => y :< newnode''''') t
+                                         ()           # t := write1 newnode' Lin t
+                                         ()           # t := write1 nodecounter' 0 t
+                                         ()           # t := mod1 subtreecounter' (\y => y + 1) t
+                                       in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
+                          False =>
+                            let newnode'' # t := marray1 1 x t
+                                ()        # t := mod1 newnode' (\y => y :< newnode'') t
+                                ()        # t := mod1 nodecounter' (\y => y + 1) t
+                              in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
     mergeRebalance' :  Shift
                     -> MArray s n (Tree1 s a)
                     -> MArray s n (Tree1 s a)
                     -> MArray s n (Tree1 s a)
-                    -> (Tree1 s a -> MArray s n (Tree1 s a))
-                    -> (MArray s n (Tree1 s a) -> Tree1 s a)
-                    -> F1 s (MArray s n (Tree1 s a))
-    mergeRebalance' sh left center right extract construct t =
-      let nodecounter      # t := ref1 0 t
-          subtreecounter   # t := ref1 0 t
-          newnode          # t := unsafeMArray1 0 t
-          newsubtree       # t := unsafeMArray1 0 t
-          newroot          # t := unsafeMArray1 0 t
-          centerright      # t := mappend center right t
-          leftcenterright  # t := mappend left centerright t
-        in mergeRebalanceInternal leftcenterright
-                                  nodecounter
-                                  subtreecounter
-                                  newnode
-                                  newsubtree
-                                  newroot
-                                  extract
-                                  construct
-                                  t
-
-
+                    -> F1 s (List (Tree1 s a))
+    mergeRebalance' sh left center right t =
+      let centerright     # t := mappend center right t
+          leftcenterright # t := mappend left centerright t
+        in mergeRebalanceInternal' sh
+                                   leftcenterright
+                                   t
+    mergeRebalanceInternal'' :  {n : Nat}
+                             -> Shift
+                             -> MArray s n (Tree1 s a)
+                             -> F1 s (List (Tree1 s a))
+    mergeRebalanceInternal'' sh lcr t =
+      let nodecounter    # t := ref1 0 t
+          subtreecounter # t := ref1 0 t
+          newnode        # t := ref1 Lin t
+          newsubtree     # t := ref1 Lin t
+          newroot        # t := ref1 Lin t
+        in go 0 n nodecounter subtreecounter newnode newsubtree newroot t
+      where
+        go :  (m, x : Nat)
+           -> MArray s n (Tree1 s a)
+           -> Ref s Nat
+           -> Ref s Nat
+           -> Ref s (SnocList (Tree1 s a))
+           -> Ref s (SnocList (Tree1 s a))
+           -> Ref s (SnocList (Tree1 s a))
+           -> {auto v : Ix x n}
+           -> F1 s (List (Tree1 s a))
+        go m Z     arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t =
+          let newnode''       # t := read1 newnode' t
+              newnode'''          := the (List (Tree1 s a)) (cast newnode'')
+              newnode''''     # t := unsafeMArray1 (length newnode''') t
+              ()              # t := writeList newnode'''' newnode''' t
+              newnode'''''        := Leaf {lsize=(length newnode''')} ((length newnode''') ** newnode'''')
+              ()              # t := mod1 newsubtree' (\y => y :< newnode''''') t
+              newsubtree''    # t := read1 newsubtree' t
+              newsubtree'''       := the (List (Tree1 s a)) (cast newsubtree'')
+              newsubtree''''  # t := unsafeMArray1 (length newsubtree''') t
+              ()              # t := writeList newsubtree'''' newsubtree''' t
+              newsubtree''''' # t := computeSizes sh newsubtree'''' t
+              ()              # t := mod1 newroot' (\y => y :< newsubtree''''') t
+              newroot''       # t := read1 newroot' t
+              newroot'''          := the (List (Tree1 s a)) (cast newroot'')
+            in newroot''' # t
+        go m (S j) arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t =
+          let j'  # t := getIx arr j t
+              j''     := treeToArray j'
+            in case j'' of
+                 Left  (b ** arr) =>
+                   let nodecounter'' # t := read1 nodecounter' t
+                     in case nodecounter'' == blocksize of
+                          True  =>
+                            let subtreecounter'' # t := read1 subtreecounter' t
+                              in case subtreecounter'' == blocksize of
+                                   True  =>
+                                     let newnode''       # t := read1 newnode' t
+                                         newnode'''          := the (List (Tree1 s a)) (cast newnode'')
+                                         newnode''''     # t := unsafeMArray1 (length newnode''') t
+                                         ()              # t := writeList newnode'''' newnode''' t
+                                         newnode'''''        := Leaf {lsize=(length newnode''')} ((length newnode''') ** newnode'''')
+                                         ()              # t := mod1 newsubtree' (\y => y :< newnode''''') t
+                                         ()              # t := write1 newnode' Lin t
+                                         ()              # t := write1 nodecounter' 0 t
+                                         ()              # t := mod1 subtreecounter' (\y => y + 1) t
+                                         newsubtree''    # t := read1 newsubtree' t
+                                         newsubtree'''       := the (List (Tree1 s a)) (cast newsubtree'')
+                                         newsubtree''''  # t := unsafeMArray1 (length newsubtree''') t
+                                         ()              # t := writeList newsubtree'''' newsubtree''' t
+                                         newsubtree''''' # t := computeSizes sh newsubtree'''' t
+                                         ()              # t := mod1 newroot' (\y => y :< newsubtree''''') t
+                                         ()              # t := write1 newsubtree' Lin t
+                                         ()              # t := write1 subtreecounter' 0 t
+                                       in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
+                                   False =>
+                                     let newnode''       # t := read1 newnode t
+                                         newnode'''          := the (List (Tree1 s a)) (cast newnode'')
+                                         newnode''''     # t := unsafeMArray1 (length newnode''') t
+                                         ()              # t := writeList newnode'''' newnode''' t
+                                         newnode'''''        := Leaf {lsize=(length newnode''')} ((length newnode''') ** newnode'''')
+                                         ()              # t := mod1 newsubtree' (\y => y :< newnode''''') t
+                                         ()              # t := write1 newnode' Lin t
+                                         ()              # t := write1 nodecounter' 0 t
+                                         ()              # t := mod1 subtreecounter' (\y => y + 1) t
+                                       in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
+                          False =>
+                            let newnode'' # t := marray1 1 x t
+                                ()        # t := mod1 newnode' (\y => y :< newnode'') t
+                                ()        # t := mod1 nodecounter' (\y => y + 1) t
+                              in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
+                 Right (u ** arr) =>
+                   let nodecounter'' # t := read1 nodecounter t
+                     in case nodecounter'' == blocksize of
+                          True  =>
+                            let subtreecounter'' # t := read1 subtreecounter' t
+                              in case subtreecounter'' == blocksize of
+                                   True  =>
+                                     let newnode''       # t := read1 newnode' t
+                                         newnode'''          := the (List (Tree1 s a)) (cast newnode'')
+                                         newnode''''     # t := unsafeMArray1 (length newnode''') t
+                                         ()              # t := writeList newnode'''' newnode''' t
+                                         newnode'''''        := Leaf {lsize=(length newnode''')} ((length newnode''') ** newnode'''')
+                                         ()              # t := mod1 newsubtree' (\y => y :< newnode''''') t
+                                         ()              # t := write1 newnode' Lin t
+                                         ()              # t := write1 nodecounter' 0 t
+                                         ()              # t := mod1 subtreecounter' (\y => y + 1) t
+                                         newsubtree''    # t := read1 newsubtree' t
+                                         newsubtree'''       := the (List (Tree1 s a)) (cast newsubtree'')
+                                         newsubtree''''  # t := unsafeMArray1 (length newsubtree''') t
+                                         ()              # t := writeList newsubtree'''' newsubtree''' t
+                                         newsubtree''''' # t := computeSizes sh newsubtree'''' t
+                                         ()              # t := mod1 newroot' (\y => y :< newsubtree''''') t
+                                         ()              # t := write1 newsubtree' Lin t
+                                         ()              # t := write1 subtreecounter' 0 t
+                                       in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
+                                   False =>
+                                     let newnode''    # t := read1 newnode t
+                                         newnode'''       := the (List (Tree1 s a)) (cast newnode'')
+                                         newnode''''  # t := unsafeMArray1 (length newnode''') t
+                                         ()           # t := writeList newnode'''' newnode''' t
+                                         newnode'''''     := Leaf {lsize=(length newnode''')} ((length newnode''') ** newnode'''')
+                                         ()           # t := mod1 newsubtree' (\y => y :< newnode''''') t
+                                         ()           # t := write1 newnode' Lin t
+                                         ()           # t := write1 nodecounter' 0 t
+                                         ()           # t := mod1 subtreecounter' (\y => y + 1) t
+                                       in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
+                          False =>
+                            let newnode'' # t := marray1 1 x t
+                                ()        # t := mod1 newnode' (\y => y :< newnode'') t
+                                ()        # t := mod1 nodecounter' (\y => y + 1) t
+                              in go (S m) j arr nodecounter' subtreecounter' newnode' newsubtree' newroot' t
+    mergeRebalance'' :  Shift
+                     -> MArray s n (Tree1 s a)
+                     -> MArray s n (Tree1 s a)
+                     -> MArray s n (Tree1 s a)
+                     -> F1 s (List (Tree1 s a))
+    mergeRebalance'' sh left center right t =
+      let centerright     # t := mappend center right t
+          leftcenterright # t := mappend left centerright t
+        in mergeRebalanceInternal'' sh
+                                    leftcenterright
+                                    t
     mergeRebalance :  Shift
                    -> MArray s n (Tree1 s a)
                    -> MArray s n (Tree1 s a)
                    -> MArray s n (Tree1 s a)
-                   -> MArray s n (Tree1 s a)
+                   -> List (Tree1 s a)
     mergeRebalance sh left center right t =
       case compare sh blockshift of
         LT =>
-          mergeRebalance' sh left center right t
+          mergeRebalance' sh left center right t  
         EQ =>
           mergeRebalance'' sh left center right t
         GT =>
           mergeRebalance' sh left center right t
     takeArr :  {n : Nat}
             -> MArray s n (Tree1 s a)
-            -> MArray s blocksize (Tree1 s a)
-    takeArr arr t with (n `minus` blocksize) <= n) proof eq
+            -> MArray s Data.RRBVector1.Internal.blocksize (Tree1 s a)
+    takeArr arr t with ((n `minus` blocksize) <= n) proof eq
       _ | True  = \t =>
         mtake arr blocksize @{lteOpReflectsLTE _ _ eq} t
       _ | False = \t => 
@@ -1265,7 +1439,7 @@ export
                -> Nat
                -> Tree1 s a
                -> Nat
-               -> MArray s n (Tree1 s a)
+               -> List (Tree1 s a)
     mergeTrees tree1@(Leaf (l1 ** arr1)) _   tree2@(Leaf (l2 ** arr2)) _   t =
       case compare l1 blocksize of
         LT =>
