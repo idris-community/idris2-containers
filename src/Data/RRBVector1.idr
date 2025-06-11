@@ -1115,8 +1115,8 @@ export
                         up sh1
                       GT =>
                         up sh1
-      arr  # t := mergeTrees tree1 sh1 tree2 sh2 t
-      arr' # t := computeSizes upmaxshift arr t
+      (_ ** arr) # t := mergeTrees tree1 sh1 tree2 sh2 t
+      arr'       # t := computeSizes upmaxshift arr t
     in normalize $ Root (plus size1 size2) upmaxshift arr' t
   where
     viewlArr :  {n : Nat}
@@ -1144,191 +1144,193 @@ export
               in (arr'', arr') # t
       _ | False = \t =>
         (assert_total $ idris_crash "Data.RRBVector1.(><).viewlArr: index out of bounds") # t
+    mergeRebalanceInternalGo' :  (m, x : Nat)
+                              -> (sh : Shift)
+                              -> MArray s n (Tree1 s a)
+                              -> Ref s Nat
+                              -> Ref s Nat
+                              -> (o ** MArray s o (Tree1 s a))
+                              -> (p ** MArray s p (Tree1 s a))
+                              -> (q ** MArray s q (Tree1 s a))
+                              -> {auto v : Ix x n}
+                              -> F1 s ((o' ** MArray s o' (Tree1 s a)), (p' ** MArray s p' (Tree1 s a)), (q' ** MArray s q' (Tree1 s a)))
+    mergeRebalanceInternalGo' m' Z      _  _    _             _                (o ** newnode'') (p ** newsubtree'') (q ** newroot'') t =
+      ((o ** newnode''), (p ** newsubtree''), (q ** newroot'')) # t
+    mergeRebalanceInternalGo' m' (S j') sh arr' nodecounter'' subtreecounter'' (o ** newnode'') (p ** newsubtree'') (q ** newroot'') t =
+      let nodecounter''' # t := read1 nodecounter'' t
+        in case nodecounter''' == blocksize of
+             True  =>
+               let subtreecounter''' # t := read1 subtreecounter'' t
+                 in case subtreecounter''' == blocksize of
+                      True  =>
+                        let newnode'''       # t := computeSizes (down sh) newnode'' t
+                            newnode''''      # t := marray1 1 newnode''' t
+                            newsubtree'''    # t := mappend newsubtree'' newnode'''' t
+                            newnode'''''     # t := unsafeMArray1 0 t
+                            ()               # t := write1 nodecounter'' 0 t
+                            ()               # t := mod1 subtreecounter'' (\y => plus y 1) t
+                            newsubtree''''   # t := computeSizes sh newsubtree''' t
+                            newsubtree'''''  # t := marray1 1 newsubtree'''' t
+                            newroot'''       # t := mappend newroot'' newsubtree''''' t
+                            newsubtree'''''' # t := unsafeMArray1 0 t
+                            ()               # t := write1 subtreecounter'' 0 t
+                          in mergeRebalanceInternalGo' (S m') j' sh arr' nodecounter'' subtreecounter'' (0 ** newnode''''') (0 ** newsubtree'''''') ((plus q 1) ** newroot''') t
+                      False =>
+                        let newnode'''       # t := computeSizes (down sh) newnode'' t
+                            newnode''''      # t := marray1 1 newnode''' t
+                            newsubtree'''    # t := mappend newsubtree'' newnode'''' t
+                            newnode'''''     # t := unsafeMArray1 0 t
+                            ()               # t := write1 nodecounter'' 0 t
+                            ()               # t := mod1 subtreecounter'' (\y => plus y 1) t
+                          in mergeRebalanceInternalGo' (S m') j' sh arr' nodecounter'' subtreecounter'' (0 ** newnode''''') ((plus p 1) ** newsubtree''') (q ** newroot'') t
+             False =>
+               let j''  # t := getIx arr' j' t
+                   j'''     := treeToArray j''
+                 in case j''' of
+                      Left  (b ** arr'') =>
+                        let newnode''' # t := mappend newnode'' arr'' t
+                            ()         # t := mod1 nodecounter'' (\y => plus y 1) t
+                          in mergeRebalanceInternalGo' (S m') j' sh arr' nodecounter'' subtreecounter'' ((plus o b) ** newnode''') (p ** newsubtree'') (q ** newroot'') t
+                      Right (u ** arr'') =>
+                        let newnode''' # t := mappend newnode'' arr'' t
+                            ()         # t := mod1 nodecounter'' (\y => plus y 1) t
+                          in mergeRebalanceInternalGo' (S m') j' sh arr' nodecounter'' subtreecounter'' ((plus o u) ** newnode''') (p ** newsubtree'') (q ** newroot'') t
+    mergeRebalanceInternalGo :  (m, x : Nat)
+                             -> (sh : Shift) 
+                             -> MArray s n (Tree1 s a)
+                             -> Ref s Nat
+                             -> Ref s Nat
+                             -> (o ** MArray s o (Tree1 s a))
+                             -> (p ** MArray s p (Tree1 s a))
+                             -> (q ** MArray s q (Tree1 s a))
+                             -> {auto v : Ix x n}
+                             -> F1 s (r ** MArray s r (Tree1 s a))
+    mergeRebalanceInternalGo m Z     sh arr nodecounter' subtreecounter' (_ ** newnode') (_ ** newsubtree') (q ** newroot') t =
+      let newnode''     # t := computeSizes (down sh) newnode' t
+          newnode'''    # t := marray1 1 newnode'' t
+          newsubtree''  # t := mappend newsubtree' newnode''' t
+          newsubtree''  # t := computeSizes sh newsubtree'' t
+          newsubtree''' # t := marray1 1 newsubtree'' t
+          newroot''     # t := mappend newroot' newsubtree''' t
+        in ((plus q 1) ** newroot'') # t
+    mergeRebalanceInternalGo m (S j) sh arr nodecounter' subtreecounter' (o ** newnode') (p ** newsubtree') (q ** newroot') t =
+      let j'  # t := getIx arr j t
+          j''     := treeToArray j'
+        in case j'' of
+             Left  (b ** arr') =>
+               let ((o' ** newnode''), (p' ** newsubtree''), (q' ** newroot'')) # t := mergeRebalanceInternalGo' 0 b sh arr' nodecounter' subtreecounter' (o ** newnode') (p ** newsubtree') (q ** newroot') t
+                 in mergeRebalanceInternalGo (S m) j sh arr nodecounter' subtreecounter' (o' ** newnode'') (p' ** newsubtree'') (q' ** newroot'') t
+             Right (u ** arr') =>
+               let ((o' ** newnode''), (p' ** newsubtree''), (q' ** newroot'')) # t := mergeRebalanceInternalGo' 0 u sh arr' nodecounter' subtreecounter' (o ** newnode') (p ** newsubtree') (q ** newroot') t
+                 in mergeRebalanceInternalGo (S m) j sh arr nodecounter' subtreecounter' (o' ** newnode'') (p' ** newsubtree'') (q' ** newroot'') t
     mergeRebalanceInternal' :  {n : Nat}
                             -> Shift
                             -> MArray s n (Tree1 s a)
                             -> F1 s (r ** MArray s r (Tree1 s a))
     mergeRebalanceInternal' sh lcr t =
-      let nodecounter    # t := ref1 0 t
-          subtreecounter # t := ref1 0 t
+      let nodecounter    # t := ref1 (the Nat 0) t
+          subtreecounter # t := ref1 (the Nat 0) t
           newnode        # t := unsafeMArray1 0 t
           newsubtree     # t := unsafeMArray1 0 t
           newroot        # t := unsafeMArray1 0 t
-        in go 0 n lcr nodecounter subtreecounter (0 ** newnode) (0 ** newsubtree) (0 ** newroot) t
-      where
-        go' :  (m, x : Nat)
-            -> MArray s n (Tree1 s a)
-            -> Ref s Nat
-            -> Ref s Nat
-            -> (o ** MArray s o (Tree1 s a))
-            -> (p ** MArray s p (Tree1 s a))
-            -> (q ** MArray s q (Tree1 s a))
-            -> {auto v : Ix x n}
-            -> F1 s (o' ** MArray s o' (Tree1 s a), p' ** MArray s p' (Tree1 s a), q' ** MArray s q' (Tree1 s a))
-        go' m' Z      _    _             _                (o ** newnode'') (p ** newsubtree'') (q ** newroot'') t =
-          ((o ** newnode''), (p ** newsubtree''), (q ** newroot'')) # t
-        go' m' (S j') arr' nodecounter'' subtreecounter'' (o ** newnode'') (p ** newsubtree'') (q ** newroot'') t =
-          let nodecounter''' # t := read1 nodecounter'' t
-            in case nodecounter''' == blocksize of
-                 True  =>
-                   let subtreecounter''' # t := read1 subtreecounter'' t
-                     in case subtreecounter''' == blocksize of
-                          True  =>
-                            let newnode'''       # t := computeSizes (down sh) newnode'' t
-                                newnode''''      # t := marray1 1 newnode''' t
-                                newsubtree'''    # t := mappend newsubtree' newnode'''' t
-                                newnode'''''     # t := unsafeMArray1 0 t
-                                ()               # t := write1 nodecounter'' 0 t
-                                ()               # t := mod1 subtreecounter'' (\y => y + 1) t
-                                newsubtree''''   # t := computeSizes sh newsubtree''' t
-                                newsubtree'''''  # t := marray1 1 newsubtree'''' t
-                                newroot'''       # t := mappend newroot'' newsubtree''''' t
-                                newsubtree'''''' # t := unsafeMArray1 0 t
-                                ()               # t := write1 subtreecounter'' 0 t
-                              in go' (S m') j' arr' nodecounter'' subtreecounter'' (0 ** newnode''''') (0 ** newsubtree'''''') ((plus q 1) ** newroot''') t
-                          False =>
-                            let newnode'''       # t := computeSizes (down sh) newnode'' t
-                                newnode''''      # t := marray1 1 newnode''' t
-                                newsubtree'''    # t := mappend newsubtree' newnode'''' t
-                                newnode'''''     # t := unsafeMArray1 0 t
-                                ()               # t := write1 nodecounter'' 0 t
-                                ()               # t := mod1 subtreecounter'' (\y => y + 1) t
-                              in go' (S m') j' arr' nodecounter'' subtreecounter'' (0 ** newnode''''') ((plus p 1) ** newsubtree''') (q ** newroot'') t
-                 False =>
-                   let j''  # t := getIx j' t
-                       j'''     := treeToArray j''
-                     in case j''' of
-                          Left  (_ ** arr'') =>
-                            let newnode'''  # t := marray1 1 arr'' t
-                                newnode'''' # t := mappend newnode'' newnode''' t
-                                ()          # t := mod1 nodecounter'' (\y => y + 1) t
-                              in go' (S m') j' arr' nodecounter'' subtreecounter'' ((plus o 1) ** newnode''') (p ** newsubtree'') (q ** newroot'') t
-                          Right (_ ** arr'') =>
-                            let newnode'''  # t := marray1 1 arr'' t
-                                newnode'''' # t := mappend newnode'' newnode''' t
-                                ()          # t := mod1 nodecounter'' (\y => y + 1) t
-                              in go' (S m') j' arr' nodecounter'' subtreecounter'' ((plus o 1) ** newnode''') (p ** newsubtree'') (q ** newroot'') t
-        go :  (m, x : Nat)
-           -> MArray s n (Tree1 s a)
-           -> Ref s Nat
-           -> Ref s Nat
-           -> (o ** MArray s o (Tree1 s a))
-           -> (p ** MArray s p (Tree1 s a))
-           -> (q ** MArray s q (Tree1 s a))
-           -> {auto v : Ix x n}
-           -> F1 s (r ** MArray s r (Tree1 s a))
-        go m Z     arr nodecounter' subtreecounter' (_ ** newnode') (_ ** newsubtree') (_ ** newroot') t =
-          let newnode''     # t := computeSizes (down sh) newnode' t
-              newnode'''    # t := marray1 1 newnode'' t
-              newsubtree''  # t := mappend newsubtree' newnode''' t
-              newsubtree''  # t := computeSizes sh newsubtree'' t
-              newsubtree''' # t := marray1 1 newsubtree'' t
-              newroot''     # t := mappend newroot' newsubtree''' t
-            in newroot'' # t
-        go m (S j) arr nodecounter' subtreecounter' (o ** newnode') (p ** newsubtree') (q ** newroot') t =
-          let j'  # t := getIx arr j t
-              j''     := treeToArray j'
-            in case j'' of
-                 Left  (b ** arr') =>
-                   let ((o' ** newnode'') (p' ** newsubtree'') (q' ** newroot'')) # t := go' 0 b arr' nodecounter' subtreecounter' (o ** newnode') (p ** newsubtree') (q ** newroot') t
-                     in go (S m) j arr nodecounter' subtreecounter' (o' ** newnode'') (p' ** newsubtree'') (q' ** newroot'') t
-                 Right (u ** arr') =>
-                   let ((o ** newnode'') (p' ** newsubtree'') (q' ** newroot'')) # t := go' 0 u arr' nodecounter' subtreecounter' (o ** newnode') (p ** newsubtree') (q ** newroot') t
-                     in go (S m) j arr nodecounter' subtreecounter' (o ** newnode'') (p' ** newsubtree'') (q' ** newroot'') t
-    mergeRebalance' :  Shift
+        in mergeRebalanceInternalGo 0 n sh lcr nodecounter subtreecounter (0 ** newnode) (0 ** newsubtree) (0 ** newroot) t
+    mergeRebalance' : {n : Nat} 
+                    -> Shift
                     -> MArray s n (Tree1 s a)
                     -> MArray s n (Tree1 s a)
                     -> MArray s n (Tree1 s a)
-                    -> F1 s (o ** MArray s o (Tree1 s a))
+                    -> F1 s (r ** MArray s r (Tree1 s a))
     mergeRebalance' sh left center right t =
       let centerright     # t := mappend center right t
           leftcenterright # t := mappend left centerright t
         in mergeRebalanceInternal' sh
                                    leftcenterright
                                    t
+    mergeRebalanceInternalGo''' : (m, x : Nat)
+                               -> (sh : Shift)
+                               -> MArray s n a
+                               -> Ref s Nat
+                               -> Ref s Nat
+                               -> (o ** MArray s o a)
+                               -> (p ** MArray s p (Tree1 s a))
+                               -> (q ** MArray s q (Tree1 s a))
+                               -> {auto v : Ix x n}
+                               -> F1 s ((o' ** MArray s o' a), (p' ** MArray s p' (Tree1 s a)), (q' ** MArray s q' (Tree1 s a)))
+    mergeRebalanceInternalGo''' m' Z      _  _    _             _                (o ** newnode'') (p ** newsubtree'') (q ** newroot'') t =
+      ((o ** newnode''), (p ** newsubtree''), (q ** newroot'')) # t
+    mergeRebalanceInternalGo''' m' (S j') sh arr' nodecounter'' subtreecounter'' (o ** newnode'') (p ** newsubtree'') (q ** newroot'') t =
+      let nodecounter''' # t := read1 nodecounter'' t
+        in case nodecounter''' == blocksize of
+             True  =>
+               let subtreecounter''' # t := read1 subtreecounter'' t
+                 in case subtreecounter''' == blocksize of
+                      True  =>
+                        let newnode'''           := Leaf {lsize=o} (o ** newnode'')
+                            newnode''''      # t := marray1 1 newnode''' t
+                            newsubtree'''    # t := mappend newsubtree'' newnode'''' t
+                            newnode'''''     # t := unsafeMArray1 0 t
+                            ()               # t := write1 nodecounter'' 0 t
+                            ()               # t := mod1 subtreecounter'' (\y => plus y 1) t
+                            newsubtree''''   # t := computeSizes sh newsubtree''' t
+                            newsubtree'''''  # t := marray1 1 newsubtree'''' t
+                            newroot'''       # t := mappend newroot'' newsubtree''''' t
+                            newsubtree'''''' # t := unsafeMArray1 0 t
+                            ()               # t := write1 subtreecounter'' 0 t
+                          in mergeRebalanceInternalGo''' (S m') j' sh arr' nodecounter'' subtreecounter'' (0 ** newnode''''') (0 ** newsubtree'''''') ((plus q 1) ** newroot''') t
+                      False =>
+                        let newnode'''           := Leaf {lsize=o} (o ** newnode'')
+                            newnode''''      # t := marray1 1 newnode''' t
+                            newsubtree'''    # t := mappend newsubtree'' newnode'''' t
+                            newnode'''''     # t := unsafeMArray1 0 t
+                            ()               # t := write1 nodecounter'' 0 t
+                            ()               # t := mod1 subtreecounter'' (\y => plus y 1) t
+                          in mergeRebalanceInternalGo''' (S m') j' sh arr' nodecounter'' subtreecounter'' (0 ** newnode''''') ((plus p 1) ** newsubtree''') (q ** newroot'') t
+             False =>
+               let j''         # t := getIx arr' j' t
+                   newnode'''  # t := marray1 1 j'' t
+                   newnode'''' # t := mappend newnode'' newnode''' t
+                   ()          # t := mod1 nodecounter'' (\y => plus y 1) t
+                 in mergeRebalanceInternalGo''' (S m') j' sh arr' nodecounter'' subtreecounter'' ((plus o 1) ** newnode'''') (p ** newsubtree'') (q ** newroot'') t
+    mergeRebalanceInternalGo'' :  (m, x : Nat)
+                               -> (sh : Shift)
+                               -> MArray s n (Tree1 s a)
+                               -> Ref s Nat
+                               -> Ref s Nat
+                               -> (o ** MArray s o a)
+                               -> (p ** MArray s p (Tree1 s a))
+                               -> (q ** MArray s q (Tree1 s a))
+                               -> {auto v : Ix x n}
+                               -> F1 s (r ** MArray s r (Tree1 s a))
+    mergeRebalanceInternalGo'' m Z     sh arr nodecounter' subtreecounter' (o ** newnode') (_ ** newsubtree') (q ** newroot') t =
+      let newnode''         := Leaf {lsize=o} (o ** newnode')
+          newnode'''    # t := marray1 1 newnode'' t
+          newsubtree''  # t := mappend newsubtree' newnode''' t
+          newsubtree''  # t := computeSizes sh newsubtree'' t
+          newsubtree''' # t := marray1 1 newsubtree'' t
+          newroot''     # t := mappend newroot' newsubtree''' t
+        in ((plus q 1) ** newroot'') # t
+    mergeRebalanceInternalGo'' m (S j) sh arr nodecounter' subtreecounter' (o ** newnode') (p ** newsubtree') (q ** newroot') t =
+      let j'                                                           # t := getIx arr j t
+          (l ** arr')                                                      := treeToArray' j'
+          ((o' ** newnode''), (p' ** newsubtree''), (q' ** newroot'')) # t := mergeRebalanceInternalGo''' 0 l sh arr' nodecounter' subtreecounter' (o ** newnode') (p ** newsubtree') (q ** newroot') t
+        in mergeRebalanceInternalGo'' (S m) j sh arr nodecounter' subtreecounter' (o' ** newnode'') (p' ** newsubtree'') (q' ** newroot'') t
     mergeRebalanceInternal'' :  {n : Nat}
                              -> Shift
                              -> MArray s n (Tree1 s a)
                              -> F1 s (r ** MArray s r (Tree1 s a))
     mergeRebalanceInternal'' sh lcr t =
-      let nodecounter    # t := ref1 0 t
-          subtreecounter # t := ref1 0 t
+      let nodecounter    # t := ref1 (the Nat 0) t
+          subtreecounter # t := ref1 (the Nat 0) t
           newnode        # t := unsafeMArray1 0 t
           newsubtree     # t := unsafeMArray1 0 t
           newroot        # t := unsafeMArray1 0 t
-        in go 0 n lcr nodecounter subtreecounter (0 ** newnode) (0 ** newsubtree) (0 ** newroot) t
-      where
-        go' :  (m, x : Nat)
-            -> MArray s n a
-            -> Ref s Nat
-            -> Ref s Nat
-            -> (o ** MArray s o a)
-            -> (p ** MArray s p (Tree1 s a))
-            -> (q ** MArray s q (Tree1 s a))
-            -> {auto v : Ix x n}
-            -> F1 s (o' ** MArray s o' a, p' ** MArray s p' (Tree1 s a), q' ** MArray s q' (Tree1 s a))
-        go' m' Z      _    _             _                (o ** newnode'') (p ** newsubtree'') (q ** newroot'') t =
-          ((o ** newnode''), (p ** newsubtree''), (q ** newroot'')) # t
-        go' m' (S j') arr' nodecounter'' subtreecounter'' (o ** newnode'') (p ** newsubtree'') (q ** newroot'') t =
-          let nodecounter''' # t := read1 nodecounter'' t
-            in case nodecounter''' == blocksize of
-                 True  =>
-                   let subtreecounter''' # t := read1 subtreecounter'' t
-                     in case subtreecounter''' == blocksize of
-                          True  =>
-                            let newnode'''           := Leaf {lsize=o} (o ** newnode'')
-                                newnode''''      # t := marray1 1 newnode''' t
-                                newsubtree'''    # t := mappend newsubtree' newnode'''' t
-                                newnode'''''     # t := unsafeMArray1 0 t
-                                ()               # t := write1 nodecounter'' 0 t
-                                ()               # t := mod1 subtreecounter'' (\y => y + 1) t
-                                newsubtree''''   # t := computeSizes sh newsubtree''' t
-                                newsubtree'''''  # t := marray1 1 newsubtree'''' t
-                                newroot'''       # t := mappend newroot'' newsubtree''''' t
-                                newsubtree'''''' # t := unsafeMArray1 0 t
-                                ()               # t := write1 subtreecounter'' 0 t
-                              in go' (S m') j' arr' nodecounter'' subtreecounter'' (0 ** newnode''''') (0 ** newsubtree'''''') ((plus q 1) ** newroot''') t
-                          False =>
-                            let newnode'''           := Leaf {lsize=o} (o ** newnode'')
-                                newnode''''      # t := marray1 1 newnode''' t
-                                newsubtree'''    # t := mappend newsubtree' newnode'''' t
-                                newnode'''''     # t := unsafeMArray1 0 t
-                                ()               # t := write1 nodecounter'' 0 t
-                                ()               # t := mod1 subtreecounter'' (\y => y + 1) t
-                              in go' (S m') j' arr' nodecounter'' subtreecounter'' (0 ** newnode''''') ((plus p 1) ** newsubtree''') (q ** newroot'') t
-                 False =>
-                   let j''         # t := getIx j' t
-                       newnode'''  # t := marray1 1 j'' t
-                       newnode'''' # t := mappend newnode'' newnode''' t
-                       ()          # t := mod1 nodecounter'' (\y => y + 1) t
-                     in go' (S m') j' arr' nodecounter'' subtreecounter'' ((plus o 1) ** newnode''') (p ** newsubtree'') (q ** newroot'') t
-        go :  (m, x : Nat)
-           -> MArray s n (Tree1 s a)
-           -> Ref s Nat
-           -> Ref s Nat
-           -> (o ** MArray s o a)
-           -> (p ** MArray s p (Tree1 s a))
-           -> (q ** MArray s q (Tree1 s a))
-           -> {auto v : Ix x n}
-           -> F1 s (r ** MArray s r (Tree1 s a))
-        go m Z     arr nodecounter' subtreecounter' (o ** newnode') (_ ** newsubtree') (_ ** newroot') t =
-          let newnode''         := Leaf {lsize=o} (o ** newnode')
-              newnode'''    # t := marray1 1 newnode'' t
-              newsubtree''  # t := mappend newsubtree' newnode''' t
-              newsubtree''  # t := computeSizes sh newsubtree'' t
-              newsubtree''' # t := marray1 1 newsubtree'' t
-              newroot''     # t := mappend newroot' newsubtree''' t
-            in newroot'' # t
-        go m (S j) arr nodecounter' subtreecounter' (o ** newnode') (p ** newsubtree') (q ** newroot') t =
-          let j'                                                         # t := getIx arr j t
-              arr'                                                           := treeToArray' j'
-              ((o' ** newnode'') (p' ** newsubtree'') (q' ** newroot'')) # t := go' 0 b arr' nodecounter' subtreecounter' (o ** newnode') (p ** newsubtree') (q ** newroot') t
-            in go (S m) j arr nodecounter' subtreecounter' (o' ** newnode'') (p' ** newsubtree'') (q' ** newroot'') t
-    mergeRebalance'' :  Shift
+        in mergeRebalanceInternalGo'' 0 n sh lcr nodecounter subtreecounter (0 ** newnode) (0 ** newsubtree) (0 ** newroot) t
+    mergeRebalance'' :  {n : Nat}
+                     -> Shift
                      -> MArray s n (Tree1 s a)
                      -> MArray s n (Tree1 s a)
                      -> MArray s n (Tree1 s a)
-                     -> F1 s (o ** MArray s o (Tree1 s a))
+                     -> F1 s (r ** MArray s r (Tree1 s a))
     mergeRebalance'' sh left center right t =
       let centerright     # t := mappend center right t
           leftcenterright # t := mappend left centerright t
@@ -1339,23 +1341,20 @@ export
                    -> MArray s n (Tree1 s a)
                    -> MArray s n (Tree1 s a)
                    -> MArray s n (Tree1 s a)
-                   -> F1 s (MArray s n (Tree1 s a))
+                   -> F1 s (r ** MArray s r (Tree1 s a))
     mergeRebalance sh left center right t =
       case compare sh blockshift of
         LT =>
-          let (_ ** arr) # t := mergeRebalance' sh left center right t  
-            in arr # t
+          mergeRebalance' sh left center right t
         EQ =>
-          let (_ ** arr) # t := mergeRebalance'' sh left center right t
-            in arr # t
+          mergeRebalance'' sh left center right t
         GT =>
-          let (_ ** arr) # t := mergeRebalance' sh left center right t
-            in arr # t
+          mergeRebalance' sh left center right t
     mergeTrees :  Tree1 s a
                -> Nat
                -> Tree1 s a
                -> Nat
-               -> F1 s (List (Tree1 s a))
+               -> F1 s (r ** MArray s r (Tree1 s a))
     mergeTrees tree1@(Leaf (l1 ** arr1)) _   tree2@(Leaf (l2 ** arr2)) _   with (blocksize <= (plus l1 l2)) proof eq
       _ | True  = \t =>
         case compare l1 blocksize of
