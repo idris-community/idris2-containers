@@ -136,6 +136,13 @@ treeToArray (Unbalanced arr _) = Right arr
 treeToArray (Leaf       _)     = assert_total $ idris_crash "Data.RRBVector1.Internal.treeToArray: leaf"
 
 export
+treeToArray' :  Tree1 s a
+             -> (lsize ** MArray s lsize a)
+treeToArray' (Balanced _)     = assert_total $ idris_crash "Data.RRBVector1.Internal.treeToArray': balanced"
+treeToArray' (Unbalanced _ _) = assert_total $ idris_crash "Data.RRBVector1.Internal.treeToArray': unbalanced"
+treeToArray' (Leaf arr)       = arr
+
+export
 treeBalanced :  Tree1 s a
              -> Bool
 treeBalanced (Balanced   _)   = True
