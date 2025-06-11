@@ -1337,7 +1337,8 @@ export
         in mergeRebalanceInternal'' sh
                                     leftcenterright
                                     t
-    mergeRebalance :  Shift
+    mergeRebalance :  {n : Nat}
+                   -> Shift
                    -> MArray s n (Tree1 s a)
                    -> MArray s n (Tree1 s a)
                    -> MArray s n (Tree1 s a)
@@ -1362,37 +1363,55 @@ export
             let arr' # t := mappend arr1 arr2 t
               in case compare (plus l1 l2) blocksize of
                    LT =>
-                     let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
-                       in [newtree] # t 
+                     let newtree   := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
+                         newlist   := [newtree]
+                         arr'' # t := unsafeMArray1 (length newlist) t
+                         ()    # t := writeList arr'' newlist t
+                       in ((length newlist) ** arr'') # t
                    EQ =>
-                     let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
-                       in [newtree] # t 
+                     let newtree   := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
+                         newlist   := [newtree]
+                         arr'' # t := unsafeMArray1 (length newlist) t
+                         ()    # t := writeList arr'' newlist t
+                       in ((length newlist) ** arr'') # t
                    GT =>
                      let left  # t := mtake arr' blocksize @{lteOpReflectsLTE _ _ eq} t
                          right # t := mdrop blocksize arr' t
                          lefttree  := Leaf {lsize=blocksize} (blocksize ** left)
                          righttree := Leaf {lsize=(minus (plus l1 l2) blocksize)} ((minus (plus l1 l2) blocksize) ** right)
                          newlist   := [lefttree, righttree]
-                       in newlist # t
+                         arr'' # t := unsafeMArray1 (length newlist) t
+                         ()    # t := writeList arr'' newlist t
+                       in ((length newlist) ** arr'') # t
           EQ =>
-            let newlist := [tree1, tree2]
-              in newlist # t
+            let newlist   := [tree1, tree2]
+                arr'' # t := unsafeMArray1 (length newlist) t
+                ()    # t := writeList arr'' newlist t
+              in ((length newlist) ** arr'') # t
           GT =>
             let arr' # t := mappend arr1 arr2 t
               in case compare (plus l1 l2) blocksize of
                    LT =>
-                     let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
-                       in [newtree] # t
+                     let newtree   := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
+                         newlist   := [newtree]
+                         arr'' # t := unsafeMArray1 (length newlist) t
+                         ()    # t := writeList arr'' newlist t
+                       in ((length newlist) ** arr'') # t
                    EQ =>
-                     let newtree := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
-                       in [newtree] # t
+                     let newtree   := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
+                         newlist   := [newtree]
+                         arr'' # t := unsafeMArray1 (length newlist) t
+                         ()    # t := writeList arr'' newlist t
+                       in ((length newlist) ** arr'') # t
                    GT =>
                      let left  # t := mtake arr' blocksize @{lteOpReflectsLTE _ _ eq} t
                          right # t := mdrop blocksize arr' t
                          lefttree  := Leaf {lsize=blocksize} (blocksize ** left)
                          righttree := Leaf {lsize=(minus (plus l1 l2) blocksize)} ((minus (plus l1 l2) blocksize) ** right)
                          newlist   := [lefttree, righttree]
-                       in newlist # t
+                         arr'' # t := unsafeMArray1 (length newlist) t
+                         ()    # t := writeList arr'' newlist t
+                       in ((length newlist) ** arr'') # t
       _ | False = \t =>
         (assert_total $ idris_crash "Data.RRBVector1.(><).mergeTrees: index out of bounds") # t
     mergeTrees tree1                     sh1 tree2                     sh2 t =
