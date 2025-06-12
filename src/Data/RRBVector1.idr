@@ -400,8 +400,9 @@ update i x v@(Root size sh tree) t =
         Nothing =>
           (assert_total $ idris_crash "Data.RRBVector.update.updateTree: can't convert Nat to Fin") # t
         Just i' =>
-          let newtree # t := assert_total $ updateTree i (down sh) (Balanced {bsize=b} (b ** arr)) t
-              ()      # t := set arr i' newtree t
+          let newtree  # t := get arr i' t
+              newtree' # t := assert_total $ updateTree i (down sh) newtree t
+              ()       # t := set arr i' newtree' t
             in (Balanced {bsize=b} (b ** arr)) # t
     updateTree i sh (Unbalanced (u ** arr) sizes) t =
       let (idx, subidx) := relaxedRadixIndex sizes i sh
@@ -409,8 +410,9 @@ update i x v@(Root size sh tree) t =
              Nothing   =>
                (assert_total $ idris_crash "Data.RRBVector.update.updateTree: can't convert Nat to Fin") # t
              Just idx' =>
-               let newtree # t := assert_total $ updateTree subidx (down sh) (Unbalanced (u ** arr) sizes) t
-                   ()      # t := set arr idx' newtree t
+               let newtree  # t := get arr idx' t
+                   newtree' # t := assert_total $ updateTree subidx (down sh) newtree t
+                   ()       # t := set arr idx' newtree' t
                  in (Unbalanced (u ** arr) sizes) # t
     updateTree i _  (Leaf (l ** arr))             t =
       let i' = integerToNat ((natToInteger i) .&. (natToInteger blockmask))
@@ -467,8 +469,9 @@ adjust i f v@(Root size sh tree) t =
         Nothing =>
           (assert_total $ idris_crash "Data.RRBVector.adjust: can't convert Nat to Fin") # t
         Just i' =>
-          let newtree # t := assert_total $ adjustTree i (down sh) (Balanced {bsize=b} (b ** arr)) t
-              ()      # t := set arr i' newtree t
+          let newtree  # t := get arr i' t
+              newtree' # t := assert_total $ adjustTree i (down sh) newtree t
+              ()       # t := set arr i' newtree' t
             in (Balanced {bsize=b} (b ** arr)) # t
     adjustTree i sh (Unbalanced (u ** arr) sizes) t =
       let (idx, subidx) := relaxedRadixIndex sizes i sh
@@ -476,8 +479,9 @@ adjust i f v@(Root size sh tree) t =
              Nothing   =>
                (assert_total $ idris_crash "Data.RRBVector.adjust: can't convert Nat to Fin") # t
              Just idx' =>
-               let newtree # t := assert_total $ adjustTree subidx (down sh) (Unbalanced (u ** arr) sizes) t
-                   ()      # t := set arr idx' newtree t
+               let newtree  # t := get arr idx' t
+                   newtree' # t := assert_total $ adjustTree subidx (down sh) newtree t
+                   ()       # t := set arr idx' newtree' t
                  in (Unbalanced (u ** arr) sizes) # t
     adjustTree i _  (Leaf (l ** arr))             t =
       let i' = integerToNat ((natToInteger i) .&. (natToInteger blockmask))
