@@ -585,20 +585,21 @@ dropTree n sh (Balanced (b ** arr))         t =
           newtree'' # t := computeSizes sh arr' t
         in newtree'' # t
 dropTree n sh (Unbalanced (u ** arr) sizes) t =
-  case tryNatToFin 0 of
-    Nothing   =>
-      (assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin") # t
-    Just zero =>
-      let arr'      # t := mdrop (fst $ relaxedRadixIndex sizes n sh) arr t
-          newtree   # t := get arr' zero t
-          newtree'  # t := assert_total $ dropTree (snd $ relaxedRadixIndex sizes n sh) (down sh) newtree t
-          ()        # t := set arr' zero newtree' t
-          newtree'' # t := computeSizes sh arr' t
-        in newtree'' # t
+  let (idx, subidx) := relaxedRadixIndex sizes n sh
+    in case tryNatToFin 0 of
+         Nothing   =>
+           (assert_total $ idris_crash "Data.RRBVector.dropTree: can't convert Nat to Fin") # t
+         Just zero =>
+           let arr'      # t := mdrop idx arr t
+               newtree   # t := get arr' zero t
+               newtree'  # t := assert_total $ dropTree subidx (down sh) newtree t
+               ()        # t := set arr' zero newtree' t
+               newtree'' # t := computeSizes sh arr' t
+             in newtree'' # t
 dropTree n _  (Leaf (l ** arr))             t =
   let n'       := integerToNat ((natToInteger n) .&. (natToInteger blockmask))
       arr' # t := mdrop n' arr t
-      in (Leaf {lsize=minus l n'} ((minus l n') ** arr')) # t
+    in (Leaf {lsize=minus l n'} ((minus l n') ** arr')) # t
 
 ||| The first i elements of the vector.
 ||| If the vector contains less than or equal to i elements, the whole vector is returned. O(log n)
