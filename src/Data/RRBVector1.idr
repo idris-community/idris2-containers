@@ -1487,7 +1487,6 @@ export
                        emptyarr             # t := unsafeMArray1 0 t
                      in mergeRebalance sh1 leftinit merged emptyarr t
 
-
 ||| Insert an element at the given index, shifting the rest of the vector over.
 ||| If the index is negative, add the element to the left end of the vector.
 ||| If the index is bigger than or equal to the length of the vector, add the element to the right end of the vector. O(log n)
