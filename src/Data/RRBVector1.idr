@@ -18,6 +18,7 @@ import Data.Zippable
 
 %hide Data.Array.Core.take
 %hide Data.Array.Indexed.drop
+%hide Data.Linear.splitAt
 %hide Data.Linear.(::)
 %hide Data.List.drop
 %hide Data.List.lookup
@@ -26,11 +27,13 @@ import Data.Zippable
 %hide Data.List1.singleton
 %hide Data.Vect.drop
 %hide Data.Vect.lookup
+%hide Data.Vect.splitAt
 %hide Data.Vect.take
 %hide Data.Vect.Stream.take
 %hide Data.Vect.(::)
 %hide Prelude.null
 %hide Prelude.take
+%hide Prelude.(|>)
 %hide Prelude.Ops.infixr.(<|)
 %hide Prelude.Ops.infixl.(|>)
 %hide Prelude.Stream.(::)
@@ -1483,3 +1486,28 @@ export
                        (_ ** merged)        # t := assert_total $ mergeTrees leftlast (down sh1) tree2 sh2 t
                        emptyarr             # t := unsafeMArray1 0 t
                      in mergeRebalance sh1 leftinit merged emptyarr t
+
+
+||| Insert an element at the given index, shifting the rest of the vector over.
+||| If the index is negative, add the element to the left end of the vector.
+||| If the index is bigger than or equal to the length of the vector, add the element to the right end of the vector. O(log n)
+export
+insertAt :  Nat
+         -> a
+         -> RRBVector1 s a
+         -> F1 s (RRBVector1 s a)
+insertAt i x v t =
+  let (left, right) # t := Data.RRBVector1.splitAt i v t
+      left'         # t := ((|>) left x) t
+    in (><) left' right t
+
+||| Delete the element at the given index.
+||| If the index is out of range, return the original vector. O(log n)
+export
+deleteAt :  Nat
+         -> RRBVector1 s a
+         -> F1 s (RRBVector1 s a)
+deleteAt i v t =
+  let (left, right) # t := Data.RRBVector1.splitAt (plus i 1) v t
+      left'         # t := take i left t
+    in (><) left' right t
