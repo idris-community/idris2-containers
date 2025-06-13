@@ -1386,16 +1386,12 @@ export
             in case compare (plus l1 l2) blocksize of
                  LT =>
                    let newtree   := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
-                       newlist   := [newtree]
-                       arr'' # t := unsafeMArray1 (length newlist) t
-                       ()    # t := writeList arr'' newlist t
-                     in ((length newlist) ** arr'') # t
+                       arr'' # t := singleton' newtree t
+                     in (1 ** arr'') # t
                  EQ =>
                    let newtree   := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
-                       newlist   := [newtree]
-                       arr'' # t := unsafeMArray1 (length newlist) t
-                       ()    # t := writeList arr'' newlist t
-                     in ((length newlist) ** arr'') # t
+                       arr'' # t := singleton' newtree t
+                     in (1 ** arr'') # t
                  GT =>
                    let left  # t := takeArr arr' t
                        right # t := mdrop blocksize arr' t
@@ -1415,16 +1411,12 @@ export
             in case compare (plus l1 l2) blocksize of
                  LT =>
                    let newtree   := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
-                       newlist   := [newtree]
-                       arr'' # t := unsafeMArray1 (length newlist) t
-                       ()    # t := writeList arr'' newlist t
-                     in ((length newlist) ** arr'') # t
+                       arr'' # t := singleton' newtree t
+                     in (1 ** arr'') # t
                  EQ =>
                    let newtree   := Leaf {lsize=(plus l1 l2)} ((plus l1 l2) ** arr')
-                       newlist   := [newtree]
-                       arr'' # t := unsafeMArray1 (length newlist) t
-                       ()    # t := writeList arr'' newlist t
-                     in ((length newlist) ** arr'') # t
+                       arr'' # t := singleton' newtree t
+                     in (1 ** arr'') # t
                  GT =>
                    let left  # t := takeArr arr' t
                        right # t := mdrop blocksize arr' t
