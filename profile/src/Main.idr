@@ -15,7 +15,6 @@ import Data.SortedSet as SS
 import Profile
 
 %hide Data.Fin.fromInteger
--- %hide Prelude.fromInteger
 %hide Profile.Types.fromInteger
 %hide Profile.Types.Scalar.fromInteger
 %hide Prelude.Ops.infixr.(<|)
@@ -341,6 +340,7 @@ consRRBVector1 n t =
       v # t := (V1.(<|) 16 v) t
       v # t := (V1.(<|) 17 v) t
       v # t := (V1.(<|) 18 v) t
+      v # t := (V1.(<|) 19 v) t
     in v # t
 
 consSeqUnsized : Nat -> Seq Nat
@@ -685,6 +685,7 @@ main' = do
       v = V.(|>) v 29
       v = V.(|>) v 30
       v = V.(|>) v 31
+      v = V.(><) v v
 --  pure ()
       v = V.toList v
   putStrLn $ show v
@@ -695,6 +696,16 @@ main1 t =
   let v # t := V1.fromList [0..9] t
       v # t := (V1.(<|) 10 v) t
       v # t := (V1.(<|) 11 v) t
+      v # t := (V1.(|>) v 10) t
+      v # t := (V1.(|>) v 11) t
+      v # t := (V1.(<|) 12 v) t
+      v # t := (V1.(|>) v 12) t
+      v # t := (V1.(<|) 13 v) t
+      v # t := (V1.(<|) 14 v) t
+      v # t := (V1.(|>) v 13) t
+      v # t := (V1.(|>) v 14) t
+      v # t := (V1.(><) v v) t
+      {-
       v # t := (V1.(<|) 12 v) t
       v # t := (V1.(<|) 13 v) t
       v # t := (V1.(<|) 14 v) t
@@ -757,11 +768,21 @@ main1 t =
       v # t := (V1.(|>) v 39) t
       v # t := (V1.(|>) v 40) t
       v # t := (V1.(|>) v 41) t
---    in () # t
-      v # t := V1.toList v t
-    in ioToF1 (putStrLn $ show v) t
+      v # t := (V1.(<|) 1000 v) t
+      v # t := (V1.(|>) v 1000) t
+      v # t := (V1.(|>) v 10000) t
+--      v # t := V1.take 2 v t
+--      v # t := V1.drop 2 v t
+--      (v'', v''') # t := V1.splitAt 3 v' t
+      v # t := (V1.(><) v v) t
+--      v # t := V1.insertAt 1 1000 v t
+--      v # t := V1.deleteAt 0 v t
+      -}
+      v'''' # t := V1.toList v t
+    in ioToF1 (putStrLn $ show v'''') t
 
 partial
 main : IO ()
-main = runIO main1
+main = runIO main1 --main' --runIO main1 
+
 --runDefault (const True) Details show bench
