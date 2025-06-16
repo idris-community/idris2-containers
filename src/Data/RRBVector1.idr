@@ -1152,10 +1152,11 @@ export
                 arr'' # t := mtake arr (minus n 1) @{lteOpReflectsLTE _ _ eq} t
               in (arr'', arr') # t
       _ | False = \t =>
-        (assert_total $ idris_crash "Data.RRBVector1.(><).viewlArr: index out of bounds") # t
+        (assert_total $ idris_crash "Data.RRBVector1.(><).viewrArr: index out of bounds") # t
     takeArr :  {n : Nat}
+            -> {blocksize : Nat}
             -> MArray s n a
-            -> F1 s (MArray s Data.RRBVector1.Internal.blocksize a)
+            -> F1 s (MArray s blocksize a)
     takeArr arr with (blocksize <= n) proof eq
       _ | True  = \t =>
         mtake arr blocksize @{lteOpReflectsLTE _ _ eq} t
@@ -1266,15 +1267,15 @@ export
                                    leftcenterright
                                    t
     mergeRebalanceInternalGo''' : (x : Nat)
-                               -> (sh : Shift)
-                               -> MArray s n a
-                               -> Ref s Nat
-                               -> Ref s Nat
-                               -> (o ** MArray s o a)
-                               -> (p ** MArray s p (Tree1 s a))
-                               -> (q ** MArray s q (Tree1 s a))
-                               -> {auto v : Ix x n}
-                               -> F1 s ((o' ** MArray s o' a), (p' ** MArray s p' (Tree1 s a)), (q' ** MArray s q' (Tree1 s a)))
+                                -> (sh : Shift)
+                                -> MArray s n a
+                                -> Ref s Nat
+                                -> Ref s Nat
+                                -> (o ** MArray s o a)
+                                -> (p ** MArray s p (Tree1 s a))
+                                -> (q ** MArray s q (Tree1 s a))
+                                -> {auto v : Ix x n}
+                                -> F1 s ((o' ** MArray s o' a), (p' ** MArray s p' (Tree1 s a)), (q' ** MArray s q' (Tree1 s a)))
     mergeRebalanceInternalGo''' Z      _  _    _             _                (o ** newnode'') (p ** newsubtree'') (q ** newroot'') t =
       ((o ** newnode''), (p ** newsubtree''), (q ** newroot'')) # t
     mergeRebalanceInternalGo''' (S j') sh arr' nodecounter'' subtreecounter'' (o ** newnode'') (p ** newsubtree'') (q ** newroot'') t =
