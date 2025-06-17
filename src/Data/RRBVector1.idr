@@ -1194,10 +1194,22 @@ export
                   newnode''''      # t := marray1 1 newnode''' t
                   newsubtree'''    # t := mappend newsubtree'' newnode'''' t
                   newnode'''''     # t := unsafeMArray1 0 t
-                  ()               # t := write1 nodecounter'' 0 t
-                  ()               # t := mod1 subtreecounter'' (\y => plus y 1) t
-                in mergeRebalanceInternalGo' j' sh arr' nodecounter'' subtreecounter'' (0 ** newnode''''') ((plus p 1) ** newsubtree''') (q ** newroot'') t
+                  j''              # t := getIx arr' j' t
+                  newnode''''''    # t := marray1 1 j'' t
+                  newnode'''''''   # t := mappend newnode''''' newnode'''''' t
+                in mergeRebalanceInternalGo' j' sh arr' (1 ** newnode''''''') ((plus p 1) ** newsubtree''') (q ** newroot'') t
         False =>
+          let j''           # t := getIx arr' j' t
+              newnode'''    # t := marray1 1 j'' t
+              newnode''''   # t := mappend newnode'' newnode''' t
+            in mergeRebalanceInternalGo' j' sh arr' ((plus 0 1) ** newnode'''') ((plus p 1) ** newsubtree''') (q ** newroot'') t
+
+
+
+
+
+
+
           let j''  # t := getIx arr' j' t
               j'''     := treeToArray j''
             in case j''' of
