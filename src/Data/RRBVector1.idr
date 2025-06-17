@@ -617,7 +617,7 @@ take n v@(Root size sh tree) t =
     GT =>
       case compare n size of
         LT =>
-          let tt  # t := takeTree (minus n 1) sh tree t
+          let tt # t := takeTree (minus n 1) sh tree t
             in normalize (Root n sh tt) t 
         EQ =>
           v # t
@@ -640,7 +640,7 @@ drop n v@(Root size sh tree) t =
     GT =>
       case compare n size of
         LT =>
-          let dt  # t := dropTree n sh tree t
+          let dt # t := dropTree n sh tree t
             in normalize (Root (minus size n) sh dt) t
         EQ =>
           empty t
@@ -665,7 +665,7 @@ splitAt n v@(Root size sh tree) t =
           let tt    # t := takeTree (minus n 1) sh tree t
               left  # t := normalize (Root n sh tt) t
               dt    # t := dropTree n sh tree t
-              right # t := normalize (Root (minus size n) sh dt) t
+              right # t := normalize (Root (size `minus` n) sh dt) t
             in (left, right) # t
         EQ =>
           (v, Empty) # t
