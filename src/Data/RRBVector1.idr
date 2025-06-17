@@ -1278,7 +1278,7 @@ export
                   j''              # t := getIx arr' j' t
                   newnode''''''    # t := marray1 1 j'' t
                   newnode'''''''   # t := mappend newnode''''' newnode'''''' t
-                in mergeRebalanceInternalGo' j' sh arr' (1 ** newnode''''''') (0  ** newsubtree'''''') ((plus q 1) ** newroot''') t
+                in mergeRebalanceInternalGo''' j' sh arr' (1 ** newnode''''''') (0  ** newsubtree'''''') ((plus q 1) ** newroot''') t
             False =>
               let newnode'''           := Leaf {lsize=0} (o ** newnode'')
                   newnode''''      # t := marray1 1 newnode''' t
@@ -1287,12 +1287,12 @@ export
                   j''              # t := getIx arr' j' t
                   newnode''''''    # t := marray1 1 j'' t
                   newnode'''''''   # t := mappend newnode''''' newnode'''''' t
-                in mergeRebalanceInternalGo' j' sh arr' (1 ** newnode''''''') ((plus p 1) ** newsubtree''') (q ** newroot'') t
+                in mergeRebalanceInternalGo''' j' sh arr' (1 ** newnode''''''') ((plus p 1) ** newsubtree''') (q ** newroot'') t
         False =>
           let j''           # t := getIx arr' j' t
               newnode'''    # t := marray1 1 j'' t
               newnode''''   # t := mappend newnode'' newnode''' t
-            in mergeRebalanceInternalGo' j' sh arr' ((plus o 1) ** newnode'''') (p ** newsubtree'') (q ** newroot'') t
+            in mergeRebalanceInternalGo''' j' sh arr' ((plus o 1) ** newnode'''') (p ** newsubtree'') (q ** newroot'') t
     mergeRebalanceInternalGo'' :  (x : Nat)
                                -> (sh : Shift)
                                -> MArray s n (Tree1 s a)
@@ -1301,7 +1301,7 @@ export
                                -> (q ** MArray s q (Tree1 s a))
                                -> {auto v : Ix x n}
                                -> F1 s (r ** MArray s r (Tree1 s a))
-    mergeRebalanceInternalGo'' Z     sh arr nodecounter' subtreecounter' (o ** newnode') (_ ** newsubtree') (q ** newroot') t =
+    mergeRebalanceInternalGo'' Z     sh arr (o ** newnode') (_ ** newsubtree') (q ** newroot') t =
       let newnode''          := Leaf {lsize=o} (o ** newnode')
           newnode'''     # t := marray1 1 newnode'' t
           newsubtree''   # t := mappend newsubtree' newnode''' t
@@ -1309,9 +1309,9 @@ export
           newsubtree'''' # t := marray1 1 newsubtree''' t
           newroot''      # t := mappend newroot' newsubtree'''' t
         in ((plus q 1) ** newroot'') # t
-    mergeRebalanceInternalGo'' (S j) sh arr    (o ** newnode') (p ** newsubtree') (q ** newroot') t =
+    mergeRebalanceInternalGo'' (S j) sh arr (o ** newnode') (p ** newsubtree') (q ** newroot') t =
       let j'                                                           # t := getIx arr j t
-          (l ** arr')                                                      := treeToArray'j'
+          (l ** arr')                                                      := treeToArray' j'
           ((o' ** newnode''), (p' ** newsubtree''), (q' ** newroot'')) # t := mergeRebalanceInternalGo''' l sh arr' (o ** newnode') (p ** newsubtree') (q ** newroot') t
         in mergeRebalanceInternalGo'' j sh arr (o' ** newnode'') (p' ** newsubtree'') (q' ** newroot'') t
     mergeRebalanceInternal'' :  {n : Nat}
