@@ -245,7 +245,7 @@ computeSizes sh arr t =
                      True  =>
                        let go'      # t := assert_total $ go arr (plus i 1) t
                            treesize # t := treeSize (down sh) subtree t
-                         in (natToInteger treesize == maxsize && go') # t
+                         in ((natToInteger treesize == maxsize) && go') # t
                      False =>
                        treeBalanced subtree # t
 
