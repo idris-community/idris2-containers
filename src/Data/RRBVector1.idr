@@ -746,28 +746,71 @@ viewr v@(Root size _ tree) t =
 --          Transformation
 --------------------------------------------------------------------------------
 
+private
+mapTree :  {n : Nat}
+        -> (F1 s a -> F1 s b)
+        -> (arr : MArray s n (Tree1 s a))
+        -> F1 s (MArray s n (Tree1 s b))
+mapTree f arr t =
+  let tmt # t := unsafeMArray1 n t
+    in go 0 n tmt t 
+  where
+    go :  (m, x : Nat)
+       -> (arr' : MArray s n (Tree1 s b))
+       -> {auto v : Ix x n}
+       -> F1 s (MArray s n (Tree1 s b))
+    go m Z     arr' t =
+      arr' # t
+    go m (S j) arr' t =
+      let j' # t := getIx arr j t
+        in case j' of
+             (Balanced (b ** arr''))         =>
+               case tryNatToFin m of
+                 Nothing =>
+                   (assert_total $ idris_crash "Data.RRBVector.mapTree: can't convert Nat to Fin") # t
+                 Just m' =>
+                   let arr''' # t := assert_total $ mapTree f arr'' t
+                       arr''''    := Balanced {bsize=b} (b ** arr''')
+                       ()     # t := set arr' m' arr'''' t
+                     in go (S m) j arr' t
+             (Unbalanced (u ** arr'') sizes) =>
+               case tryNatToFin m of
+                 Nothing =>
+                   (assert_total $ idris_crash "Data.RRBVector.mapTree.go: can't convert Nat to Fin") # t
+                 Just m' =>
+                   let arr''' # t := assert_total $ mapTree f arr'' t
+                       arr''''    := Unbalanced (u ** arr''') sizes
+                       ()     # t := set arr' m' arr'''' t
+                     in go (S m) j arr' t
+             (Leaf (l ** arr''))             =>
+               case tryNatToFin m of
+                 Nothing =>
+                   (assert_total $ idris_crash "Data.RRBVector.mapTree.go: can't convert Nat to Fin") # t
+                 Just m' =>
+                   let arr''' # t := mmap f arr'' t
+                       arr''''    := Leaf {lsize=l} (l ** arr''')
+                       ()     # t := set arr' m' arr'''' t
+                     in go (S m) j arr' t
+
 ||| Apply the function to every element. O(n)
 export
 map :  (F1 s a -> F1 s b)
-    -> (F1 s (Tree1 s a) -> F1 s (Tree1 s b))
     -> RRBVector1 s a
     -> F1 s (RRBVector1 s b)
-map _ _  Empty               t = empty t
-map f f' (Root size sh tree) t =
-  let maptree # t := mapTree tree t
-    in (Root size sh maptree) # t
-  where
-    mapTree :  Tree1 s a
-            -> F1 s (Tree1 s b)
-    mapTree (Balanced (b ** arr))         t =
-      let arr' # t := mmap f' arr t
-        in (Balanced {bsize=b} (b ** arr')) # t
-    mapTree (Unbalanced (u ** arr) sizes) t =
-      let arr' # t := mmap f' arr t
-        in (Unbalanced (u ** arr') sizes) # t
-    mapTree (Leaf (l ** arr))             t =
-      let arr' # t := mmap f arr t
-        in (Leaf {lsize=l} (l ** arr')) # t
+map _ Empty                                        t =
+  empty t
+map f (Root size sh (Balanced (b ** arr)))         t =
+  let arr' # t := mapTree f arr t
+      arr''    := Balanced {bsize=b} (b ** arr')
+    in (Root size sh arr'') # t
+map f (Root size sh (Unbalanced (u ** arr) sizes)) t =
+  let arr' # t := mapTree f arr t
+      arr''    := Unbalanced (u ** arr') sizes
+    in (Root size sh arr'') # t
+map f (Root size sh (Leaf (l ** arr)))             t =
+  let arr' # t := mmap f arr t
+      arr''    := Leaf {lsize=l} (l ** arr')
+    in (Root size sh arr'') # t
 
 --------------------------------------------------------------------------------
 --          Concatenation
