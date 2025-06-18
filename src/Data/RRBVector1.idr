@@ -641,7 +641,7 @@ drop n v@(Root size sh tree) t =
       case compare n size of
         LT =>
           let dt # t := dropTree n sh tree t
-            in normalize (Root (minus size n) sh dt) t
+            in normalize (Root (size `minus` n) sh dt) t
         EQ =>
           empty t
         GT =>
