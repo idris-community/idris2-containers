@@ -619,7 +619,7 @@ take n v@(Root size sh tree) t =
       case compare n size of
         LT =>
           let tt # t := takeTree (minus n 1) sh tree t
-            in normalize (Root n sh tt) t 
+            in normalize (Root n sh tt) t
         EQ =>
           v # t
         GT =>
@@ -754,7 +754,7 @@ mapTree :  {n : Nat}
         -> F1 s (MArray s n (Tree1 s b))
 mapTree f arr t =
   let tmt # t := unsafeMArray1 n t
-    in go 0 n tmt t 
+    in go 0 n tmt t
   where
     go :  (m, x : Nat)
        -> (arr' : MArray s n (Tree1 s b))
@@ -873,9 +873,9 @@ export
                  -> Nat
                  -> Tree1 s a
                  -> F1 s Nat
-    computeShift sz sh min (Balanced _)                  t = 
+    computeShift sz sh min (Balanced _)                  t =
       -- sz - 1 is the index of the last element
-      let comp     := mult (log2 (minus sz 1) `div` blockshift) blockshift -- the shift of the root when normalizing 
+      let comp     := mult (log2 (minus sz 1) `div` blockshift) blockshift -- the shift of the root when normalizing
           hishift  := case compare comp 0 of
                         LT =>
                           0
@@ -1224,7 +1224,7 @@ export
               let newnode'''       # t := computeSizes (down sh) newnode'' t
                   newnode''''      # t := marray1 1 newnode''' t
                   newsubtree'''    # t := mappend newsubtree'' newnode'''' t
-                  newnode'''''     # t := unsafeMArray1 0 t  
+                  newnode'''''     # t := unsafeMArray1 0 t
                   newsubtree''''   # t := computeSizes sh newsubtree''' t
                   newsubtree'''''  # t := marray1 1 newsubtree'''' t
                   newroot'''       # t := mappend newroot'' newsubtree''''' t
@@ -1248,7 +1248,7 @@ export
               newnode''''   # t := mappend newnode'' newnode''' t
             in mergeRebalanceInternalGo' j' sh arr' ((plus o 1) ** newnode'''') (p ** newsubtree'') (q ** newroot'') t
     mergeRebalanceInternalGo :  (x : Nat)
-                             -> (sh : Shift) 
+                             -> (sh : Shift)
                              -> MArray s n (Tree1 s a)
                              -> (o ** MArray s o (Tree1 s a))
                              -> (p ** MArray s p (Tree1 s a))
