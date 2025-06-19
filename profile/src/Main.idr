@@ -1,15 +1,21 @@
 module Main
 
+import Data.Linear.Ref1
+import Data.Linear.Token
 import Data.List
 import Data.Map as M
 import Data.RRBVector as V
 import Data.RRBVector.Internal
+import Data.RRBVector1.Internal
 import Data.SortedMap as SM
 import Data.Set as S
 import Data.Seq.Unsized as SU
 import Data.SortedSet as SS
 import Profile
 
+%hide Data.Fin.fromInteger
+%hide Profile.Types.fromInteger
+%hide Profile.Types.Scalar.fromInteger
 %hide Prelude.Ops.infixr.(<|)
 %hide Prelude.Ops.infixl.(|>)
 
@@ -377,13 +383,13 @@ appendSeqUnsized n = do
 indexRRBVector : Nat -> Maybe ()
 indexRRBVector n = do
   let v = V.fromList [0..n]
-  for_ (id v) $ \v' =>
+  for_ (Prelude.id v) $ \v' =>
     V.lookup v' v
 
 indexSeqUnsized : Nat -> Maybe ()
 indexSeqUnsized n = do
   let s = SU.fromList [0..n]
-  for_ (id s) $ \s' =>
+  for_ (Prelude.id s) $ \s' =>
     SU.index s' s
 
 mapRRBVector : Nat -> RRBVector Nat
@@ -613,6 +619,7 @@ bench = Group "containers"
       , Single "10000"   (basic splitAtSeqUnsized 9999)
       ]
   ]
+
 
 partial
 main : IO ()

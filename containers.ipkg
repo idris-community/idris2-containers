@@ -8,6 +8,7 @@ depends    = base         >= 0.6.0
            , array
            , elab-util
            , hashable
+           , ref1
 
 modules = Data.BoundedQueue
         , Data.FVect
@@ -24,7 +25,9 @@ modules = Data.BoundedQueue
         , Data.OrdPSQ.Internal
         , Data.Queue
         , Data.RRBVector
+        , Data.RRBVector1
         , Data.RRBVector.Internal
+        , Data.RRBVector1.Internal
         , Data.Seq.Internal
         , Data.Seq.Sized
         , Data.Seq.Unsized

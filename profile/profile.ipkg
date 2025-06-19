@@ -6,6 +6,7 @@ sourcedir  = "src"
 depends    = containers
            , elab-util
            , profiler
+           , ref1
 
 executable = "profile-containers"
 main       = Main
