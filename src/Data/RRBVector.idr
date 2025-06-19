@@ -906,37 +906,26 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
         for_ (toList left ++ toList center ++ toList right) $ \subtree =>
           for_ (extract subtree) $ \x => do
             nodecounter' <- readSTRef nodecounter
-            case nodecounter' == (natToInteger blocksize) of
-              True  => do
-                subtreecounter' <- readSTRef subtreecounter
-                case subtreecounter' == (natToInteger blocksize) of
-                  True  => do
-                    newnode' <- readSTRef newnode
-                    modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
-                                                                      (snocConcat newnode'))
-                                           )
-                    writeSTRef newnode Lin
-                    writeSTRef nodecounter 0
-                    modifySTRef subtreecounter (\y => y + 1
-                                               )
-                    newsubtree' <- readSTRef newsubtree
-                    modifySTRef newroot (\y => y :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
-                                        )
-                    writeSTRef newsubtree Lin
-                    writeSTRef subtreecounter 0
-                  False => do
-                    newnode' <- readSTRef newnode
-                    modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
-                                                                      (snocConcat newnode'))
-                                           )
-                    writeSTRef newnode Lin
-                    writeSTRef nodecounter 0
-                    modifySTRef subtreecounter (\y => y + 1)
-              False => do
-                modifySTRef newnode (\y => y :< (extract x)
+            when (nodecounter' == (natToInteger blocksize)) $ do
+              newnode' <- readSTRef newnode
+              modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
+                                                                (snocConcat newnode'))
                                     )
-                modifySTRef nodecounter (\y => y + 1
-                                        )
+              writeSTRef newnode Lin
+              writeSTRef nodecounter 0
+              modifySTRef subtreecounter (\y => y + 1
+                                         )
+              subtreecounter' <- readSTRef subtreecounter
+              when (subtreecounter' == (natToInteger blocksize)) $ do
+                newsubtree' <- readSTRef newsubtree
+                modifySTRef newroot (\y => y :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
+                                    )
+                writeSTRef newsubtree Lin
+                writeSTRef subtreecounter 0
+            modifySTRef newnode (\y => y :< (fill 1 x)
+                                )
+            modifySTRef nodecounter (\y => y + 1
+                                    )
         newnode' <- readSTRef newnode
         modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
                                                           (snocConcat newnode'))
@@ -957,37 +946,26 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
         for_ (toList left ++ toList center ++ toList right) $ \subtree =>
           for_ (extract subtree) $ \x => do
             nodecounter' <- readSTRef nodecounter
-            case nodecounter' == (natToInteger blocksize) of
-              True  => do
-                subtreecounter' <- readSTRef subtreecounter
-                case subtreecounter' == (natToInteger blocksize) of
-                  True  => do
-                    newnode' <- readSTRef newnode
-                    modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
-                                                                      (snocConcat newnode'))
-                                           )
-                    writeSTRef newnode Lin
-                    writeSTRef nodecounter 0
-                    modifySTRef subtreecounter (\y => y + 1
-                                               )
-                    newsubtree' <- readSTRef newsubtree
-                    modifySTRef newroot (\y => y :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
-                                        )
-                    writeSTRef newsubtree Lin
-                    writeSTRef subtreecounter 0
-                  False => do
-                    newnode' <- readSTRef newnode
-                    modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
-                                                                      (snocConcat newnode'))
-                                           )
-                    writeSTRef newnode Lin
-                    writeSTRef nodecounter 0
-                    modifySTRef subtreecounter (\y => y + 1)
-              False => do
-                modifySTRef newnode (\y => y :< (fill 1 x)
+            when (nodecounter' == (natToInteger blocksize)) $ do
+              newnode' <- readSTRef newnode
+              modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
+                                                                (snocConcat newnode'))
                                     )
-                modifySTRef nodecounter (\y => y + 1
-                                        )
+              writeSTRef newnode Lin
+              writeSTRef nodecounter 0
+              modifySTRef subtreecounter (\y => y + 1
+                                         )
+              subtreecounter' <- readSTRef subtreecounter
+              when (subtreecounter' == (natToInteger blocksize)) $ do
+                newsubtree' <- readSTRef newsubtree
+                modifySTRef newroot (\y => y :< (computeSizes sh (fromList $ the (List (Tree a)) (cast newsubtree')))
+                                    )
+                writeSTRef newsubtree Lin
+                writeSTRef subtreecounter 0
+            modifySTRef newnode (\y => y :< (fill 1 x)
+                                )
+            modifySTRef nodecounter (\y => y + 1
+                                    )
         newnode' <- readSTRef newnode
         modifySTRef newsubtree (\y => y :< (construct $ A (SnocSize newnode')
                                                           (snocConcat newnode'))
