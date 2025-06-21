@@ -1065,12 +1065,12 @@ showRRBVectorRep (Root size sh t) = "rrbvector " ++ "[" ++ "size " ++ (show size
 --------------------------------------------------------------------------------
 
 export
-Ord a => Ord (RRBVector a) where
-  compare xs ys = compare (Data.RRBVector.toList xs) (Data.RRBVector.toList ys)
-
-export
 Eq a => Eq (RRBVector a) where
   xs == ys = length xs == length ys && Data.RRBVector.toList xs == Data.RRBVector.toList ys
+
+export
+Ord a => Ord (RRBVector a) where
+  compare xs ys = compare (Data.RRBVector.toList xs) (Data.RRBVector.toList ys)
 
 export
 Functor RRBVector where

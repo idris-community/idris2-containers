@@ -99,12 +99,12 @@ data Tree a = Balanced (Array (Tree a))
             | Unbalanced (Array (Tree a)) (Array Nat)
             | Leaf (Array a)
 
-public export
-Eq a => Eq (Tree a) where
-  (Balanced x)      == (Balanced y)      = assert_total $ heq x.arr y.arr
-  (Unbalanced x x') == (Unbalanced y y') = assert_total $ heq x.arr y.arr && heq x'.arr y'.arr
-  (Leaf x)          == (Leaf y)          = heq x.arr y.arr
-  _                 == _                 = False
+--public export
+--Eq a => Eq (Tree a) where
+--  (Balanced x)      == (Balanced y)      = assert_total $ heq x.arr y.arr
+--  (Unbalanced x x') == (Unbalanced y y') = assert_total $ heq x.arr y.arr && heq x'.arr y'.arr
+--  (Leaf x)          == (Leaf y)          = heq x.arr y.arr
+--  _                 == _                 = False
 
 public export
 Show a => Show (Tree a) where
@@ -286,11 +286,11 @@ data RRBVector a = Root Nat   -- size
                         (Tree a)
                  | Empty
 
-public export
-Eq a => Eq (Tree a) => Eq (RRBVector a) where
-  (Root n s t) == (Root n' s' t') = n == n' && s == s' && t == t'
-  Empty        == Empty           = True
-  _            == _               = False
+--public export
+--Eq a => Eq (Tree a) => Eq (RRBVector a) where
+--  (Root n s t) == (Root n' s' t') = n == n' && s == s' && t == t'
+--  Empty        == Empty           = True
+--  _            == _               = False
 
 public export
 Show a => Show (Tree a) => Show (RRBVector a) where
