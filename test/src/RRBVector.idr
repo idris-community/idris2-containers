@@ -12,8 +12,14 @@ import Data.RRBVector
 rrbvectorOf : Gen a -> Gen (RRBVector a)
 rrbvectorOf g = fromList <$> list (linear 0 20) g
 
+rrbvectorOf' : Gen a -> Gen (RRBVector a)
+rrbvectorOf' g = fromList <$> list (linear 1 20) g
+
 rrbvectorBits : Gen (RRBVector Bits8)
 rrbvectorBits = rrbvectorOf anyBits8
+
+rrbvectorBits' : Gen (RRBVector Bits8)
+rrbvectorBits' = rrbvectorOf' anyBits8
 
 prop_eq_refl : Property
 prop_eq_refl = property $ do
@@ -76,7 +82,7 @@ prop_insertAt = property $ do
 
 prop_deleteAt : Property
 prop_deleteAt = property $ do
-  vs <- forAll rrbvectorBits
+  vs <- forAll rrbvectorBits'
   case inBounds 0 (toList vs) of
     No  _   =>
       assert_total $ idris_crash "index not within bounds of list"
