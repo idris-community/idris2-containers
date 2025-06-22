@@ -131,23 +131,32 @@ export
 treeToArray :  Tree1 s a
             -> Either (bsize ** MArray s bsize (Tree1 s a))
                       (usize ** MArray s usize (Tree1 s a))
-treeToArray (Balanced   arr)   = Left arr
-treeToArray (Unbalanced arr _) = Right arr
-treeToArray (Leaf       _)     = assert_total $ idris_crash "Data.RRBVector1.Internal.treeToArray: leaf"
+treeToArray (Balanced   arr)   =
+  Left arr
+treeToArray (Unbalanced arr _) =
+  Right arr
+treeToArray (Leaf       _)     =
+  assert_total $ idris_crash "Data.RRBVector1.Internal.treeToArray: leaf"
 
 export
 treeToArray' :  Tree1 s a
              -> (lsize ** MArray s lsize a)
-treeToArray' (Balanced _)     = assert_total $ idris_crash "Data.RRBVector1.Internal.treeToArray': balanced"
-treeToArray' (Unbalanced _ _) = assert_total $ idris_crash "Data.RRBVector1.Internal.treeToArray': unbalanced"
-treeToArray' (Leaf arr)       = arr
+treeToArray' (Balanced _)     =
+  assert_total $ idris_crash "Data.RRBVector1.Internal.treeToArray': balanced"
+treeToArray' (Unbalanced _ _) =
+  assert_total $ idris_crash "Data.RRBVector1.Internal.treeToArray': unbalanced"
+treeToArray' (Leaf arr)       =
+  arr
 
 export
 treeBalanced :  Tree1 s a
              -> Bool
-treeBalanced (Balanced   _)   = True
-treeBalanced (Unbalanced _ _) = False
-treeBalanced (Leaf       _ )  = True
+treeBalanced (Balanced   _)   =
+  True
+treeBalanced (Unbalanced _ _) =
+  False
+treeBalanced (Leaf       _ )  =
+  True
 
 ||| Computes the size of a tree with shift.
 export

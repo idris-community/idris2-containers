@@ -47,12 +47,14 @@ empty = Empty
 
 ||| A vector with a single element. O(1)
 export
-singleton : a -> RRBVector a
+singleton :  a
+          -> RRBVector a
 singleton x = Root 1 0 (Leaf $ A 1 $ fill 1 x)
 
 ||| Create a new vector from a list. O(n)
 export
-fromList : List a -> RRBVector a
+fromList :  List a
+         -> RRBVector a
 fromList []  = Empty
 fromList [x] = singleton x
 fromList xs  =
@@ -62,7 +64,9 @@ fromList xs  =
     xs'    =>
       assert_smaller xs (iterateNodes blockshift xs')
   where
-    nodes : (Array a -> Tree a) -> List a -> List (Tree a)
+    nodes :  (Array a -> Tree a)
+          -> List a
+          -> List (Tree a)
     nodes f trees =
       let (trees', rest) = unsafeAlloc blocksize (go 0 blocksize f trees)
         in case rest of
@@ -90,7 +94,9 @@ fromList xs  =
                 Just cur' => T1.do
                   set r cur' x
                   go (S cur) n f xs r
-    nodes' : (Array (Tree a) -> Tree a) -> List (Tree a) -> List (Tree a)
+    nodes' :  (Array (Tree a)-> Tree a)
+           -> List (Tree a)
+           -> List (Tree a)
     nodes' f trees =
       let (trees', rest) = unsafeAlloc blocksize (go 0 blocksize f trees)
         in case rest of
@@ -118,7 +124,9 @@ fromList xs  =
                 Just cur' => T1.do
                   set r cur' x
                   go (S cur) n f xs r
-    iterateNodes : Nat -> List (Tree a) -> RRBVector a
+    iterateNodes :  Nat
+                 -> List (Tree a)
+                 -> RRBVector a
     iterateNodes sh trees =
       case nodes' Balanced trees of
         [tree] =>
@@ -128,7 +136,9 @@ fromList xs  =
 
 ||| Creates a vector of length n with every element set to x. O(log n)
 export
-replicate : Nat -> a -> RRBVector a
+replicate :  Nat
+          -> a
+          -> RRBVector a
 replicate n x =
   case compare n 0 of
     LT =>
@@ -147,7 +157,10 @@ replicate n x =
                             (Leaf $ A blocksize $ fill blocksize x)
                             (Leaf $ A size' $ fill size' x)
   where
-    iterateNodes : Shift -> Tree a -> Tree a -> RRBVector a
+    iterateNodes :  Shift
+                 -> Tree a
+                 -> Tree a
+                 -> RRBVector a
     iterateNodes sh full rest =
       let subtreesm1  = (natToInteger $ minus n 1) `shiftR` sh
           restsize    = integerToNat (subtreesm1 .&. (natToInteger blockmask))
@@ -168,11 +181,13 @@ replicate n x =
 
 ||| Convert a vector to a list. O(n)
 export
-toList : RRBVector a -> List a
+toList :  RRBVector a
+       -> List a
 toList Empty           = []
 toList (Root _ _ tree) = treeToList tree
   where
-    treeToList : Tree a -> List a
+    treeToList :  Tree a
+               -> List a
     treeToList (Balanced trees)     = assert_total $ concat (map treeToList (toList trees))
     treeToList (Unbalanced trees _) = assert_total $ concat (map treeToList (toList trees))
     treeToList (Leaf arr)           = toList arr
@@ -182,26 +197,38 @@ toList (Root _ _ tree) = treeToList tree
 --------------------------------------------------------------------------------
 
 export
-foldl : (b -> a -> b) -> b -> RRBVector a -> b
+foldl :  (b -> a -> b)
+      -> b
+      -> RRBVector a
+      -> b
 foldl f acc = go
   where
-    foldlTree : b -> Tree a -> b
+    foldlTree :  b
+              -> Tree a
+              -> b
     foldlTree acc' (Balanced arr)     = assert_total $ foldl foldlTree acc' arr
     foldlTree acc' (Unbalanced arr _) = assert_total $ foldl foldlTree acc' arr
     foldlTree acc' (Leaf arr)         = assert_total $ foldl f acc' arr
-    go : RRBVector a -> b
+    go :  RRBVector a
+       -> b
     go Empty           = acc
     go (Root _ _ tree) = assert_total $ foldlTree acc tree
 
 export
-foldr : (a -> b -> b) -> b -> RRBVector a -> b
+foldr :  (a -> b -> b)
+      -> b
+      -> RRBVector a
+      -> b
 foldr f acc = go
   where
-    foldrTree : Tree a -> b -> b
+    foldrTree :  Tree a
+              -> b
+              -> b
     foldrTree (Balanced arr) acc'     = assert_total $ foldr foldrTree acc' arr
     foldrTree (Unbalanced arr _) acc' = assert_total $ foldr foldrTree acc' arr
     foldrTree (Leaf arr) acc'         = assert_total $ foldr f acc' arr
-    go : RRBVector a -> b
+    go :  RRBVector a
+       -> b
     go Empty           = acc
     go (Root _ _ tree) = assert_total $ foldrTree tree acc
 
@@ -211,13 +238,15 @@ foldr f acc = go
 
 ||| Is the vector empty? O(1)
 export
-null : RRBVector a -> Bool
+null :  RRBVector a
+     -> Bool
 null Empty = True
 null _     = False
 
 ||| Return the size of a vector. O(1)
 export
-length : RRBVector a -> Nat
+length :  RRBVector a
+       -> Nat
 length Empty        = 0
 length (Root s _ _) = s
 
@@ -227,7 +256,9 @@ length (Root s _ _) = s
 
 ||| The element at the index or Nothing if the index is out of range. O(log n)
 export
-lookup : Nat -> RRBVector a -> Maybe a
+lookup :  Nat
+       -> RRBVector a
+       -> Maybe a
 lookup _ Empty               = Nothing
 lookup i (Root size sh tree) =
   case compare i 0 of
@@ -250,7 +281,10 @@ lookup i (Root size sh tree) =
         LT =>
           Just $ lookupTree i sh tree
   where
-    lookupTree : Nat -> Nat -> Tree a -> a
+    lookupTree :  Nat
+               -> Nat
+               -> Tree a
+               -> a
     lookupTree i sh (Balanced arr)         =
       case tryNatToFin (radixIndex i sh) of
         Nothing =>
@@ -275,23 +309,32 @@ lookup i (Root size sh tree) =
 ||| The element at the index.
 ||| Calls 'idris_crash' if the index is out of range. O(log n)
 export
-index : Nat -> RRBVector a -> a
+index :  Nat
+      -> RRBVector a
+      -> a
 index i = fromMaybe (assert_total $ idris_crash "Data.RRBVector.index: index out of range") . lookup i
 
 ||| A flipped version of lookup. O(log n)
 export
-(!?) : RRBVector a -> Nat -> Maybe a
+(!?) :  RRBVector a
+     -> Nat
+     -> Maybe a
 (!?) = flip lookup
 
 ||| A flipped version of index. O(log n)
 export
-(!!) : RRBVector a -> Nat -> a
+(!!) :  RRBVector a
+     -> Nat
+     -> a
 (!!) = flip index
 
 ||| Update the element at the index with a new element.
 ||| If the index is out of range, the original vector is returned. O (log n)
 export
-update : Nat -> a -> RRBVector a -> RRBVector a
+update :  Nat
+       -> a
+       -> RRBVector a
+       -> RRBVector a
 update _ _ Empty                 = Empty
 update i x v@(Root size sh tree) =
   case compare i 0 of
@@ -314,7 +357,10 @@ update i x v@(Root size sh tree) =
         LT =>
           Root size sh (updateTree i sh tree)
   where
-    updateTree : Nat -> Nat -> Tree a -> Tree a
+    updateTree :  Nat
+               -> Nat
+               -> Tree a
+               -> Tree a
     updateTree i sh (Balanced arr)         =
       case tryNatToFin (radixIndex i sh) of
         Nothing =>
@@ -339,7 +385,10 @@ update i x v@(Root size sh tree) =
 ||| Adjust the element at the index by applying the function to it.
 ||| If the index is out of range, the original vector is returned. O(log n)
 export
-adjust : Nat -> (a -> a) -> RRBVector a -> RRBVector a
+adjust :  Nat
+       -> (a -> a)
+       -> RRBVector a
+       -> RRBVector a
 adjust _ _ Empty                 = Empty
 adjust i f v@(Root size sh tree) =
   case compare i 0 of
@@ -362,7 +411,10 @@ adjust i f v@(Root size sh tree) =
         LT =>
           Root size sh (adjustTree i sh tree)
   where
-    adjustTree : Nat -> Nat -> Tree a -> Tree a
+    adjustTree :  Nat
+               -> Nat
+               -> Tree a
+               -> Tree a
     adjustTree i sh (Balanced arr)         =
       case tryNatToFin (radixIndex i sh) of
         Nothing =>
@@ -385,7 +437,8 @@ adjust i f v@(Root size sh tree) =
                Leaf (A arr.size (updateAt i'' f arr.arr))
 
 private
-normalize : RRBVector a -> RRBVector a
+normalize :  RRBVector a
+          -> RRBVector a
 normalize v@(Root size sh (Balanced arr))     =
   case compare arr.size 1 of
     LT =>
@@ -415,7 +468,10 @@ normalize v                                   =
 
 ||| The initial i is n - 1 (the index of the last element in the new tree).
 private
-takeTree : Nat -> Shift -> Tree a -> Tree a
+takeTree :  Nat
+         -> Shift
+         -> Tree a
+         -> Tree a
 takeTree i sh (Balanced arr) with (radixIndex i sh) | ((plus (radixIndex i sh) 1) <= arr.size) proof eq
   _ | i' | True  =
     case tryNatToFin i' of
@@ -444,7 +500,10 @@ takeTree i _ (Leaf arr) with (integerToNat (((natToInteger i) .&. (natToInteger 
     assert_total $ idris_crash "Data.RRBVector.takeTree: index out of bounds"
 
 private
-dropTree : Nat -> Shift -> Tree a -> Tree a
+dropTree :  Nat
+         -> Shift
+         -> Tree a
+         -> Tree a
 dropTree n sh (Balanced arr) =
   case tryNatToFin 0 of
     Nothing   =>
@@ -467,7 +526,9 @@ dropTree n _  (Leaf arr) =
 ||| The first i elements of the vector.
 ||| If the vector contains less than or equal to i elements, the whole vector is returned. O(log n)
 export
-take : Nat -> RRBVector a -> RRBVector a
+take :  Nat
+     -> RRBVector a
+     -> RRBVector a
 take _ Empty                 = Empty
 take n v@(Root size sh tree) =
   case compare n 0 of
@@ -487,7 +548,9 @@ take n v@(Root size sh tree) =
 ||| The vector without the first i elements.
 ||| If the vector contains less than or equal to i elements, the empty vector is returned. O(log n)
 export
-drop : Nat  -> RRBVector a -> RRBVector a
+drop :  Nat
+     -> RRBVector a
+     -> RRBVector a
 drop _ Empty                 = Empty
 drop n v@(Root size sh tree) =
   case compare n 0 of
@@ -506,7 +569,9 @@ drop n v@(Root size sh tree) =
 
 ||| Split the vector at the given index. O(log n)
 export
-splitAt : Nat -> RRBVector a -> (RRBVector a, RRBVector a)
+splitAt :  Nat
+        -> RRBVector a
+        -> (RRBVector a, RRBVector a)
 splitAt _ Empty                 = (Empty, Empty)
 splitAt n v@(Root size sh tree) =
   case compare n 0 of
@@ -531,7 +596,8 @@ splitAt n v@(Root size sh tree) =
 
 ||| The first element and the vector without the first element, or 'Nothing' if the vector is empty. O(log n)
 export
-viewl : RRBVector a -> Maybe (a, RRBVector a)
+viewl :  RRBVector a
+      -> Maybe (a, RRBVector a)
 viewl Empty             = Nothing
 viewl v@(Root _ _ tree) =
   let tail = drop 1 v
@@ -559,7 +625,8 @@ viewl v@(Root _ _ tree) =
 
 ||| The vector without the last element and the last element, or 'Nothing' if the vector is empty. O(log n)
 export
-viewr : RRBVector a -> Maybe (RRBVector a, a)
+viewr :  RRBVector a
+      -> Maybe (RRBVector a, a)
 viewr Empty                = Nothing
 viewr v@(Root size _ tree) =
   let init = take (minus size 1) v
@@ -591,7 +658,9 @@ viewr v@(Root size _ tree) =
 
 ||| Apply the function to every element. O(n)
 export
-map : (a -> b) -> RRBVector a -> RRBVector b
+map :  (a -> b)
+    -> RRBVector a
+    -> RRBVector b
 map _ Empty               = Empty
 map f (Root size sh tree) = Root size sh (mapTree tree)
   where
@@ -605,7 +674,8 @@ map f (Root size sh tree) = Root size sh (mapTree tree)
 
 ||| Reverse the vector. O(n)
 export
-reverse : RRBVector a -> RRBVector a
+reverse :  RRBVector a
+        -> RRBVector a
 reverse v =
   case compare (length v) 1 of
     LT =>
@@ -622,7 +692,9 @@ reverse v =
 ||| Take two vectors and return a vector of corresponding pairs.
 ||| If one input is longer, excess elements are discarded from the right end. O(min(n1,n2))
 export
-zip : RRBVector a -> RRBVector b -> RRBVector (a, b)
+zip :  RRBVector a
+    -> RRBVector b
+    -> RRBVector (a, b)
 zip v1 v2 =
   case fromList $ toList v1 of
     Nothing  =>
@@ -640,13 +712,17 @@ zip v1 v2 =
 
 ||| Create a new tree with shift sh.
 private
-newBranch : a -> Shift -> Tree a
+newBranch :  a
+          -> Shift
+          -> Tree a
 newBranch x 0  = Leaf (singleton x)
 newBranch x sh = assert_total $ Balanced (singleton $ newBranch x (down sh))
 
 ||| Add an element to the left end of the vector. O(log n)
 export
-(<|) : a -> RRBVector a -> RRBVector a
+(<|) :  a
+     -> RRBVector a
+     -> RRBVector a
 x <| Empty             = singleton x
 x <| Root size sh tree =
   case compare insertshift sh of
@@ -660,7 +736,11 @@ x <| Root size sh tree =
   where
     -- compute the shift at which the new branch needs to be inserted (0 means there is space in the leaf)
     -- the size is computed for efficient calculation of the shift in a balanced subtree
-    computeShift : Nat -> Nat -> Nat -> Tree a -> Nat
+    computeShift :  Nat
+                 -> Nat
+                 -> Nat
+                 -> Tree a
+                 -> Nat
     computeShift sz sh min (Balanced _)          =
       -- @sz - 1@ is the index of the last element
       let hishift  = let comp = mult (log2 (minus sz 1) `div` blockshift) blockshift  -- the shift of the root when normalizing
@@ -715,7 +795,9 @@ x <| Root size sh tree =
           min
     insertshift : Nat
     insertshift = computeShift size sh (up sh) tree
-    consTree : Nat -> Tree a -> Tree a
+    consTree :  Nat
+             -> Tree a
+             -> Tree a
     consTree sh (Balanced arr)     =
       case compare sh insertshift of
         LT =>
@@ -753,7 +835,9 @@ x <| Root size sh tree =
 
 ||| Add an element to the right end of the vector. O(log n)
 export
-(|>) : RRBVector a -> a -> RRBVector a
+(|>) :  RRBVector a
+     -> a
+     -> RRBVector a
 Empty             |> x = singleton x
 Root size sh tree |> x =
   case compare insertshift sh of
@@ -767,7 +851,11 @@ Root size sh tree |> x =
   where
     -- compute the shift at which the new branch needs to be inserted (0 means there is space in the leaf)
     -- the size is computed for efficient calculation of the shift in a balanced subtree
-    computeShift : Nat -> Nat -> Nat -> Tree a -> Nat
+    computeShift :  Nat
+                 -> Nat
+                 -> Nat
+                 -> Tree a
+                 -> Nat
     computeShift sz sh min (Balanced _)          =
       -- @sz - 1@ is the index of the last element
       let newshift = mult (countTrailingZeros sz `div` blockshift) blockshift
@@ -812,7 +900,9 @@ Root size sh tree |> x =
           min
     insertshift : Nat
     insertshift = computeShift size sh (up sh) tree
-    snocTree : Nat -> Tree a -> Tree a
+    snocTree :  Nat
+             -> Tree a
+             -> Tree a
     snocTree sh (Balanced arr) =
       case compare sh insertshift of
         LT =>
@@ -867,7 +957,9 @@ Root size sh tree |> x =
 
 ||| Concatenates two vectors. O(log(max(n1,n2)))
 export
-(><) : RRBVector a -> RRBVector a -> RRBVector a
+(><) :  RRBVector a
+     -> RRBVector a
+     -> RRBVector a
 Empty                >< v                    = v
 v                    >< Empty                = v
 Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
@@ -895,7 +987,13 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
           assert_total $ idris_crash "Data.RRBVector.(><).viewrArr: can't convert Nat to Fin"
         Just last =>
           (take (minus arr.size 1) arr, at arr.arr last)
-    mergeRebalance' : Shift -> Array (Tree a) -> Array (Tree a) -> Array (Tree a) -> (Tree a -> Array (Tree a)) -> (Array (Tree a) -> Tree a) -> Array (Tree a)
+    mergeRebalance' :  Shift
+                    -> Array (Tree a)
+                    -> Array (Tree a)
+                    -> Array (Tree a)
+                    -> (Tree a -> Array (Tree a))
+                    -> (Array (Tree a) -> Tree a)
+                    -> Array (Tree a)
     mergeRebalance' sh left center right extract construct =
       runST $ do
         nodecounter    <- newSTRef 0
@@ -935,7 +1033,13 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
                             )
         newroot' <- readSTRef newroot
         pure $ fromList $ the (List (Tree a)) (cast newroot')
-    mergeRebalance'' : Shift -> Array (Tree a) -> Array (Tree a) -> Array (Tree a) -> (Tree a -> Array a) -> (Array a -> Tree a) -> Array (Tree a)
+    mergeRebalance'' :  Shift
+                     -> Array (Tree a)
+                     -> Array (Tree a)
+                     -> Array (Tree a)
+                     -> (Tree a -> Array a)
+                     -> (Array a -> Tree a)
+                     -> Array (Tree a)
     mergeRebalance'' sh left center right extract construct =
       runST $ do
         nodecounter    <- newSTRef 0
@@ -975,7 +1079,11 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
                             )
         newroot' <- readSTRef newroot
         pure $ fromList $ the (List (Tree a)) (cast newroot')
-    mergeRebalance : Shift -> Array (Tree a) -> Array (Tree a) -> Array (Tree a) -> Array (Tree a)
+    mergeRebalance :  Shift
+                   -> Array (Tree a)
+                   -> Array (Tree a)
+                   -> Array (Tree a)
+                   -> Array (Tree a)
     mergeRebalance sh left center right =
       case compare sh blockshift of
         LT =>
@@ -984,7 +1092,11 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
           assert_total $ mergeRebalance'' sh left center right (\(Leaf arr) => arr) Leaf
         GT =>
           assert_total $ mergeRebalance' sh left center right treeToArray (computeSizes (down sh))
-    mergeTrees : Tree a -> Nat -> Tree a -> Nat -> Array (Tree a)
+    mergeTrees :  Tree a
+               -> Nat
+               -> Tree a
+               -> Nat
+               -> Array (Tree a)
     mergeTrees tree1@(Leaf arr1) _   tree2@(Leaf arr2) _   =
       case compare arr1.size blocksize of
         LT =>
@@ -1037,7 +1149,10 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
 ||| If the index is negative, add the element to the left end of the vector.
 ||| If the index is bigger than or equal to the length of the vector, add the element to the right end of the vector. O(log n)
 export
-insertAt : Nat -> a -> RRBVector a -> RRBVector a
+insertAt :  Nat
+         -> a
+         -> RRBVector a
+         -> RRBVector a
 insertAt i x v =
   let (left, right) = splitAt i v
     in (left |> x) >< right
@@ -1045,7 +1160,9 @@ insertAt i x v =
 ||| Delete the element at the given index.
 ||| If the index is out of range, return the original vector. O(log n)
 export
-deleteAt : Nat -> RRBVector a -> RRBVector a
+deleteAt :  Nat
+         -> RRBVector a
+         -> RRBVector a
 deleteAt i v =
   let (left, right) = splitAt (plus i 1) v
     in take i left >< right
@@ -1056,9 +1173,15 @@ deleteAt i v =
 
 ||| Show the full representation of the vector.
 export
-showRRBVectorRep : Show a => Show (Tree a) => Show (RRBVector a) => RRBVector a -> String
-showRRBVectorRep Empty            = ""
-showRRBVectorRep (Root size sh t) = "rrbvector " ++ "[" ++ "size " ++ (show size) ++ " shift " ++ (show sh) ++ " tree " ++ (showTreeRep t) ++ "]"
+showRRBVectorRep :  Show a
+                 => Show (Tree a)
+                 => Show (RRBVector a)
+                 => RRBVector a
+                 -> String
+showRRBVectorRep Empty            =
+  ""
+showRRBVectorRep (Root size sh t) =
+  "rrbvector " ++ "[" ++ "size " ++ (show size) ++ " shift " ++ (show sh) ++ " tree (" ++ (showTreeRep t) ++ ")" ++ "]"
 
 --------------------------------------------------------------------------------
 --          Interfaces
