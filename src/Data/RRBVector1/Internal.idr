@@ -22,7 +22,9 @@ import Derive.Prelude
 
 ||| Convenience interface for bitSize that doesn't use an implicit parameter.
 private
-bitSizeOf : (ty : Type) -> FiniteBits ty => Nat
+bitSizeOf :  (ty : Type)
+          -> FiniteBits ty
+          => Nat
 bitSizeOf ty = bitSize {a = ty}
 
 --------------------------------------------------------------------------------
