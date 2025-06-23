@@ -50,6 +50,11 @@ prop_replicate : Property
 prop_replicate = property1 $
   toList (Data.RRBVector.replicate 5 1) === [1,1,1,1,1]
 
+prop_take : Property
+prop_take = property $ do
+  vs <- forAll rrbvectorBits
+  toList (take 1 vs) === take 1 (toList vs)
+
 prop_drop : Property
 prop_drop = property $ do
   vs <- forAll rrbvectorBits
@@ -98,6 +103,7 @@ props = MkGroup "RRBVector"
   , ("prop_null", prop_null)
   , ("prop_size", prop_size)
   , ("prop_replicate", prop_replicate)
+  , ("prop_take", prop_take)
   , ("prop_drop", prop_drop)
   , ("prop_cons", prop_cons)
   , ("prop_snoc", prop_snoc)
