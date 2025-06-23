@@ -1188,7 +1188,7 @@ showRRBVectorRep (Root size sh t) =
   ", Shift = "    ++
   (show sh)       ++
   ", Tree = "     ++
-  (showTreeRep t) ++ 
+  (showTreeRep t) ++
   "}"
 
 --------------------------------------------------------------------------------
