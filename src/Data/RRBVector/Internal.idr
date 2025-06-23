@@ -129,11 +129,11 @@ showTreeRep :  Show a
             => Tree a
             -> String
 showTreeRep (Balanced trees)     =
-  assert_total $ "balanced (" ++ (show $ toList trees) ++ ")"
+  assert_total $ "Balanced " ++ (show $ toList trees)
 showTreeRep (Unbalanced trees _) =
-  assert_total $ "unbalanced (" ++ (show $ toList trees) ++ ")"
+  assert_total $ "Unbalanced " ++ (show $ toList trees)
 showTreeRep (Leaf elems)         =
-  assert_total $ "leaf (" ++ (show $ toList elems) ++ ")"
+  assert_total $ "Leaf " ++ (show $ toList elems)
 
 --------------------------------------------------------------------------------
 --          Tree Utilities

@@ -1181,7 +1181,15 @@ showRRBVectorRep :  Show a
 showRRBVectorRep Empty            =
   ""
 showRRBVectorRep (Root size sh t) =
-  "rrbvector " ++ "[" ++ "size " ++ (show size) ++ " shift " ++ (show sh) ++ " tree (" ++ (showTreeRep t) ++ ")" ++ "]"
+  "RRBVector "    ++
+  "{ "            ++
+  "Size = "       ++
+  (show size)     ++
+  ", Shift = "    ++
+  (show sh)       ++
+  ", Tree = "     ++
+  (showTreeRep t) ++ 
+  "}"
 
 --------------------------------------------------------------------------------
 --          Interfaces
