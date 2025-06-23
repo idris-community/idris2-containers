@@ -1,0 +1,16 @@
+package containers-test
+
+authors    = "stefan-hoeck and matthew-mosior"
+version    = 0.0.1
+readme     = "README.md"
+license    = "BSD-3 Clause"
+
+main       = Main
+executable = "containers-test"
+
+sourcedir  = "src"
+
+depends    = array
+           , containers
+           , hedgehog
+           , ref1

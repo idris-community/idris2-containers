@@ -21,7 +21,9 @@ import Syntax.T1 as T1
 
 ||| Convenience interface for bitSize that doesn't use an implicit parameter.
 private
-bitSizeOf : (ty : Type) -> FiniteBits ty => Nat
+bitSizeOf :  (ty : Type)
+          -> FiniteBits ty
+          => Nat
 bitSizeOf ty = bitSize {a = ty}
 
 --------------------------------------------------------------------------------
@@ -48,19 +50,26 @@ blockmask : Nat
 blockmask = minus blocksize 1
 
 export
-up : Shift -> Shift
+up :  Shift
+   -> Shift
 up sh = plus sh blockshift
 
 export
-down : Shift -> Shift
+down :  Shift
+     -> Shift
 down sh = minus sh blockshift
 
 export
-radixIndex : Nat -> Shift -> Nat
+radixIndex :  Nat
+           -> Shift
+           -> Nat
 radixIndex i sh = integerToNat ((natToInteger i) `shiftR` sh .&. (natToInteger blockmask))
 
 export
-relaxedRadixIndex : Array Nat -> Nat -> Shift -> (Nat, Nat)
+relaxedRadixIndex :  Array Nat
+                  -> Nat
+                  -> Shift
+                  -> (Nat, Nat)
 relaxedRadixIndex sizes i sh =
   let guess  = radixIndex i sh -- guess <= idx
       idx    = loop sizes guess
@@ -76,7 +85,9 @@ relaxedRadixIndex sizes i sh =
                      in minus i (at sizes.arr idx')
     in (idx, subIdx)
   where
-    loop : Array Nat -> Nat -> Nat
+    loop :  Array Nat
+         -> Nat
+         -> Nat
     loop sizes idx =
       let current = case tryNatToFin idx of
                       Nothing       =>
@@ -100,13 +111,6 @@ data Tree a = Balanced (Array (Tree a))
             | Leaf (Array a)
 
 public export
-Eq a => Eq (Tree a) where
-  (Balanced x)      == (Balanced y)      = assert_total $ heq x.arr y.arr
-  (Unbalanced x x') == (Unbalanced y y') = assert_total $ heq x.arr y.arr && heq x'.arr y'.arr
-  (Leaf x)          == (Leaf y)          = heq x.arr y.arr
-  _                 == _                 = False
-
-public export
 Show a => Show (Tree a) where
   show (Balanced trees)     =
     assert_total $ show $ toList trees
@@ -120,7 +124,10 @@ Show a => Show (Tree a) where
 --------------------------------------------------------------------------------
 
 public export
-showTreeRep : Show a => Show (Tree a) => Tree a -> String
+showTreeRep :  Show a
+            => Show (Tree a)
+            => Tree a
+            -> String
 showTreeRep (Balanced trees)     =
   assert_total $ "Balanced " ++ (show $ toList trees)
 showTreeRep (Unbalanced trees _) =
@@ -133,27 +140,42 @@ showTreeRep (Leaf elems)         =
 --------------------------------------------------------------------------------
 
 export
-singleton : a -> Array a
-singleton x = A 1 $ fill 1 x
+singleton :  a
+          -> Array a
+singleton x =
+  A 1 $ fill 1 x
 
 export
-treeToArray : Tree a -> Array (Tree a)
-treeToArray (Balanced arr)     = arr
-treeToArray (Unbalanced arr _) = arr
-treeToArray (Leaf _)           = assert_total $ idris_crash "Data.RRBVector.Internal.treeToArray: leaf"
+treeToArray :  Tree a
+            -> Array (Tree a)
+treeToArray (Balanced arr)     =
+  arr
+treeToArray (Unbalanced arr _) =
+  arr
+treeToArray (Leaf _)           =
+  assert_total $ idris_crash "Data.RRBVector.Internal.treeToArray: leaf"
 
 export
-treeBalanced : Tree a -> Bool
-treeBalanced (Balanced _)     = True
-treeBalanced (Unbalanced _ _) = False
-treeBalanced (Leaf _)         = True
+treeBalanced :  Tree a
+             -> Bool
+treeBalanced (Balanced _)     =
+  True
+treeBalanced (Unbalanced _ _) =
+  False
+treeBalanced (Leaf _)         =
+  True
 
 ||| Computes the size of a tree with shift.
 export
-treeSize : Shift -> Tree a -> Nat
+treeSize :  Shift
+         -> Tree a
+         -> Nat
 treeSize = go 0
   where
-    go : Shift -> Shift -> Tree a -> Nat
+    go :  Shift
+       -> Shift
+       -> Tree a
+       -> Nat
     go acc _  (Leaf arr)             =
       plus acc arr.size
     go acc _  (Unbalanced arr sizes) =
@@ -177,7 +199,9 @@ treeSize = go 0
 ||| Turns an array into a tree node by computing the sizes of its subtrees.
 ||| sh is the shift of the resulting tree.
 export
-computeSizes : Shift -> Array (Tree a) -> Tree a
+computeSizes :  Shift
+             -> Array (Tree a)
+             -> Tree a
 computeSizes sh arr =
   case isBalanced of
     True  =>
@@ -209,7 +233,8 @@ computeSizes sh arr =
     isBalanced : Bool
     isBalanced = go 0
       where
-        go : Nat -> Bool
+        go :  Nat
+           -> Bool
         go i =
           let subtree = case tryNatToFin i of
                           Nothing =>
@@ -223,7 +248,8 @@ computeSizes sh arr =
                    treeBalanced subtree
 
 export
-countTrailingZeros : Nat -> Nat
+countTrailingZeros :  Nat
+                   -> Nat
 countTrailingZeros x =
   go 0
   where
@@ -247,7 +273,8 @@ countTrailingZeros x =
 
 ||| Nat log base 2.
 export
-log2 : Nat -> Nat
+log2 :  Nat
+     -> Nat
 log2 x =
   let bitSizeMinus1 = minus (bitSizeOf Int) 1
     in minus bitSizeMinus1 (countLeadingZeros x)
@@ -285,12 +312,6 @@ data RRBVector a = Root Nat   -- size
                         Shift -- shift (blockshift * height)
                         (Tree a)
                  | Empty
-
-public export
-Eq a => Eq (Tree a) => Eq (RRBVector a) where
-  (Root n s t) == (Root n' s' t') = n == n' && s == s' && t == t'
-  Empty        == Empty           = True
-  _            == _               = False
 
 public export
 Show a => Show (Tree a) => Show (RRBVector a) where
