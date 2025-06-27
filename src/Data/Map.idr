@@ -159,7 +159,7 @@ insertWithKeyR = go
 
 ||| Insert with a function, combining key, new value and old value.
 ||| insertWithKey f key value mp
-||| will insert the pair (key, value) into mp if key does
+||| will insert the pair (key, value) into map if key does
 ||| not exist in the map. If the key does exist, the function will
 ||| insert the pair (key,f key new_value old_value). O(log n)
 export

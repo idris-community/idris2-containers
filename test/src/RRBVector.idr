@@ -47,8 +47,9 @@ prop_size = property $ do
   length vs === length (toList vs)
 
 prop_replicate : Property
-prop_replicate = property1 $
-  toList (Data.RRBVector.replicate 5 1) === [1,1,1,1,1]
+prop_replicate = property $ do
+  vs <- forAll rrbvectorBits
+  toList (Data.RRBVector.replicate 5 1) === replicate 5 1
 
 prop_take : Property
 prop_take = property $ do
