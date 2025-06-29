@@ -1875,6 +1875,7 @@ toList =
 export
 fromList :  Ord (k, v)
          => Ord k
+         => Ord v
          => List (k, v)
          -> Map k v
 fromList Nil                =
@@ -1895,9 +1896,9 @@ fromList ((kx0, x0) :: xs0) =
       False
     notOrdered kx ((ky, _) :: _) =
       kx >= ky
-    fromList' :  Map (k, v)
+    fromList' :  Map k v
               -> List (k, v)
-              -> Map (k, v)
+              -> Map k v
     fromList' t0 xs =
       foldl ins t0 xs
       where
@@ -1925,8 +1926,10 @@ fromList ((kx0, x0) :: xs0) =
                  (l    , ys@((ky, y) :: yss), _)  =>
                    case notOrdered ky yss of
                      True  =>
+                       (l, [], ys)
                      False =>
-                       
+                       let (r, zs, ws) = create (s `shiftR` 1) yss
+                         in (link ky y l r, zs, ws)
             
     go :  Nat
        -> Map k v
