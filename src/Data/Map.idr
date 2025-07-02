@@ -1873,9 +1873,11 @@ toList =
 ||| for the key is retained.
 ||| If the keys of the list are ordered, a linear-time implementation is used. O(n * log(n))
 export
-fromList :  Ord (k, v)
-         => Ord k
-         => Ord v
+fromList : -- Ord (k, v)
+           Ord k
+--         => Ord v
+         => Eq v
+         => Eq (Map k v)
          => List (k, v)
          -> Map k v
 fromList Nil                =
@@ -1889,8 +1891,9 @@ fromList ((kx0, x0) :: xs0) =
     False =>
       go 1 (Bin 1 kx0 x0 Tip Tip) xs0
   where
-    notOrdered :  v
-               -> List (v, w)
+    notOrdered :  Ord a
+               => a
+               -> List (a, b)
                -> Bool
     notOrdered _  []             =
       False
@@ -1900,9 +1903,7 @@ fromList ((kx0, x0) :: xs0) =
               -> List (k, v)
               -> Map k v
     fromList' t0 xs =
-      foldl ins t0 xs
-      where
-        ins t (k, x) = insert k x t
+      foldl (\t, (k, x) => insert k x t) t0 xs
     create :  Nat
            -> List (k, v)
            -> (Map k v, List (k, v), List (k, v))
@@ -1917,7 +1918,7 @@ fromList ((kx0, x0) :: xs0) =
             False =>
               (Bin 1 kx x Tip Tip, xss, [])
         False =>
-          let create' = create (s `shiftR` 1) xs
+          let create' = assert_total $ create (integerToNat ((natToInteger s) `shiftR` 1)) xs
             in case create' of
                  res@(_, []                 , _)  =>
                    res
@@ -1928,9 +1929,8 @@ fromList ((kx0, x0) :: xs0) =
                      True  =>
                        (l, [], ys)
                      False =>
-                       let (r, zs, ws) = create (s `shiftR` 1) yss
-                         in (link ky y l r, zs, ws)
-            
+                       let (r, zs, ws) = assert_total $ create (integerToNat ((natToInteger s) `shiftR` 1)) yss
+                         in (link ky y l r, zs, ws)          
     go :  Nat
        -> Map k v
        -> List (k, v)
@@ -1946,8 +1946,8 @@ fromList ((kx0, x0) :: xs0) =
         False =>
           case create s xss of
             (r, ys, []) =>
-              go (s `shiftL` 1) (link kx x l r) ys
-            (r, _ , ys) =>
+              assert_total $ go (integerToNat ((natToInteger s) `shiftL` 1)) (link kx x l r) ys
+            (r, _,  ys) =>
               fromList' (link kx x l r) ys
 
 --------------------------------------------------------------------------------
