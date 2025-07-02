@@ -1873,9 +1873,7 @@ toList =
 ||| for the key is retained.
 ||| If the keys of the list are ordered, a linear-time implementation is used. O(n * log(n))
 export
-fromList : -- Ord (k, v)
-           Ord k
---         => Ord v
+fromList :  Ord k
          => Eq v
          => Eq (Map k v)
          => List (k, v)
