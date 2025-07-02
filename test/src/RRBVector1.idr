@@ -63,10 +63,10 @@ prop_size = property $ do
         in Data.RRBVector1.length vs' t ) === length vs
 
 prop_replicate : Property
-prop_replicate = property1 $
+prop_replicate = property $ do
   ( run1 $ \t =>
       let vs' # t := Data.RRBVector1.replicate 5 1 t
-        in toList vs' t ) === [1,1,1,1,1]
+        in toList vs' t ) === replicate 5 1
 
 prop_take : Property
 prop_take = property $ do

@@ -18,8 +18,14 @@ Size = Nat
 
 ||| A finite map from keys k to values v.
 public export
-data Map k v = Bin Size k v (Map k v) (Map k v)
-             | Tip
+data Map : (k : Type) -> (v : Type) -> Type where
+  Bin :  Size
+      -> k
+      -> v
+      -> Map k v
+      -> Map k v
+      -> Map k v
+  Tip : Map k v
 
 %runElab derive "Map" [Eq,Ord,Show]
 
