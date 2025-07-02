@@ -5,7 +5,6 @@ import public Data.Map.Internal
 
 import Data.Bits
 import Data.List
-import Data.List1
 
 %hide Prelude.null
 %hide Prelude.toList
