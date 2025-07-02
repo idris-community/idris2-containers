@@ -1927,7 +1927,7 @@ fromList ((kx0, x0) :: xs0) =
                        (l, [], ys)
                      False =>
                        let (r, zs, ws) = assert_total $ create (integerToNat ((natToInteger s) `shiftR` 1)) yss
-                         in (link ky y l r, zs, ws)          
+                         in (link ky y l r, zs, ws)
     go :  Nat
        -> Map k v
        -> List (k, v)
@@ -1935,7 +1935,7 @@ fromList ((kx0, x0) :: xs0) =
     go _ t []                  =
       t
     go _ t ((kx, x) :: [])     =
-      insertMax kx x t 
+      insertMax kx x t
     go s l xs@((kx, x) :: xss) =
       case notOrdered kx xss of
         True  =>
