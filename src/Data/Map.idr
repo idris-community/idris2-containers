@@ -1888,7 +1888,8 @@ fromList ((kx0, x0) :: xs0) =
     False =>
       go 1 (Bin 1 kx0 x0 Tip Tip) xs0
   where
-    notOrdered :  a
+    notOrdered :  Ord a
+               => a
                -> List (a, b)
                -> Bool
     notOrdered _  []             =
