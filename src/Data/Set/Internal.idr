@@ -18,8 +18,13 @@ Size = Nat
 
 ||| A finite set of values.
 public export
-data Set a = Bin Size a (Set a) (Set a)
-           | Tip
+data Set : (a : Type) -> Type where
+  Bin :  Size
+      -> a
+      -> Set a
+      -> Set a
+      -> Set a
+  Tip : Set a
 
 %runElab derive "Set" [Eq,Ord,Show]
 
@@ -29,8 +34,10 @@ data Set a = Bin Size a (Set a) (Set a)
 
 ||| Wrap a single value in a set.
 export
-singleton : a -> Set a
-singleton x = Bin 1 x Tip Tip
+singleton :  a
+          -> Set a
+singleton x =
+  Bin 1 x Tip Tip
 
 --------------------------------------------------------------------------------
 --          Query
@@ -38,9 +45,12 @@ singleton x = Bin 1 x Tip Tip
 
 ||| The number of elements in the set. O(1)
 export
-size : Set a -> Nat
-size Tip           = 0
-size (Bin _ _ l r) = 1 + size l + size r
+size :  Set a
+     -> Nat
+size Tip           =
+  0
+size (Bin _ _ l r) =
+  1 + size l + size r
 
 --------------------------------------------------------------------------------
 --          Set Internals
@@ -87,14 +97,21 @@ ratio : Nat
 ratio = 2
 
 ||| The bin constructor maintains the size of the tree.
-bin : a -> Set a -> Set a -> Set a
-bin x l r = Bin (size l + size r + 1) x l r
+bin :  a
+    -> Set a
+    -> Set a
+    -> Set a
+bin x l r =
+  Bin (size l + size r + 1) x l r
 
 ||| A specialized version of balance.
 ||| balanceL is called when left subtree might have been inserted to or when
 ||| right subtree might have been deleted from.
 export
-balanceL : a -> Set a -> Set a -> Set a
+balanceL :  a
+         -> Set a
+         -> Set a
+         -> Set a
 balanceL x l r =
   case r of
     Tip              =>
@@ -136,7 +153,10 @@ balanceL x l r =
 ||| balanceR is called when right subtree might have been inserted to or when
 ||| left subtree might have been deleted from.
 export
-balanceR : a -> Set a -> Set a -> Set a
+balanceR :  a
+         -> Set a
+         -> Set a
+         -> Set a
 balanceR x l r =
   case l of
     Tip            =>
@@ -175,7 +195,9 @@ balanceR x l r =
               Bin (1+ls+rs) x l r
 
 export
-insertMax : a -> Set a -> Set a
+insertMax :  a
+          -> Set a
+          -> Set a
 insertMax x t =
   case t of
     Tip            =>
@@ -184,7 +206,9 @@ insertMax x t =
       balanceR y l (insertMax x r)
 
 export
-insertMin : a -> Set a -> Set a
+insertMin :  a
+          -> Set a
+          -> Set a
 insertMin x t =
   case t of
     Tip            =>
@@ -193,16 +217,24 @@ insertMin x t =
       balanceL y (insertMin x l) r
 
 export
-minViewSure : a -> Set a -> Set a -> (a,Set a)
-minViewSure x Tip              r = (x,r)
+minViewSure :  a
+            -> Set a
+            -> Set a
+            -> (a, Set a)
+minViewSure x Tip              r =
+  (x, r)
 minViewSure x (Bin _ xl ll lr) r =
   case minViewSure xl ll lr of
     (xm, l') =>
       (xm, balanceR x l' r)
 
 export
-maxViewSure : a -> Set a -> Set a -> (a,Set a)
-maxViewSure x l Tip              = (x,l)
+maxViewSure :  a
+            -> Set a
+            -> Set a
+            -> (a, Set a)
+maxViewSure x l Tip              =
+  (x, l)
 maxViewSure x l (Bin _ xr rl rr) =
   case maxViewSure xr rl rr of
     (xm, r') =>
@@ -210,9 +242,13 @@ maxViewSure x l (Bin _ xr rl rr) =
 
 ||| Glues two sets together (assumes that both sets are already balanced with respect to each other).
 export
-glue : Set a -> Set a -> Set a
-glue Tip                    r                = r
-glue l                      Tip              = l
+glue :  Set a
+     -> Set a
+     -> Set a
+glue Tip                    r                =
+  r
+glue l                      Tip              =
+  l
 glue l@(Bin sl xl ll lr) r@(Bin sr xr rl rr) =
   case sl > sr of
     True  =>
@@ -224,9 +260,14 @@ glue l@(Bin sl xl ll lr) r@(Bin sr xr rl rr) =
 
 ||| Utility function that maintains the balance properties of the tree.
 export
-link : a -> Set a -> Set a -> Set a
-link x Tip                      r                  = insertMin x r
-link x l                        Tip                = insertMax x l
+link :  a
+     -> Set a
+     -> Set a
+     -> Set a
+link x Tip                      r                  =
+  insertMin x r
+link x l                        Tip                =
+  insertMax x l
 link x l@(Bin sizeL y ly ry) r@(Bin sizeR z lz rz) =
   case delta * sizeL < sizeR of
     True  =>
