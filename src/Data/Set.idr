@@ -760,54 +760,78 @@ toList = toAscList
 ||| the last of each identical elemen is retained.
 ||| If the elements of the list are ordered, a linear-time implementation is used. O(n * log(n))
 export
-partial
-fromList : Ord a => List a -> Set a
-fromList [] = Tip
-fromList xs =
-  case sorted xs of
+fromList :  Ord a
+         => List a
+         -> Set a
+fromList []          =
+  Tip
+fromList (x :: [])   =
+  Bin 1 x Tip Tip
+fromList (x0 :: xs0) =
+  case notOrdered x0 xs0 of
     True  =>
-      buildBalancedTree (convertToList1 xs) (length xs)
+      fromList' (Bin 1 x0 Tip Tip) xs0
     False =>
-      buildBalancedTree (convertToList1 (sort xs)) (length xs)
+      go 1 (Bin 1 x0 Tip Tip) xs0
   where
-    -- Calculate the size of a tree
-    sizeTree : Set a -> Nat
-    sizeTree Tip            = 0
-    sizeTree (Bin sz _ _ _) = sz
-    -- Convert a list to a List1, which requires the list to be non-empty
-    convertToList1 : List a -> List1 a
-    convertToList1 []        = assert_total $ idris_crash "Unexpected empty list"
-    convertToList1 (x :: xs) = x ::: xs
-    -- Link a root node with two subtrees
-    linkRootWithSubtrees : a -> Set a -> Set a -> Nat -> Set a
-    linkRootWithSubtrees x left right newSize =
-      Bin newSize x left right
-    -- Split a non-empty list into left, middle, and right parts
-    splitList : List1 a -> Nat -> (List a, a, List a, Nat)
-    splitList l len =
-      let half         = len `div` 2
-          (left, rest) = splitAt half (forget l)
-        in case rest of
-             []                =>
-               assert_total $ idris_crash "Unexpected empty list"
-             (middle :: right) =>
-               (left, middle, right, len)
-    -- Build a balanced tree from a non-empty list
-    buildBalancedTree : List1 a -> Nat -> Set a
-    buildBalancedTree (x ::: []) _   = Bin 1 x Tip Tip
-    buildBalancedTree xs         len =
-      let (left, root, right, totalSize) = splitList xs len
-          leftTree = case left of
-                       [] =>
-                         Tip
-                       _  =>
-                         assert_total $ buildBalancedTree (convertToList1 left) (length left)
-          rightTree = case right of
-                        [] =>
-                          Tip
-                        _  =>
-                          assert_total $ buildBalancedTree (convertToList1 right) (length right)
-        in linkRootWithSubtrees root leftTree rightTree totalSize
+    notOrdered :  a
+               -> List a
+               -> Bool
+    notOrdered _  []      =
+      False
+    notOrdered x (y :: _) =
+      x >= y
+    fromList' :  Set a
+              -> List a
+              -> Set a
+    fromList' t0 xs =
+      foldl (\t, x => insert x t) t0 xs
+    create :  Nat
+           -> List a
+           -> (Set a, List a, List a)
+    create _ []            =
+      (Tip, [], [])
+    create s xs@(x :: xss) =
+      case s == 1 of
+        True  =>
+          case notOrdered x xss of
+            True  =>
+              (Bin 1 x Tip Tip, [], xss)
+            False =>
+              (Bin 1 x Tip Tip, xss, [])
+        False =>
+          let create' = assert_total $ create (integerToNat ((natToInteger s) `shiftR` 1)) xs
+            in case create' of
+                 res@(_, []           , _)  =>
+                   res
+                 (l    , [y]          , zs) =>
+                   (insertMax y l, [], zs)
+                 (l    , ys@(y :: yss), _)  =>
+                   case notOrdered y yss of
+                     True  =>
+                       (l, [], ys)
+                     False =>
+                       let (r, zs, ws) = assert_total $ create (integerToNat ((natToInteger s) `shiftR` 1)) yss
+                         in (link y l r, zs, ws)
+    go :  Nat
+       -> Set a
+       -> List a
+       -> Set a
+    go _ t []            =
+      t
+    go _ t (x :: [])     =
+      insertMax x t
+    go s l xs@(x :: xss) =
+      case notOrdered x xss of
+        True  =>
+          fromList' l xs
+        False =>
+          let create' = assert_total $ create s xss
+            in case create' of
+                 (r, ys, []) =>
+                   assert_total $ go (integerToNat ((natToInteger s) `shiftL` 1)) (link x l r) ys
+                 (r, _,  ys) =>
+                   fromList' (link x l r) ys
 
 --------------------------------------------------------------------------------
 --          Map
