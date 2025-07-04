@@ -19,13 +19,26 @@ record BoundedQueue a where
 
 ||| The empty `BoundedQueue`. O(1)
 export
-empty : Nat -> BoundedQueue a
-empty l = Q empty l 0
+empty :  Nat
+      -> BoundedQueue a
+empty l =
+  Q empty l 0
+
+||| Is the `BoundedQueue` empty? O(1)
+export
+null :  BoundedQueue a
+     -> Bool
+null (Q _ _ 0) =
+  True
+null _         =
+  False
 
 ||| Naively keeps the first `n` values of a list, and converts
 ||| into a `BoundedQueue` (keeps the order of the elements). O(1)
 export
-fromList : Nat -> List a -> BoundedQueue a
+fromList :  Nat
+         -> List a
+         -> BoundedQueue a
 fromList n vs =
   let vs' = take n vs
     in Q (fromList vs') n (length vs')
@@ -33,7 +46,9 @@ fromList n vs =
 ||| Naively keeps the first `n` values of a `SnocList`, and converts
 ||| into a `BoundedQueue` (keeps the order of the elements). O(1)
 export
-fromSnocList : Nat -> SnocList a -> BoundedQueue a
+fromSnocList :  Nat
+             -> SnocList a
+             -> BoundedQueue a
 fromSnocList n sv =
   let sv' = take n $ cast sv
     in Q (fromList sv') n (length sv')
@@ -41,18 +56,24 @@ fromSnocList n sv =
 ||| Converts a `BoundedQueue` to a `List`, keeping the order
 ||| of elements. O(n)
 export
-toList : BoundedQueue a -> List a
-toList (Q queue _ _) = toList queue
+toList :  BoundedQueue a
+       -> List a
+toList (Q queue _ _) =
+  toList queue
 
 ||| Converts a `BoundedQueue` to a `SnocList`, keeping the order
 ||| of elements. O(n)
 export
-toSnocList : BoundedQueue a -> SnocList a
-toSnocList (Q queue _ _) = cast $ toList queue
+toSnocList :  BoundedQueue a
+           -> SnocList a
+toSnocList (Q queue _ _) =
+  cast $ toList queue
 
 ||| Append a value at the back of the `BoundedQueue`. O(1)
 export
-enqueue : BoundedQueue a -> a -> BoundedQueue a
+enqueue :  BoundedQueue a
+        -> a
+        -> BoundedQueue a
 enqueue (Q queue queuelimit queuesize) v =
   case queuelimit == queuesize of
     True  =>
@@ -66,7 +87,8 @@ enqueue (Q queue queuelimit queuesize) v =
 
 ||| Take a value from the front of the `BoundedQueue`. O(1)
 export
-dequeue : BoundedQueue a -> Maybe (a, BoundedQueue a)
+dequeue :  BoundedQueue a
+        -> Maybe (a, BoundedQueue a)
 dequeue (Q queue queuelimit queuesize) =
   case viewl queue of
     Nothing          =>
@@ -81,7 +103,9 @@ dequeue (Q queue queuelimit queuesize) =
 ||| structure, but it allows us to conveniently implement
 ||| `peekOldest`.
 export
-prepend : a -> BoundedQueue a -> BoundedQueue a
+prepend :  a
+        -> BoundedQueue a
+        -> BoundedQueue a
 prepend x (Q queue queuelimit queuesize) =
   case queuelimit == queuesize of
     True  =>
@@ -101,7 +125,8 @@ prepend x (Q queue queuelimit queuesize) =
 |||       runtime behavior, the newly arranged queue should be used
 |||       henceforth.
 export
-peekOldest : BoundedQueue a -> Maybe (a, BoundedQueue a)
+peekOldest :  BoundedQueue a
+           -> Maybe (a, BoundedQueue a)
 peekOldest q =
   case dequeue q of
     Just (v, Q queue queuelimit queuesize) =>
@@ -111,13 +136,16 @@ peekOldest q =
 
 ||| Appends two `BoundedQueues`. O(m + n)
 export
-(++) : BoundedQueue a -> BoundedQueue a -> BoundedQueue a
+(++) :  BoundedQueue a
+     -> BoundedQueue a
+     -> BoundedQueue a
 (Q queue1 queuelimit1 queuesize1) ++ (Q queue2 queuelimit2 queuesize2) =
   Q (queue1 ++ queue2) (queuelimit1 `plus` queuelimit2) (queuesize1 `plus` queuesize2)
 
 ||| Returns the length of the `BoundedQueue`. O(1).
 export
-length : BoundedQueue a -> Nat
+length :  BoundedQueue a
+       -> Nat
 length (Q _ _ queuesize) = queuesize
 
 --------------------------------------------------------------------------------
