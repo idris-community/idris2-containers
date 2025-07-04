@@ -10,7 +10,7 @@ import Data.Seq.Internal
 
 %default total
 
-||| A two-end finite sequences.
+||| A two-end finite sequence.
 export
 data Seq : Type -> Type where
   MkSeq : FingerTree (Elem e) -> Seq e
@@ -164,11 +164,8 @@ implementation Functor Seq where
 public export
 implementation Foldable Seq where
   foldr f z (MkSeq tr) = foldr (f . unElem) z tr
-
   foldl f z (MkSeq tr) = foldl (\acc, (MkElem elem) => f acc elem) z tr
-
   toList (MkSeq tr) = toList' tr
-
   null (MkSeq Empty) = True
   null _ = False
 
@@ -183,11 +180,8 @@ implementation Show a => Show (Seq a) where
 public export
 implementation Zippable Seq where
   zipWith f (MkSeq x) (MkSeq y) = MkSeq (zipWith' f x y)
-
   zipWith3 f (MkSeq x) (MkSeq y) (MkSeq z) = MkSeq (zipWith3' f x y z)
-
   unzipWith f (MkSeq zs) = let (xs, ys) = unzipWith' f zs in (MkSeq xs, MkSeq ys)
-
   unzipWith3 f (MkSeq ws) = let (xs, ys, zs) = unzipWith3' f ws in (MkSeq xs, MkSeq ys, MkSeq zs)
 
 public export

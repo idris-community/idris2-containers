@@ -18,7 +18,7 @@ import Data.Seq.Internal
 err : String -> a
 err s = assert_total (idris_crash s)
 
-||| A two-end finite sequences, with length in its type.
+||| A two-end finite sequence, with length in its type.
 export
 data Seq : Nat -> Type -> Type where
   MkSeq : FingerTree (Elem e) -> Seq n e
@@ -175,11 +175,8 @@ implementation Functor (Seq n) where
 public export
 implementation Foldable (Seq n) where
   foldr f z (MkSeq tr) = foldr (f . unElem) z tr
-
   foldl f z (MkSeq tr) = foldl (\acc, (MkElem elem) => f acc elem) z tr
-
   toList (MkSeq tr) = toList' tr
-
   null (MkSeq Empty) = True
   null _ = False
 
@@ -194,11 +191,8 @@ implementation Show a => Show (Seq n a) where
 public export
 implementation Zippable (Seq n) where
   zipWith f (MkSeq x) (MkSeq y) = MkSeq (zipWith' f x y)
-
   zipWith3 f (MkSeq x) (MkSeq y) (MkSeq z) = MkSeq (zipWith3' f x y z)
-
   unzipWith f (MkSeq zs) = let (xs, ys) = unzipWith' f zs in (MkSeq xs, MkSeq ys)
-
   unzipWith3 f (MkSeq ws) = let (xs, ys, zs) = unzipWith3' f ws in (MkSeq xs, MkSeq ys, MkSeq zs)
 
 ||| This implementation works like a ZipList,
