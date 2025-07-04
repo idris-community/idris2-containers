@@ -1,5 +1,6 @@
 module Main
 
+import BoundedQueue
 import Hedgehog
 import Map
 import RRBVector
@@ -11,7 +12,8 @@ import Set
 
 main : IO ()
 main = test
-  [ Map.props
+  [ BoundedQueue.props
+  , Map.props
   , RRBVector.props
   , RRBVector1.props
   , Seq.Unsized.props
