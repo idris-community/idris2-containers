@@ -9,30 +9,34 @@ import Data.OrdPSQ
 %hide Prelude.Ops.infixr.(<|)
 %hide Prelude.Stream.(::)
 
-ordpsqOf : Gen a -> Gen (BoundedQueue a)
+ordpsqOf : Ord a => Gen a -> Gen (OrdPSQ a a a)
 ordpsqOf g = do
-  l <- list (linear 0 20) g
-  pure $ fromList 20 l
+  k <- list (linear 0 20) g
+  p <- list (linear 0 20) g
+  v <- list (linear 0 20) g
+  pure $ fromList $ zip3 k p v
 
-ordpsqOf' : Gen a -> Gen (BoundedQueue a)
+ordpsqOf' : Ord a => Gen a -> Gen (OrdPSQ a a a)
 ordpsqOf' g = do
-  l <- list (linear 1 20) g
-  pure $ fromList 20 l
+  k <- list (linear 1 20) g
+  p <- list (linear 1 20) g
+  v <- list (linear 1 20) g
+  pure $ fromList $ zip3 k p v
 
-boundedqueueBits : Gen (BoundedQueue Bits8)
-boundedqueueBits = boundedqueueOf anyBits8
+ordpsqBits : Gen (OrdPSQ Bits8 Bits8 Bits8)
+ordpsqBits = ordpsqOf anyBits8
 
-boundedqueueBits' : Gen (BoundedQueue Bits8)
-boundedqueueBits' = boundedqueueOf' anyBits8
+ordpsqBits' : Gen (OrdPSQ Bits8 Bits8 Bits8)
+ordpsqBits' = ordpsqOf' anyBits8
 
 prop_eq_refl : Property
 prop_eq_refl = property $ do
-  vs <- forAll boundedqueueBits
+  vs <- forAll ordpsqBits
   vs === vs
 
 prop_map_id : Property
 prop_map_id = property $ do
-  vs <- forAll boundedqueueBits
+  vs <- forAll ordpsqBits
   vs === map id vs
 
 prop_from_to_list : Property
