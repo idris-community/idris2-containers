@@ -399,7 +399,15 @@ lBalanceRight k p v l m r =
       lDoubleRight k p v l m r
 
 private
-rBalanceLeft : Ord k => Ord p => k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
+rBalanceLeft :  Ord k
+             => Ord p
+             => k
+             -> p
+             -> v
+             -> LTree k p v
+             -> k
+             -> LTree k p v
+             -> LTree k p v
 rBalanceLeft  k p v l m r =
   case size' (left r) < size' (right r) of
     True  =>
@@ -408,7 +416,15 @@ rBalanceLeft  k p v l m r =
       rDoubleLeft k p v l m r
 
 private
-rBalanceRight : Ord k => Ord p => k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
+rBalanceRight :  Ord k
+              => Ord p
+              => k
+              -> p
+              -> v
+              -> LTree k p v
+              -> k
+              -> LTree k p v
+              -> LTree k p v
 rBalanceRight k p v l m r =
   case size' (left l) > size' (right l) of
     True  =>
@@ -417,9 +433,19 @@ rBalanceRight k p v l m r =
       rDoubleRight k p v l m r
 
 private
-lBalance : Ord k => Ord p => k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
-lBalance k p v Start m r     = lLoser k p v Start m r
-lBalance k p v l     m Start = lLoser k p v l m Start
+lBalance :  Ord k
+         => Ord p
+         => k
+         -> p
+         -> v
+         -> LTree k p v
+         -> k
+         -> LTree k p v
+         -> LTree k p v
+lBalance k p v Start m r     =
+  lLoser k p v Start m r
+lBalance k p v l     m Start =
+  lLoser k p v l m Start
 lBalance k p v l     m r     =
   case size' r > omega * size' l of
     True  =>
@@ -432,9 +458,19 @@ lBalance k p v l     m r     =
           lLoser k p v l m r
 
 private
-rBalance : Ord k => Ord p => k -> p -> v -> LTree k p v -> k -> LTree k p v -> LTree k p v
-rBalance k p v Start m r     = rLoser k p v Start m r
-rBalance k p v l     m Start = rLoser k p v l m Start
+rBalance :  Ord k
+         => Ord p
+         => k
+         -> p
+         -> v
+         -> LTree k p v
+         -> k
+         -> LTree k p v
+         -> LTree k p v
+rBalance k p v Start m r     =
+  rLoser k p v Start m r
+rBalance k p v l     m Start =
+  rLoser k p v l m Start
 rBalance k p v l     m r     =
   case size' r > omega * size' l of
     True  =>
@@ -451,24 +487,41 @@ rBalance k p v l     m r     =
 --------------------------------------------------------------------------------
 
 public export
-data TourView k p v = Null
-                    | Single (Elem k p v)
-                    | Play (OrdPSQ k p v) (OrdPSQ k p v)
+data TourView : (k : Type) -> (p : Type) -> (v : Type) -> Type where
+  Null   :  TourView k p v
+  Single :  Elem k p v
+         -> TourView k p v
+  Play   :  OrdPSQ k p v
+         -> OrdPSQ k p v
+         -> TourView k p v
+
+%runElab derive "TourView" [Eq,Ord,Show]
 
 export
-tourView : OrdPSQ k p v -> TourView k p v
-tourView Void                                = Null
-tourView (Winner e Start _)                  = Single e
-tourView (Winner e (RLoser _ e' tl m tr) m') = Winner e tl m `Play` Winner e' tr m'
-tourView (Winner e (LLoser _ e' tl m tr) m') = Winner e' tl m `Play` Winner e tr m'
+tourView :  OrdPSQ k p v
+         -> TourView k p v
+tourView Void                                =
+  Null
+tourView (Winner e Start _)                  =
+  Single e
+tourView (Winner e (RLoser _ e' tl m tr) m') =
+  Winner e tl m `Play` Winner e' tr m'
+tourView (Winner e (LLoser _ e' tl m tr) m') =
+  Winner e' tl m `Play` Winner e tr m'
 
 ||| Take two pennants and returns a new pennant that is the union of
 ||| the two with the precondition that the keys in the first tree are
 ||| strictly smaller than the keys in the second tree.
 export
-play : Ord k => Ord p => OrdPSQ k p v -> OrdPSQ k p v -> OrdPSQ k p v
-Void                          `play` t'                                  = t'
-t                             `play` Void                                = t
+play :  Ord k
+     => Ord p
+     => OrdPSQ k p v
+     -> OrdPSQ k p v
+     -> OrdPSQ k p v
+Void                          `play` t'                                  =
+  t'
+t                             `play` Void                                =
+  t
 (Winner e@(MkElem k p v) t m) `play` (Winner e'@(MkElem k' p' v') t' m') =
   case (p, k) `beats` (p', k') of
     True  =>
