@@ -41,9 +41,10 @@ prop_map_id = property $ do
 
 prop_from_to_list : Property
 prop_from_to_list = property $ do
-  vs <- forAll (list (linear 0 10) anyBits8)
-  toList (fromList 10 vs) === vs
+  vs <- forAll ordpsqBits
+  fromList (toList vs) === vs
 
+{-
 prop_null : Property
 prop_null = property $ do
   vs <- forAll boundedqueueBits
@@ -63,15 +64,16 @@ prop_prepend : Property
 prop_prepend = property $ do
   vs <- forAll boundedqueueBits
   (1 :: (toList vs)) === (toList (prepend 1 vs))
+  -}
 
 export
 props : Group
-props = MkGroup "BoundedQueue"
+props = MkGroup "OrdPSQ"
   [ ("prop_eq_refl", prop_eq_refl)
   , ("prop_map_id", prop_map_id)
   , ("prop_from_to_list", prop_from_to_list)
-  , ("prop_null", prop_null)
-  , ("prop_size", prop_size)
-  , ("prop_enqueue", prop_enqueue)
-  , ("prop_prepend", prop_prepend)
+--  , ("prop_null", prop_null)
+--  , ("prop_size", prop_size)
+--  , ("prop_enqueue", prop_enqueue)
+--  , ("prop_prepend", prop_prepend)
   ]
