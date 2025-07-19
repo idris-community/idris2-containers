@@ -17,8 +17,16 @@ import Data.Maybe
 --------------------------------------------------------------------------------
 
 private
-ins : Eq k => Ord k => Ord p => k -> p -> v -> Maybe (p, Bucket k p v) -> Maybe (p, Bucket k p v)
-ins k p v Nothing                        = Just (p, MkBucket k v (OrdPSQ.empty))
+ins :  Eq k
+    => Ord k
+    => Ord p
+    => k
+    -> p
+    -> v
+    -> Maybe (p, Bucket k p v)
+    -> Maybe (p, Bucket k p v)
+ins k p v Nothing                        =
+  Just (p, MkBucket k v (OrdPSQ.empty))
 ins k p v (Just (p', MkBucket k' v' os)) =
   case k' == k of
     True  =>
@@ -42,7 +50,14 @@ ins k p v (Just (p', MkBucket k' v' os)) =
 ||| the associated priority and value are
 ||| replaced with the supplied priority and value. O(min(n, W))
 export
-insert : Hashable k => Ord k => Ord p => k -> p -> v -> HashPSQ k p v -> HashPSQ k p v
+insert :  Hashable k
+       => Ord k
+       => Ord p
+       => k
+       -> p
+       -> v
+       -> HashPSQ k p v
+       -> HashPSQ k p v
 insert k p v (MkHashPSQ npsq) =
   MkHashPSQ $
     snd     $
@@ -55,12 +70,20 @@ insert k p v (MkHashPSQ npsq) =
 ||| The empty queue. O(1)
 export
 empty : HashPSQ k p v
-empty = MkHashPSQ NatPSQ.empty
+empty =
+  MkHashPSQ NatPSQ.empty
 
 ||| Build a queue with one element. O(1)
 export
-singleton : Hashable k => Ord k => Ord p => k -> p -> v -> HashPSQ k p v
-singleton k p v = Data.HashPSQ.insert k p v empty
+singleton :  Hashable k
+          => Ord k
+          => Ord p
+          => k
+          -> p
+          -> v
+          -> HashPSQ k p v
+singleton k p v =
+  Data.HashPSQ.insert k p v empty
 
 --------------------------------------------------------------------------------
 --          Query
@@ -68,12 +91,15 @@ singleton k p v = Data.HashPSQ.insert k p v empty
 
 ||| Is the queue empty? O(1)
 export
-null : HashPSQ k p v -> Bool
-null (MkHashPSQ npsq) = NatPSQ.null npsq
+null :  HashPSQ k p v
+     -> Bool
+null (MkHashPSQ npsq) =
+  NatPSQ.null npsq
 
 ||| The number of elements in a queue. O(n)
 export
-size : HashPSQ k p v -> Nat
+size :  HashPSQ k p v
+     -> Nat
 size (MkHashPSQ npsq) =
   NatPSQ.fold (\_, _, (MkBucket _ _ opsq), acc => 1 + OrdPSQ.size opsq + acc)
               0
@@ -82,7 +108,12 @@ size (MkHashPSQ npsq) =
 ||| The priority and value of a given key, or Nothing if the
 ||| key is not bound. O(min(n ,W))
 export
-lookup : Hashable k => Ord k => Ord p => k -> HashPSQ k p v -> Maybe (p, v)
+lookup :  Hashable k
+       => Ord k
+       => Ord p
+       => k
+       -> HashPSQ k p v
+       -> Maybe (p, v)
 lookup k (MkHashPSQ npsq) =
   let nsq' = NatPSQ.lookup (cast $ hash k) npsq
     in case nsq' of
@@ -97,12 +128,34 @@ lookup k (MkHashPSQ npsq) =
 
 ||| Check if a key is present in the queue. O(min(n, W))
 export
-member : Nat-> NatPSQ p v -> Bool
-member k = isJust . lookup k
+member :  Hashable k
+       => Ord k
+       => Ord p
+       => k
+       -> HashPSQ k p v
+       -> Bool
+member k =
+  isJust . lookup k
+
+||| Is the key not a member of the queue? See also member. O(log n)
+export
+notMember :  Hashable k
+          => Ord k
+          => Ord p
+          => k
+          -> HashPSQ k p v
+          -> Bool
+notMember k m =
+  not $
+    member k m
 
 ||| The element with the lowest priority. O(1)
 export
-findMin : Hashable k => Ord k => Ord p => HashPSQ k p v -> Maybe (k, p, v)
+findMin :  Hashable k
+        => Ord k
+        => Ord p
+        => HashPSQ k p v
+        -> Maybe (k, p, v)
 findMin (MkHashPSQ npsq) =
   case NatPSQ.findMin npsq of
     Nothing                     =>
@@ -115,8 +168,14 @@ findMin (MkHashPSQ npsq) =
 --------------------------------------------------------------------------------
 
 private
-deleteV : Eq k => Ord k => Ord p => k -> Maybe (p, Bucket k p v) -> (Maybe (p, v), Maybe (p, Bucket k p v))
-deleteV _ Nothing                         = (Nothing, Nothing)
+deleteV :  Eq k
+        => Ord k
+        => Ord p
+        => k
+        -> Maybe (p, Bucket k p v)
+        -> (Maybe (p, v), Maybe (p, Bucket k p v))
+deleteV _ Nothing                         =
+  (Nothing, Nothing)
 deleteV k (Just (p, MkBucket bk bx opsq)) =
   case k == bk of
     True  =>
@@ -136,7 +195,12 @@ deleteV k (Just (p, MkBucket bk bx opsq)) =
 ||| the key was present, the associated priority and value are returned in
 ||| addition to the updated queue. O(min(n, W))
 export
-deleteView : Hashable k => Ord k => Ord p => k -> HashPSQ k p v -> Maybe (p, v, HashPSQ k p v)
+deleteView :  Hashable k
+           => Ord k
+           => Ord p
+           => k
+           -> HashPSQ k p v
+           -> Maybe (p, v, HashPSQ k p v)
 deleteView k (MkHashPSQ npsq) =
   case NatPSQ.alter (\x => deleteV k x) (cast $ hash k) npsq of
     (Nothing,     _    ) =>
@@ -148,7 +212,14 @@ deleteView k (MkHashPSQ npsq) =
 ||| is already present in the queue, then the evicted priority and value can be
 ||| found the first element of the returned tuple. O(min(n, W))
 export
-insertView : Hashable k => Ord k => Ord p => k -> p -> v -> HashPSQ k p v -> (Maybe (p, v), HashPSQ k p v)
+insertView :  Hashable k
+           => Ord k
+           => Ord p
+           => k
+           -> p
+           -> v
+           -> HashPSQ k p v
+           -> (Maybe (p, v), HashPSQ k p v)
 insertView k p x t =
   case deleteView k t of
     Nothing          =>
@@ -157,8 +228,12 @@ insertView k p x t =
       (Just (p', x'), insert k p x t)
 
 private
-minV : Ord k => Ord p => Maybe (a, b, Bucket k p v) -> (Maybe (k, b, v), Maybe (a, p, Bucket k p v))
-minV Nothing                        = (Nothing, Nothing)
+minV :  Ord k
+     => Ord p
+     => Maybe (a, b, Bucket k p v)
+     -> (Maybe (k, b, v), Maybe (a, p, Bucket k p v))
+minV Nothing                        =
+  (Nothing, Nothing)
 minV (Just (h, p, MkBucket k x os)) =
   case OrdPSQ.minView os of
     Nothing                =>
@@ -169,7 +244,11 @@ minV (Just (h, p, MkBucket k x os)) =
 ||| Retrieve the binding with the least priority, and the
 ||| rest of the queue stripped of that binding. O(min(n, W))
 export
-minView : Hashable k => Ord k => Ord p => HashPSQ k p v -> Maybe (k, p, v, HashPSQ k p v)
+minView :  Hashable k
+        => Ord k
+        => Ord p
+        => HashPSQ k p v
+        -> Maybe (k, p, v, HashPSQ k p v)
 minView (MkHashPSQ npsq) =
   case NatPSQ.alterMin minV npsq of
     (Nothing       , _    ) =>
@@ -181,7 +260,12 @@ minView (MkHashPSQ npsq) =
 ||| and the rest of the queue stripped of these elements.
 ||| The returned list of elements can be in any order: no guarantees there.
 export
-atMostView : Hashable k => Ord k => Ord p => p -> HashPSQ k p v -> (List (k, p, v), HashPSQ k p v)
+atMostView :  Hashable k
+           => Ord k
+           => Ord p
+           => p
+           -> HashPSQ k p v
+           -> (List (k, p, v), HashPSQ k p v)
 atMostView pt (MkHashPSQ t0) =
   let -- First we use NatPSQ.atMostView to get a collection of buckets that have
       -- AT LEAST one element with a low priority.  Buckets will usually only
@@ -199,8 +283,12 @@ atMostView pt (MkHashPSQ t0) =
     in (returns, MkHashPSQ t2)
     where
       -- We use two accumulators, for returns and re-inserts.
-      go : List (k, p, v) -> List (p, Bucket k p v) -> List (a, p, Bucket k p v) -> (List (k, p, v), List (p, Bucket k p v))
-      go rets reins []                                = (rets, reins)
+      go :  List (k, p, v)
+         -> List (p, Bucket k p v)
+         -> List (a, p, Bucket k p v)
+         -> (List (k, p, v), List (p, Bucket k p v))
+      go rets reins []                                =
+        (rets, reins)
       go rets reins ((_, p, MkBucket k v opsq) :: bs) =
           -- Note that 'elems' should be very small, ideally a null list.
           let (elems, opsq') = OrdPSQ.atMostView pt opsq
@@ -210,7 +298,7 @@ atMostView pt (MkHashPSQ t0) =
                                    reins
                                  Just (p', b) =>
                                    ((p', b) :: reins)
-            in  go rets' reins' bs
+            in go rets' reins' bs
 
 --------------------------------------------------------------------------------
 --          Delete
@@ -219,7 +307,12 @@ atMostView pt (MkHashPSQ t0) =
 ||| Delete a key and its priority and value from the queue.
 ||| When the key is not a member of the queue, the original queue is returned. O(min(n, W))
 export
-delete : Hashable k => Ord k => Ord p => k -> HashPSQ k p v -> HashPSQ k p v
+delete :  Hashable k
+       => Ord k
+       => Ord p
+       => k
+       -> HashPSQ k p v
+       -> HashPSQ k p v
 delete k t =
   case deleteView k t of
     Nothing         =>
@@ -231,7 +324,11 @@ delete k t =
 ||| rest of the queue stripped of that binding.
 ||| In case the queue is empty, the empty queue is returned again. O(min(n, W))
 export
-deleteMin : Hashable k => Ord k => Ord p => HashPSQ k p v -> HashPSQ k p v
+deleteMin :  Hashable k
+          => Ord k
+          => Ord p
+          => HashPSQ k p v
+          -> HashPSQ k p v
 deleteMin t =
   case minView t of
     Nothing            =>
@@ -247,7 +344,13 @@ deleteMin t =
 ||| alter can be used to insert, delete, or update a value in a queue.
 ||| It also allows you to calculate an additional value b. O(min(n, w))
 export
-alter : Hashable k => Ord k => Ord p => (Maybe (p, v) -> (b, Maybe (p, v))) -> k -> HashPSQ k p v -> (b, HashPSQ k p v)
+alter :  Hashable k
+      => Ord k
+      => Ord p
+      => (Maybe (p, v) -> (b, Maybe (p, v)))
+      -> k
+      -> HashPSQ k p v
+      -> (b, HashPSQ k p v)
 alter f k (MkHashPSQ npsq) =
   let h = cast $ hash k
     in case NatPSQ.deleteView h npsq of
@@ -279,7 +382,12 @@ alter f k (MkHashPSQ npsq) =
 ||| minimum priority.
 ||| Unlike alter, this variant also allows you to change the key of the element. O(min(n, W))
 export
-alterMin : Hashable k => Ord k => Ord p => (Maybe (k, p, v) -> (b, Maybe (k, p, v))) -> HashPSQ k p v -> (b, HashPSQ k p v)
+alterMin :  Hashable k
+         => Ord k
+         => Ord p
+         => (Maybe (k, p, v) -> (b, Maybe (k, p, v)))
+         -> HashPSQ k p v
+         -> (b, HashPSQ k p v)
 alterMin f t0 =
   let (t, mbx)  = case minView t0 of
                     Nothing             =>
@@ -299,11 +407,14 @@ alterMin f t0 =
 
 ||| Modify every value in the queue. O(n)
 export
-map : (v -> w) -> HashPSQ k p v -> HashPSQ k p w
+map :  (v -> w)
+    -> HashPSQ k p v
+    -> HashPSQ k p w
 map f (MkHashPSQ npsq) =
   MkHashPSQ (NatPSQ.map mapBucket npsq)
   where
-    mapBucket : Bucket k p v -> Bucket k p w
+    mapBucket :  Bucket k p v
+              -> Bucket k p w
     mapBucket (MkBucket k v opsq) =
       MkBucket k (f v) (OrdPSQ.map (\k', p', v' => f v') opsq)
 
@@ -315,13 +426,22 @@ map f (MkHashPSQ npsq) =
 ||| If the list contains more than one priority and value for the same key, the
 ||| last priority and value for the key is retained. O(min(n, W))
 export
-fromList : Hashable k => Ord k => Ord p => List (k, p, v) -> HashPSQ k p v
-fromList = foldl (\psq, (k, p, x) => insert k p x psq) empty
+fromList :  Hashable k
+         => Ord k
+         => Ord p
+         => List (k, p, v)
+         -> HashPSQ k p v
+fromList =
+  foldl (\psq, (k, p, x) => insert k p x psq) empty
 
 ||| Convert a queue to a list of (key, priority, value) tuples. The
 ||| order of the list is not specified. O(n)
 export
-toList : Hashable k => Ord k => Ord p => HashPSQ k p v -> List (k, p, v)
+toList :  Hashable k
+       => Ord k
+       => Ord p
+       => HashPSQ k p v
+       -> List (k, p, v)
 toList (MkHashPSQ npsq) =
     [ (k', p', x')
     | (_, p, (MkBucket k x opsq)) <- NatPSQ.toList npsq
@@ -330,8 +450,13 @@ toList (MkHashPSQ npsq) =
 
 ||| Obtain the list of present keys in the queue. O(n)
 export
-keys : Hashable k => Ord k => Ord p => HashPSQ k p v -> List k
-keys t = [k | (k, _, _) <- toList t]
+keys :  Hashable k
+     => Ord k
+     => Ord p
+     => HashPSQ k p v
+     -> List k
+keys t =
+  [k | (k, _, _) <- toList t]
 
 --------------------------------------------------------------------------------
 --          Interfaces
