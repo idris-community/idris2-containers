@@ -17,7 +17,8 @@ import Data.Zippable
 
 ||| Create an empty LRUCache of the given size.
 export
-empty : Nat -> LRUCache k v
+empty :  Nat
+      -> LRUCache k v
 empty capacity =
   case capacity < 1 of
     True  =>
@@ -33,20 +34,27 @@ empty capacity =
 --------------------------------------------------------------------------------
 
 private
-compress : List (k, Priority, v) -> List (k, Priority, v)
+compress :  List (k, Priority, v)
+         -> List (k, Priority, v)
 compress q =
   let sortedq = sortBy compareByPriority q
     in zipWith (\(k, _, v), p => (k, p, v))
                sortedq
                [1..(length sortedq)]
   where
-    compareByPriority : (k, Priority, v) -> (k, Priority, v) -> Ordering
-    compareByPriority (_, p, _) (_, p', _) = compare p p'
+    compareByPriority :  (k, Priority, v)
+                      -> (k, Priority, v)
+                      -> Ordering
+    compareByPriority (_, p, _) (_, p', _) =
+      compare p p'
 
 ||| Restore LRUCache invariants.
 ||| For performance reasons this is not snd . trim'.
 private
-trim : Hashable k => Ord k => LRUCache k v -> LRUCache k v
+trim :  Hashable k
+     => Ord k
+     => LRUCache k v
+     -> LRUCache k v
 trim cache@(MkLRUCache c s t q) =
   case s > c of
     True  =>
@@ -59,7 +67,12 @@ trim cache@(MkLRUCache c s t q) =
 
 ||| Insert an element into the LRUCache.
 export
-insert : Hashable k => Ord k => k -> v -> LRUCache k v -> LRUCache k v
+insert :  Hashable k
+       => Ord k
+       => k
+       -> v
+       -> LRUCache k v
+       -> LRUCache k v
 insert key val (MkLRUCache c s t q) =
   let (mboldval, queue) = HashPSQ.insertView key t val q
     in case isNothing mboldval of
@@ -82,7 +95,10 @@ insert key val (MkLRUCache c s t q) =
 
 ||| Restore LRUCache invariants returning the evicted element if any.
 private
-trim' : Hashable k => Ord k => LRUCache k v -> (Maybe (k, v), LRUCache k v)
+trim' :  Hashable k
+      => Ord k
+      => LRUCache k v
+      -> (Maybe (k, v), LRUCache k v)
 trim' cache@(MkLRUCache c s t q) =
   case s > c of
     True  =>
@@ -102,7 +118,12 @@ trim' cache@(MkLRUCache c s t q) =
 ||| When the logical clock reaches its maximum value and all values are
 ||| evicted Nothing is returned.
 export
-insertView : Hashable k => Ord k => k -> v -> LRUCache k v -> (Maybe (k, v), LRUCache k v)
+insertView :  Hashable k
+           => Ord k
+           => k
+           -> v
+           -> LRUCache k v
+           -> (Maybe (k, v), LRUCache k v)
 insertView key val (MkLRUCache c s t q) =
   let (mboldval, queue) = HashPSQ.insertView key t val q
     in case isNothing mboldval of
@@ -125,7 +146,11 @@ insertView key val (MkLRUCache c s t q) =
 
 ||| Lookup an element in an LRUCache and mark it as the least recently accessed.
 export
-lookup : Hashable k => Ord k => k -> LRUCache k v -> Maybe (v, LRUCache k v)
+lookup :  Hashable k
+       => Ord k
+       => k
+       -> LRUCache k v
+       -> Maybe (v, LRUCache k v)
 lookup k cache@(MkLRUCache c s t q) =
   case HashPSQ.alter lookupAndBump k q of
     (Nothing, _) =>
@@ -138,6 +163,9 @@ lookup k cache@(MkLRUCache c s t q) =
                             q
         in Just (x, c')
   where
-    lookupAndBump : Maybe (a, b) -> (Maybe b, Maybe (Priority, b))
-    lookupAndBump Nothing       = (Nothing, Nothing)
-    lookupAndBump (Just (_, x)) = (Just x,  Just (t, x))
+    lookupAndBump :  Maybe (a, b)
+                  -> (Maybe b, Maybe (Priority, b))
+    lookupAndBump Nothing       =
+      (Nothing, Nothing)
+    lookupAndBump (Just (_, x)) =
+      (Just x, Just (t, x))
