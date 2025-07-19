@@ -19,8 +19,12 @@ empty = Void
 
 ||| Build a queue with one element. O(1)
 export
-singleton : k -> p -> v -> OrdPSQ k p v
-singleton k p v = Winner (MkElem k p v) Start k
+singleton :  k
+          -> p
+          -> v
+          -> OrdPSQ k p v
+singleton k p v =
+  Winner (MkElem k p v) Start k
 
 --------------------------------------------------------------------------------
 --          Query
@@ -28,23 +32,34 @@ singleton k p v = Winner (MkElem k p v) Start k
 
 ||| Is the queue empty? O(1)
 export
-null : OrdPSQ k p v -> Bool
-null Void           = True
-null (Winner _ _ _) = False
+null :  OrdPSQ k p v
+     -> Bool
+null Void           =
+  True
+null (Winner _ _ _) =
+  False
 
 ||| The number of elements in a queue. O(1)
 export
-size : OrdPSQ k p v -> Nat
-size Void            = 0
-size (Winner _ lt _) = 1 + size' lt
+size :  OrdPSQ k p v
+     -> Nat
+size Void            =
+  0
+size (Winner _ lt _) =
+  1 + size' lt
 
 ||| The priority and value of a given key, or Nothing
 ||| if the key is not bound. O(log n)
 export
-lookup : Ord k => k -> OrdPSQ k p v -> Maybe (p, v)
-lookup key = go
+lookup :  Ord k
+       => k
+       -> OrdPSQ k p v
+       -> Maybe (p, v)
+lookup key =
+  go
   where
-    go : OrdPSQ k p v -> Maybe (p, v)
+    go :  OrdPSQ k p v
+       -> Maybe (p, v)
     go t =
       case tourView t of
         Null                   =>
@@ -64,14 +79,31 @@ lookup key = go
 
 ||| Check if a key is present in the queue. O(log n)
 export
-member : Ord k => k -> OrdPSQ k p v -> Bool
-member k = isJust . lookup k
+member :  Ord k
+       => k
+       -> OrdPSQ k p v
+       -> Bool
+member k =
+  isJust . lookup k
+
+||| Is the key not a member of the queue? See also member. O(log n)
+export
+notMember :  Ord k
+          => k
+          -> OrdPSQ k p v
+          -> Bool
+notMember k m =
+  not $
+    member k m
 
 ||| The element with the lowest priority. O(1)
 export
-findMin : OrdPSQ k p v -> Maybe (k, p, v)
-findMin Void                        = Nothing
-findMin (Winner (MkElem k p v) _ _) = Just (k, p, v)
+findMin :  OrdPSQ k p v
+        -> Maybe (k, p, v)
+findMin Void                        =
+  Nothing
+findMin (Winner (MkElem k p v) _ _) =
+  Just (k, p, v)
 
 --------------------------------------------------------------------------------
 --          Insertion
@@ -82,10 +114,18 @@ findMin (Winner (MkElem k p v) _ _) = Just (k, p, v)
 ||| priority and value are replaced with the supplied priority
 ||| and value. O(log n)
 export
-insert : Ord k => Ord p => k -> p -> v -> OrdPSQ k p v -> OrdPSQ k p v
-insert key priority value = go
+insert :  Ord k
+       => Ord p
+       => k
+       -> p
+       -> v
+       -> OrdPSQ k p v
+       -> OrdPSQ k p v
+insert key priority value =
+  go
   where
-    go : OrdPSQ k p v -> OrdPSQ k p v
+    go :  OrdPSQ k p v
+       -> OrdPSQ k p v
     go t =
       case t of
         Void                               =>
@@ -117,18 +157,30 @@ insert key priority value = go
 
 ||| Modify every value in the queue. O(n)
 export
-map : (k -> p -> v -> w) -> OrdPSQ k p v -> OrdPSQ k p w
-map f = goPSQ
+map :  (k -> p -> v -> w)
+    -> OrdPSQ k p v
+    -> OrdPSQ k p w
+map f =
+  goPSQ
   where
-    goElem : Elem k p v -> Elem k p w
-    goElem (MkElem k p x) = MkElem k p (f k p x)
-    goLTree : LTree k p v -> LTree k p w
-    goLTree Start              = Start
-    goLTree (LLoser s e l k r) = LLoser s (goElem e) (goLTree l) k (goLTree r)
-    goLTree (RLoser s e l k r) = RLoser s (goElem e) (goLTree l) k (goLTree r)
-    goPSQ : OrdPSQ k p v -> OrdPSQ k p w
-    goPSQ Void           = Void
-    goPSQ (Winner e l k) = Winner (goElem e) (goLTree l) k
+    goElem :  Elem k p v
+           -> Elem k p w
+    goElem (MkElem k p x) =
+      MkElem k p (f k p x)
+    goLTree :  LTree k p v
+            -> LTree k p w
+    goLTree Start              =
+      Start
+    goLTree (LLoser s e l k r) =
+      LLoser s (goElem e) (goLTree l) k (goLTree r)
+    goLTree (RLoser s e l k r) =
+      RLoser s (goElem e) (goLTree l) k (goLTree r)
+    goPSQ :  OrdPSQ k p v
+          -> OrdPSQ k p w
+    goPSQ Void           =
+      Void
+    goPSQ (Winner e l k) =
+      Winner (goElem e) (goLTree l) k
 
 ||| Maps a function over the values and priorities of the queue.
 ||| The function f must be monotonic with respect to the priorities.
@@ -137,24 +189,38 @@ map f = goPSQ
 ||| If f is not monotonic, then the result
 ||| will be invalid. O(n)
 export
-unsafeMapMonotonic : (k -> p -> v -> (q, w)) -> OrdPSQ k p v -> OrdPSQ k q w
-unsafeMapMonotonic f = goPSQ
+unsafeMapMonotonic :  (k -> p -> v -> (q, w))
+                   -> OrdPSQ k p v
+                   -> OrdPSQ k q w
+unsafeMapMonotonic f =
+  goPSQ
   where
-    goElem : Elem k p v -> Elem k q w
+    goElem :  Elem k p v
+           -> Elem k q w
     goElem (MkElem k p x) =
       let (p', x') = f k p x
         in MkElem k p' x'
-    goLTree : LTree k p v -> LTree k q w
-    goLTree Start              = Start
-    goLTree (LLoser s e l k r) = LLoser s (goElem e) (goLTree l) k (goLTree r)
-    goLTree (RLoser s e l k r) = RLoser s (goElem e) (goLTree l) k (goLTree r)
-    goPSQ : OrdPSQ k p v -> OrdPSQ k q w
-    goPSQ Void           = Void
-    goPSQ (Winner e l k) = Winner (goElem e) (goLTree l) k
+    goLTree :  LTree k p v
+            -> LTree k q w
+    goLTree Start              =
+      Start
+    goLTree (LLoser s e l k r) =
+      LLoser s (goElem e) (goLTree l) k (goLTree r)
+    goLTree (RLoser s e l k r) =
+      RLoser s (goElem e) (goLTree l) k (goLTree r)
+    goPSQ :  OrdPSQ k p v
+          -> OrdPSQ k q w
+    goPSQ Void           =
+      Void
+    goPSQ (Winner e l k) =
+      Winner (goElem e) (goLTree l) k
 
 ||| Fold over every key, priority and value in the queue. O(n)
 export
-fold : (k -> p -> v -> a -> a) -> a -> OrdPSQ k p v -> a
+fold :  (k -> p -> v -> a -> a)
+     -> a
+     -> OrdPSQ k p v
+     -> a
 fold f acc psq =
   case psq of
     Void                        =>
@@ -163,20 +229,35 @@ fold f acc psq =
       let acc' = f k p v acc
         in go acc' t
   where
-    go : a -> LTree k p v -> a
-    go acc Start                             = acc
-    go acc (LLoser _ (MkElem k p v) lt _ rt) = go (f k p v (go acc lt)) rt
-    go acc (RLoser _ (MkElem k p v) lt _ rt) = go (f k p v (go acc lt)) rt
+    go :  a
+       -> LTree k p v
+       -> a
+    go acc Start                             =
+      acc
+    go acc (LLoser _ (MkElem k p v) lt _ rt) =
+      go (f k p v (go acc lt)) rt
+    go acc (RLoser _ (MkElem k p v) lt _ rt) =
+      go (f k p v (go acc lt)) rt
 
 export
-foldr : (a -> b -> b) -> b -> OrdPSQ k p a -> b
-foldr f z Void           = z
-foldr f z (Winner e l _) = Prelude.foldr f (Data.OrdPSQ.Internal.LTree.foldr f z l) e
+foldr :  (a -> b -> b)
+      -> b
+      -> OrdPSQ k p a
+      -> b
+foldr f z Void           =
+  z
+foldr f z (Winner e l _) =
+  Prelude.foldr f (Data.OrdPSQ.Internal.LTree.foldr f z l) e
 
 export
-foldl : (b -> a -> b) -> b -> OrdPSQ k p a -> b
-foldl f z Void           = z
-foldl f z (Winner e l _) = Prelude.foldl f (Data.OrdPSQ.Internal.LTree.foldl f z l) e
+foldl :  (b -> a -> b)
+      -> b
+      -> OrdPSQ k p a
+      -> b
+foldl f z Void           =
+  z
+foldl f z (Winner e l _) =
+  Prelude.foldl f (Data.OrdPSQ.Internal.LTree.foldl f z l) e
 
 --------------------------------------------------------------------------------
 --          Views
@@ -186,7 +267,11 @@ foldl f z (Winner e l _) = Prelude.foldl f (Data.OrdPSQ.Internal.LTree.foldl f z
 ||| If the key was present, the associated priority and value are returned in addition
 ||| to the updated queue. O(log n)
 export
-deleteView : Ord k => Ord p => k -> OrdPSQ k p v -> Maybe (p, v, OrdPSQ k p v)
+deleteView :  Ord k
+           => Ord p
+           => k
+           -> OrdPSQ k p v
+           -> Maybe (p, v, OrdPSQ k p v)
 deleteView k psq =
   case psq of
     Void                               =>
@@ -215,7 +300,13 @@ deleteView k psq =
 ||| then the evicted priority and value can be
 ||| found the first element of the returned tuple. O(log n)
 export
-insertView : Ord k => Ord p => k -> p -> v -> OrdPSQ k p v -> (Maybe (p, v), OrdPSQ k p v)
+insertView :  Ord k
+           => Ord p
+           => k
+           -> p
+           -> v
+           -> OrdPSQ k p v
+           -> (Maybe (p, v), OrdPSQ k p v)
 insertView k p x t =
   case deleteView k t of
     Nothing          =>
@@ -224,30 +315,52 @@ insertView k p x t =
       (Just (p', x'), insert k p x t)
 
 private
-secondBest : Ord k => Ord p => LTree k p v -> k -> OrdPSQ k p v
-secondBest Start _                 = Void
-secondBest (LLoser _ e tl m tr) m' = Winner e tl m `play` secondBest tr m'
-secondBest (RLoser _ e tl m tr) m' = secondBest tl m `play` Winner e tr m'
+secondBest :  Ord k
+           => Ord p
+           => LTree k p v
+           -> k
+           -> OrdPSQ k p v
+secondBest Start _                 =
+  Void
+secondBest (LLoser _ e tl m tr) m' =
+  Winner e tl m `play` secondBest tr m'
+secondBest (RLoser _ e tl m tr) m' =
+  secondBest tl m `play` Winner e tr m'
 
 ||| Retrieve the binding with the least priority, and the
 ||| rest of the queue stripped of that binding. O(log n)
 export
-minView : Ord k => Ord p => OrdPSQ k p v -> Maybe (k, p, v, OrdPSQ k p v)
-minView Void                        = Nothing
-minView (Winner (MkElem k p v) t m) = Just (k, p, v, secondBest t m)
+minView :  Ord k
+        => Ord p
+        => OrdPSQ k p v
+        -> Maybe (k, p, v, OrdPSQ k p v)
+minView Void                        =
+  Nothing
+minView (Winner (MkElem k p v) t m) =
+  Just (k, p, v, secondBest t m)
 
 ||| Return a list of elements ordered by key whose priorities are at most pt,
 ||| and the rest of the queue stripped of these elements.
 ||| The returned list of elements can be in any order: no guarantees there.
 export
-atMostView : Ord k => Ord p => p -> OrdPSQ k p v -> (List (k, p, v), OrdPSQ k p v)
-atMostView pt = go Nil
+atMostView :  Ord k
+           => Ord p
+           => p
+           -> OrdPSQ k p v
+           -> (List (k, p, v), OrdPSQ k p v)
+atMostView pt =
+  go Nil
   where
-    go : Ord a => List (a, p, c) -> OrdPSQ a p c -> (List(a, p, c), OrdPSQ a p c)
+    go :  Ord a
+       => List (a, p, c)
+       -> OrdPSQ a p c
+       -> (List(a, p, c), OrdPSQ a p c)
     go acc psq =
       case psq of
-        Void                                             => (acc, Void)
-        (Winner (MkElem k p v) Start                 _)  => ((k, p, v) :: acc, Void)
+        Void                                             =>
+          (acc, Void)
+        (Winner (MkElem k p v) Start                 _)  =>
+          ((k, p, v) :: acc, Void)
         (Winner e              (RLoser _ e' tl m tr) m') =>
           let (acc',  t')  = go acc  (assert_smaller psq (Winner e  tl m))
               (acc'', t'') = go acc' (assert_smaller psq (Winner e' tr m'))
@@ -271,10 +384,16 @@ atMostView pt = go Nil
 ||| When the key is not a member of the queue,
 ||| the original queue is returned. O(log n)
 export
-delete : Ord k => Ord p => k -> OrdPSQ k p v -> OrdPSQ k p v
-delete key = go
+delete :  Ord k
+       => Ord p
+       => k
+       -> OrdPSQ k p v
+       -> OrdPSQ k p v
+delete key =
+  go
   where
-    go : OrdPSQ k p v -> OrdPSQ k p v
+    go :  OrdPSQ k p v
+       -> OrdPSQ k p v
     go t =
       case t of
         Void                               =>
@@ -302,7 +421,10 @@ delete key = go
 ||| rest of the queue stripped of that binding.
 ||| In case the queue is empty, the empty queue is returned again. O(log n)
 export
-deleteMin : Ord k => Ord p => OrdPSQ k p v -> OrdPSQ k p v
+deleteMin :  Ord k
+          => Ord p
+          => OrdPSQ k p v
+          -> OrdPSQ k p v
 deleteMin t =
   case minView t of
     Nothing            =>
@@ -315,7 +437,12 @@ deleteMin t =
 ||| alter can be used to insert, delete, or update a value in a queue.
 ||| It also allows you to calculate an additional value b. O(log n)
 export
-alter : Ord k => Ord p => (Maybe (p, v) -> (b, Maybe (p, v))) -> k -> OrdPSQ k p v -> (b, OrdPSQ k p v)
+alter :  Ord k
+      => Ord p
+      => (Maybe (p, v) -> (b, Maybe (p, v)))
+      -> k
+      -> OrdPSQ k p v
+      -> (b, OrdPSQ k p v)
 alter f k psq =
   let (psq', mbpv) = case deleteView k psq of
                        Nothing          =>
@@ -332,7 +459,11 @@ alter f k psq =
 ||| A variant of alter which works on the element with the minimum priority.
 ||| Unlike alter, this variant also allows you to change the key of the element. O(log n)
 export
-alterMin : Ord k => Ord p => (Maybe (k, p, v) -> (b, Maybe (k, p, v))) -> OrdPSQ k p v -> (b, OrdPSQ k p v)
+alterMin :  Ord k
+         => Ord p
+         => (Maybe (k, p, v) -> (b, Maybe (k, p, v)))
+         -> OrdPSQ k p v
+         -> (b, OrdPSQ k p v)
 alterMin f psq =
   case minView psq of
     Nothing            =>
@@ -342,9 +473,13 @@ alterMin f psq =
       let (b, mbkpv) = f $ Just (k, p, v)
         in (b, insertMay mbkpv psq')
   where
-    insertMay : Maybe (k, p, v) -> OrdPSQ k p v -> OrdPSQ k p v
-    insertMay Nothing          psq = psq
-    insertMay (Just (k, p, v)) psq = insert k p v psq
+    insertMay :  Maybe (k, p, v)
+              -> OrdPSQ k p v
+              -> OrdPSQ k p v
+    insertMay Nothing          psq =
+      psq
+    insertMay (Just (k, p, v)) psq =
+      insert k p v psq
 
 --------------------------------------------------------------------------------
 --          Conversion
@@ -354,12 +489,17 @@ alterMin f psq =
 ||| If the list contains more than one priority and value for the same key, the
 ||| last priority and value for the key is retained. O(n * log n)
 export
-fromList : Ord k => Ord p => List (k, p, v) -> OrdPSQ k p v
-fromList = foldl (\q, (k, p, v) => insert k p v q) empty
+fromList :  Ord k
+         => Ord p
+         => List (k, p, v)
+         -> OrdPSQ k p v
+fromList =
+  foldl (\q, (k, p, v) => insert k p v q) empty
 
 ||| Convert a queue to a list of (key, priority, value) tuples. O(n)
 export
-toList : OrdPSQ k p v -> List (k, p, v)
+toList :  OrdPSQ k p v
+       -> List (k, p, v)
 toList psq =
   case psq of
     Void                      =>
@@ -367,7 +507,8 @@ toList psq =
     Winner (MkElem k p v) l _ =>
       (k, p, v) :: toListLTree l
   where
-    toListLTree : LTree k p v -> List (k, p, v)
+    toListLTree :  LTree k p v
+                -> List (k, p, v)
     toListLTree lTree =
       case lTree of
         Start                         =>
@@ -378,8 +519,11 @@ toList psq =
           (k, p, v) :: toListLTree l ++ toListLTree r
 
 ||| Obtain the list of present keys in the queue. O(n)
-keys : OrdPSQ k p v -> List k
-keys t = [k | (k, _, _) <- toList t]
+export
+keys :  OrdPSQ k p v
+     -> List k
+keys t =
+  [k | (k, _, _) <- toList t]
 
 --------------------------------------------------------------------------------
 --          Interfaces
