@@ -2,8 +2,10 @@
 module Data.NatPSQ.Internal
 
 import Data.Bits
+import Derive.Prelude
 
 %default total
+%language ElabReflection
 
 --------------------------------------------------------------------------------
 --          Internal Utility
@@ -11,8 +13,11 @@ import Data.Bits
 
 ||| Convenience interface for bitSize that doesn't use an implicit parameter.
 private
-bitSizeOf : (ty : Type) -> FiniteBits ty => Nat
-bitSizeOf ty = bitSize {a = ty}
+bitSizeOf :  (ty : Type)
+          -> FiniteBits ty
+          => Nat
+bitSizeOf ty =
+  bitSize {a = ty}
 
 --------------------------------------------------------------------------------
 --          Internals
@@ -22,9 +27,12 @@ bitSizeOf ty = bitSize {a = ty}
 ||| (Bits32/Bits64 or the size of an unsigned Int on the host system).
 public export
 Size : Type
-Size = case bitSizeOf Int of
-         32 => Bits32
-         _  => Bits64
+Size =
+  case bitSizeOf Int of
+    32 =>
+      Bits32
+    _  =>
+      Bits64
 
 ||| The Nat type are keys for the queue (Ordered Nat Priority Search Queue).
 public export
@@ -41,29 +49,43 @@ Mask = Nat
 --------------------------------------------------------------------------------
 
 private
-natFromBits : Key -> Size
-natFromBits = cast
+natFromBits :  Key
+            -> Size
+natFromBits =
+  cast
 
 private
-bitsFromNat : Size -> Key
-bitsFromNat = cast
+bitsFromNat :  Size
+            -> Key
+bitsFromNat =
+  cast
 
 export
-zero : Key -> Mask -> Bool
-zero i m = (natFromBits i) .&. (natFromBits m) == 0
+zero :  Key
+     -> Mask
+     -> Bool
+zero i m =
+  (natFromBits i) .&. (natFromBits m) == 0
 
 private
-maskW : Size -> Size
-maskW m = complement (m - 1) `xor` m
+maskW :  Size
+      -> Size
+maskW m =
+  complement (m - 1) `xor` m
 
 export
-noMatch : Key -> Key -> Mask -> Bool
-noMatch k1 k2 m = natFromBits k1 .&. m' /= natFromBits k2 .&. m'
+noMatch :  Key
+        -> Key
+        -> Mask
+        -> Bool
+noMatch k1 k2 m =
+  natFromBits k1 .&. m' /= natFromBits k2 .&. m'
   where
     m' = maskW (natFromBits m)
 
 private
-highestBitMask : Size -> Size
+highestBitMask :  Size
+               -> Size
 highestBitMask x1 =
   let x2 = x1 .|. x1 `shiftR` 1
       x3 = x2 .|. x2 `shiftR` 2
@@ -78,8 +100,11 @@ highestBitMask x1 =
     in x7 `xor` (x7 `shiftR` 1)
 
 export
-branchMask : Key -> Key -> Mask
-branchMask k1 k2 = bitsFromNat (highestBitMask (natFromBits k1 `xor` natFromBits k2))
+branchMask :  Key
+           -> Key
+           -> Mask
+branchMask k1 k2 =
+  bitsFromNat (highestBitMask (natFromBits k1 `xor` natFromBits k2))
 
 --------------------------------------------------------------------------------
 --          NatPSQ
@@ -92,39 +117,18 @@ branchMask k1 k2 = bitsFromNat (highestBitMask (natFromBits k1 `xor` natFromBits
 ||| (the number of bits in an Int (32 or 64)).
 ||| It is generally much faster than an OrdPSQ.
 public export
-data NatPSQ p v = Bin Key
-                      p
-                      v
-                      Mask
-                      (NatPSQ p v)
-                      (NatPSQ p v)
-                | Tip Key
-                      p
-                      v
-                | Nil
+data NatPSQ : (p : Type) -> (v : Type) -> Type where
+  Bin :  Key
+      -> p
+      -> v
+      -> Mask
+      -> NatPSQ p v
+      -> NatPSQ p v
+      -> NatPSQ p v
+  Tip :  Key
+      -> p
+      -> v
+      -> NatPSQ p v
+  Nil : NatPSQ p v
 
-Show p => Show v => Show (NatPSQ p v) where
-  show xs = show' xs  where
-    show' : NatPSQ p v -> String
-    show' Nil               = "Nil"
-    show' (Bin k p v m l r) = "Bin "   ++
-                              "("      ++
-                              (show k) ++
-                              " "      ++
-                              (show p) ++
-                              " "      ++
-                              (show v) ++
-                              " "      ++
-                              (show m) ++
-                              " "      ++
-                              (show l) ++
-                              " "      ++
-                              (show r) ++
-                              ")"
-    show' (Tip k p v)       = "Tip "   ++
-                              (show k) ++
-                              " "      ++
-                              (show p) ++
-                              " "      ++
-                              (show v) ++
-                              ")"
+%runElab derive "NatPSQ" [Eq,Ord,Show]
