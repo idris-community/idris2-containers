@@ -18,7 +18,7 @@ import Data.Maybe
 
 private
 ins :  Eq k
-    => Ord k 
+    => Ord k
     => Ord p
     => k
     -> p
