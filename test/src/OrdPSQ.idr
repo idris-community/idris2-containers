@@ -39,41 +39,56 @@ prop_map_id = property $ do
   vs <- forAll ordpsqBits
   vs === map id vs
 
-prop_from_to_list : Property
-prop_from_to_list = property $ do
-  vs <- forAll ordpsqBits
-  fromList (toList vs) === vs
-
-{-
 prop_null : Property
 prop_null = property $ do
-  vs <- forAll boundedqueueBits
-  null vs === null (Data.BoundedQueue.toList vs)
+  vs <- forAll ordpsqBits
+  Prelude.null vs === null (Data.OrdPSQ.toList vs)
 
 prop_size : Property
 prop_size = property $ do
-  vs <- forAll boundedqueueBits
-  length vs === length (toList vs)
+  vs <- forAll ordpsqBits
+  size vs === length (toList vs)
 
-prop_enqueue : Property
-prop_enqueue = property $ do
-  vs <- forAll boundedqueueBits
-  (toList vs) ++ [1] === toList (enqueue vs 1)
+prop_member : Property
+prop_member = property1 $
+  (member 5 (fromList [(3, 0, 1), (5, 1, the Nat 2)])) === True
 
-prop_prepend : Property
-prop_prepend = property $ do
-  vs <- forAll boundedqueueBits
-  (1 :: (toList vs)) === (toList (prepend 1 vs))
-  -}
+prop_notMember : Property
+prop_notMember = property1 $
+  (notMember 5 (fromList [(3, 0, 1), (5, 1, the Nat 2)])) === False
+
+prop_singleton : Property
+prop_singleton = property1 $
+  (singleton 3 0 1) === (fromList [(3, 0, 1)])
+
+prop_insert : Property
+prop_insert = property1 $
+  (insert 5 1 2 (fromList [(3, 0, 1), (5, 0, 2)])) === (fromList [(3, 0, 1), (5, 1, 2)])
+
+prop_delete : Property
+prop_delete = property1 $
+  (delete 5 (fromList [(3, 0, 1), (5, 1, 2)])) === (singleton 3 0 1)
+
+prop_alterF : Property
+prop_alterF = property1 $
+  (alter (\_ => (6, Nothing)) 5 (fromList [(3, 0, 1), (5, 1, 2)])) === (6, (fromList [(3, 0, 1)]))
+
+prop_alterG : Property
+prop_alterG = property1 $
+  (alter (\_ => (6, Just (1, 4))) 5 (fromList [(3, 0, 1), (5, 1, 2)])) === (6, (fromList [(3, 0, 1), (5, 1, 4)]))
 
 export
 props : Group
 props = MkGroup "OrdPSQ"
   [ ("prop_eq_refl", prop_eq_refl)
   , ("prop_map_id", prop_map_id)
-  , ("prop_from_to_list", prop_from_to_list)
---  , ("prop_null", prop_null)
---  , ("prop_size", prop_size)
---  , ("prop_enqueue", prop_enqueue)
---  , ("prop_prepend", prop_prepend)
+  , ("prop_null", prop_null)
+  , ("prop_size", prop_size)
+  , ("prop_member", prop_member)
+  , ("prop_notMember", prop_notMember)
+  , ("prop_singleton", prop_singleton)
+  , ("prop_insert", prop_insert)
+  , ("prop_delete", prop_delete)
+  , ("prop_alterF", prop_alterF)
+  , ("prop_alterG", prop_alterG)
   ]

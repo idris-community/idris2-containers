@@ -86,6 +86,16 @@ member :  Ord k
 member k =
   isJust . lookup k
 
+||| Is the key not a member of the queue? See also member. O(log n)
+export
+notMember :  Ord k
+          => k
+          -> OrdPSQ k p v
+          -> Bool
+notMember k m =
+  not $
+    member k m
+
 ||| The element with the lowest priority. O(1)
 export
 findMin :  OrdPSQ k p v
@@ -429,8 +439,7 @@ deleteMin t =
 export
 alter :  Ord k
       => Ord p
-      => (Maybe (p, v)
-      -> (b, Maybe (p, v)))
+      => (Maybe (p, v) -> (b, Maybe (p, v)))
       -> k
       -> OrdPSQ k p v
       -> (b, OrdPSQ k p v)
