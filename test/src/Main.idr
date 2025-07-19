@@ -1,6 +1,7 @@
 module Main
 
 import BoundedQueue
+import HashPSQ
 import Hedgehog
 import Map
 import NatPSQ
@@ -15,6 +16,7 @@ import Set
 main : IO ()
 main = test
   [ BoundedQueue.props
+  , HashPSQ.props
   , Map.props
   , NatPSQ.props
   , OrdPSQ.props
