@@ -3,6 +3,7 @@ module Main
 import BoundedQueue
 import Hedgehog
 import Map
+import NatPSQ
 import OrdPSQ
 import RRBVector
 import RRBVector1
@@ -15,6 +16,7 @@ main : IO ()
 main = test
   [ BoundedQueue.props
   , Map.props
+  , NatPSQ.props
   , OrdPSQ.props
   , RRBVector.props
   , RRBVector1.props

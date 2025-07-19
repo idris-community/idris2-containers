@@ -214,6 +214,15 @@ member :  Nat
 member k =
   isJust . lookup k
 
+||| Is the key not a member of the queue? See also member. O(log n)
+export
+notMember :  Nat
+          -> NatPSQ p v
+          -> Bool
+notMember k m =
+  not $
+    member k m
+
 ||| The element with the lowest priority. O(1)
 export
 findMin :  NatPSQ p v
