@@ -77,6 +77,30 @@ prop_alterG : Property
 prop_alterG = property1 $
   (alter (\_ => (6, Just (1, 4))) 5 (fromList [(3, 0, 1), (5, 1, 2)])) === (6, (fromList [(3, 0, 1), (5, 1, 4)]))
 
+prop_alterMin : Property
+prop_alterMin = property1 $
+  (alterMin (\_ => (6, Just (3, 0, 4))) (fromList [(3, 0, 1), (5, 1, 2)])) === (6, (fromList [(3, 0, 4), (5, 1, 2)]))
+
+prop_findMin : Property
+prop_findMin = property1 $
+  (findMin (fromList [(3, 0, 1), (5, 1, 2)])) === (Just (3 ,0 ,1))
+
+prop_deleteView : Property
+prop_deleteView = property1 $
+  (deleteView 5 (fromList [(3, 0, 1), (5, 1, 2)])) === (Just (1, 2, singleton 3 0 1))
+
+prop_insertView : Property
+prop_insertView = property1 $
+  (insertView 5 1 2 (fromList [(3, 0, 1), (5, 0, 2)])) === (Just (0, 2), fromList [(3, 0, 1), (5, 1, 2)])
+
+prop_minView : Property
+prop_minView = property1 $
+  (minView (fromList [(3, 0, 1), (5, 0, 2)])) === (Just (3, 0, 1, fromList [(5, 0, 2)]))
+
+prop_deleteMin : Property
+prop_deleteMin = property1 $
+  (deleteMin (fromList [(3, 0, 1), (5, 1, 2)])) === (singleton 5 1 2)
+
 export
 props : Group
 props = MkGroup "OrdPSQ"
@@ -91,4 +115,10 @@ props = MkGroup "OrdPSQ"
   , ("prop_delete", prop_delete)
   , ("prop_alterF", prop_alterF)
   , ("prop_alterG", prop_alterG)
+  , ("prop_alterMin", prop_alterMin)
+  , ("prop_findMin", prop_findMin)
+  , ("prop_deleteView", prop_deleteView)
+  , ("prop_insertView", prop_insertView)
+  , ("prop_minView", prop_minView)
+  , ("prop_deleteMin", prop_deleteMin)
   ]

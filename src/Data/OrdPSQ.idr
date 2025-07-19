@@ -461,8 +461,7 @@ alter f k psq =
 export
 alterMin :  Ord k
          => Ord p
-         => (Maybe (k, p, v)
-         -> (b, Maybe (k, p, v)))
+         => (Maybe (k, p, v) -> (b, Maybe (k, p, v)))
          -> OrdPSQ k p v
          -> (b, OrdPSQ k p v)
 alterMin f psq =
