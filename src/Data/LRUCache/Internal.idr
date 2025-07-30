@@ -2,8 +2,10 @@
 module Data.LRUCache.Internal
 
 import Data.HashPSQ
+import Derive.Prelude
 
 %default total
+%language ElabReflection
 
 --------------------------------------------------------------------------------
 --          Priority
@@ -26,3 +28,5 @@ data LRUCache : (k : Type) -> (v : Type) -> Type where
              -> (tick : Priority)              -- The next logical time.
              -> (queue : HashPSQ k Priority v) -- The underlying priority queue.
              -> LRUCache k v
+
+%runElab derive "LRUCache" [Eq,Ord,Show]
