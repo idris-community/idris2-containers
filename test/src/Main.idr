@@ -3,6 +3,7 @@ module Main
 import BoundedQueue
 import HashPSQ
 import Hedgehog
+import LRUCache
 import Map
 import NatPSQ
 import OrdPSQ
@@ -17,6 +18,7 @@ main : IO ()
 main = test
   [ BoundedQueue.props
   , HashPSQ.props
+  , LRUCache.props
   , Map.props
   , NatPSQ.props
   , OrdPSQ.props
