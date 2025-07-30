@@ -11,7 +11,7 @@ prop_eviction = property1 $
       c'' = insert 1 1 c'
     in c'' === ( MkLRUCache 1
                             1
-                            2 
+                            2
                             (singleton 1 1 1)
                )
 
