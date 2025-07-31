@@ -110,14 +110,7 @@ data Tree a = Balanced (Array (Tree a))
             | Unbalanced (Array (Tree a)) (Array Nat)
             | Leaf (Array a)
 
-public export
-Show a => Show (Tree a) where
-  show (Balanced trees)     =
-    assert_total $ show $ toList trees
-  show (Unbalanced trees _) =
-    assert_total $ show $ toList trees
-  show (Leaf elems)         =
-    assert_total $ show $ toList elems
+%runElab derive "Tree" [Eq,Ord,Show]
 
 --------------------------------------------------------------------------------
 --          Show Utilities (Tree)
@@ -313,9 +306,4 @@ data RRBVector a = Root Nat   -- size
                         (Tree a)
                  | Empty
 
-public export
-Show a => Show (Tree a) => Show (RRBVector a) where
-  show xs = "[" ++ (show' xs) ++ "]" where
-    show' : RRBVector a -> String
-    show' Empty            = ""
-    show' (Root size sh t) = show t
+%runElab derive "RRBVector" [Eq,Ord,Show]
