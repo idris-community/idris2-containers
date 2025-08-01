@@ -55,8 +55,10 @@ singleton x = Root 0 (Leaf $ A 1 $ fill 1 x)
 export
 fromList :  (xs : List a)
          -> RRBVector (length xs) a
-fromList []  = Empty
-fromList [x] = singleton x
+fromList []  =
+  Empty
+fromList [x] =
+  singleton x
 fromList xs  =
   case nodes Leaf xs of
     [tree] =>
