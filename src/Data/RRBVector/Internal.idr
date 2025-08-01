@@ -306,4 +306,4 @@ data RRBVector a = Root Nat   -- size
                         (Tree a)
                  | Empty
 
-%runElab derive "RRBVector" [Eq,Ord,Show]
+%runElab derive "RRBVector" [Show]
