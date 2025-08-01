@@ -307,9 +307,4 @@ data RRBVector : (n : Nat) -> (a : Type) -> Type where
         -> RRBVector n a
   Empty :  RRBVector n a
 
---data RRBVector a = Root Nat   -- size
---                        Shift -- shift (blockshift * height)
---                        (Tree a)
---                 | Empty
-
-%runElab derive "RRBVector" [Eq,Ord,Show]
+%runElab derive "RRBVector" [Show]

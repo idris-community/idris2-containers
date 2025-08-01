@@ -719,29 +719,29 @@ map f (Root sh tree) =
 
 ||| Reverse the vector. O(n)
 export
---reverse :  RRBVector n a
---        -> RRBVector n a
-reverse : ?a
+reverse :  {n : Nat}
+        -> RRBVector n a
+        -> (n' ** RRBVector n' a)
 reverse v =
   case compare (length v) 1 of
     LT =>
-      v
+      (n ** v)
     EQ =>
-      v
+      (n ** v)
     GT =>
       case fromList $ toList v of
         Nothing =>
           assert_total $ idris_crash "Data.RRBVector.reverse: can't convert to List1"
         Just v' =>
-          fromList $ forget $ reverse v'
+          ((length (forget (reverse v'))) ** fromList $ forget $ reverse v')
 
 ||| Take two vectors and return a vector of corresponding pairs.
 ||| If one input is longer, excess elements are discarded from the right end. O(min(n1,n2))
 export
---zip :  RRBVector n a
---    -> RRBVector n b
---    -> RRBVector n (a, b)
-zip : ?b
+zip :  {n : Nat}
+    -> RRBVector n a
+    -> RRBVector n b
+    -> (n' ** RRBVector n' (a, b))
 zip v1 v2 =
   case fromList $ toList v1 of
     Nothing  =>
@@ -751,7 +751,7 @@ zip v1 v2 =
         Nothing  =>
           assert_total $ idris_crash "Data.RRBVector.zip: can't convert to List1"
         Just v2' =>
-          fromList $ forget $ zip v1' v2'
+          ((length (forget (v1' `zip` v2'))) ** fromList $ forget $ zip v1' v2')
 
 --------------------------------------------------------------------------------
 --          Concatenation
@@ -1010,12 +1010,16 @@ Root sh tree |> x =
 
 ||| Concatenates two vectors. O(log(max(n1,n2)))
 export
-(><) :  RRBVector a
-     -> RRBVector a
-     -> RRBVector a
-Empty                >< v                    = v
-v                    >< Empty                = v
-Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
+(><) :  {n1 : Nat}
+     -> {n2 : Nat}
+     -> RRBVector n1 a
+     -> RRBVector n2 a
+     -> (n' ** RRBVector n' a)
+Empty                >< v                    =
+  (n2 ** v)
+v                    >< Empty                =
+  (n1 ** v)
+Root sh1 tree1 >< Root sh2 tree2 =
   let upmaxshift = case compare sh1 sh2 of
                      LT =>
                        up sh2
@@ -1024,16 +1028,18 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
                      GT =>
                        up sh1
       newarr     = mergeTrees tree1 sh1 tree2 sh2
-    in normalize $ Root (plus size1 size2) upmaxshift (computeSizes upmaxshift newarr)
+    in ((plus n1 n2) ** normalize $ Root upmaxshift (computeSizes upmaxshift newarr))
   where
-    viewlArr : Array (Tree a) -> (Tree a, Array (Tree a))
+    viewlArr :  Array (Tree a)
+             -> (Tree a, Array (Tree a))
     viewlArr arr =
       case tryNatToFin 0 of
         Nothing   =>
           assert_total $ idris_crash "Data.RRBVector.(><).viewlArr: can't convert Nat to Fin"
         Just zero =>
           (at arr.arr zero, drop 1 arr)
-    viewrArr : Array (Tree b) -> (Array (Tree b), Tree b)
+    viewrArr :  Array (Tree b)
+             -> (Array (Tree b), Tree b)
     viewrArr arr =
       case tryNatToFin $ minus arr.size 1 of
         Nothing   =>
@@ -1202,23 +1208,27 @@ Root size1 sh1 tree1 >< Root size2 sh2 tree2 =
 ||| If the index is negative, add the element to the left end of the vector.
 ||| If the index is bigger than or equal to the length of the vector, add the element to the right end of the vector. O(log n)
 export
-insertAt :  Nat
+insertAt :  {n : Nat}
+         -> Nat
          -> a
-         -> RRBVector a
-         -> RRBVector a
+         -> RRBVector n a
+         -> (n' ** RRBVector n' a)
 insertAt i x v =
-  let (left, right) = splitAt i v
-    in (left |> x) >< right
+  let (left, right)      = splitAt i v
+      (l' ** left')      = left |> x
+    in left' >< right
 
 ||| Delete the element at the given index.
 ||| If the index is out of range, return the original vector. O(log n)
 export
-deleteAt :  Nat
-         -> RRBVector a
-         -> RRBVector a
+deleteAt :  {n : Nat}
+         -> Nat
+         -> RRBVector n a
+         -> (n' ** RRBVector n' a)
 deleteAt i v =
-  let (left, right) = splitAt (plus i 1) v
-    in take i left >< right
+  let (left, right)      = splitAt (plus i 1) v
+      left'              = take i left
+    in left' >< right
 
 --------------------------------------------------------------------------------
 --          Show Utilities (RRB-Vector)
@@ -1226,19 +1236,20 @@ deleteAt i v =
 
 ||| Show the full representation of the vector.
 export
-showRRBVectorRep :  Show a
+showRRBVectorRep :  {n : Nat}
+                 -> Show a
                  => Show (Tree a)
-                 => Show (RRBVector a)
-                 => RRBVector a
+                 => Show (RRBVector n a)
+                 => RRBVector n a
                  -> String
-showRRBVectorRep Empty            =
+showRRBVectorRep Empty       =
   ""
-showRRBVectorRep (Root size sh t) =
+showRRBVectorRep (Root sh t) =
   "RRBVector "    ++
+  (show n)        ++
+  " "             ++
   "{ "            ++
-  "Size = "       ++
-  (show size)     ++
-  ", Shift = "    ++
+  "Shift = "      ++
   (show sh)       ++
   ", Tree = "     ++
   (showTreeRep t) ++
@@ -1249,36 +1260,19 @@ showRRBVectorRep (Root size sh t) =
 --------------------------------------------------------------------------------
 
 export
-Eq a => Eq (RRBVector n a) where
+{n : Nat} -> Eq a => Eq (RRBVector n a) where
   xs == ys = length xs == length ys && Data.RRBVector.toList xs == Data.RRBVector.toList ys
 
 export
-Ord a => Ord (RRBVector n a) where
+{n : Nat} -> Ord a => Ord (RRBVector n a) where
   compare xs ys = compare (Data.RRBVector.toList xs) (Data.RRBVector.toList ys)
 
 export
-Functor (RRBVector n a) where
+Functor (RRBVector n) where
   map f v = map f v
 
 export
-Foldable (RRBVector n a) where
+Foldable (RRBVector n) where
   foldl f z           = Data.RRBVector.foldl f z
   foldr f z           = Data.RRBVector.foldr f z
   null                = null
-
-export
-Applicative (RRBVector n a) where
-  pure      = singleton
-  fs <*> xs = Data.RRBVector.foldl (\acc, f => acc >< map f xs) empty fs
-
-export
-Semigroup (RRBVector n) where
-  (<+>) = (><)
-
-export
-Semigroup (RRBVector n a) => Monoid (RRBVector n a) where
-  neutral = empty
-
-export
-Monad (RRBVector n) where
-  xs >>= f = Data.RRBVector.foldl (\acc, x => acc >< f x) empty xs

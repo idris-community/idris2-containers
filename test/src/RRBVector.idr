@@ -9,10 +9,12 @@ import Data.RRBVector
 %hide Prelude.Ops.infixr.(<|)
 %hide Prelude.Stream.(::)
 
-rrbvectorOf : Gen a -> Gen (RRBVector a)
-rrbvectorOf g = fromList <$> list (linear 0 20) g
+rrbvectorOf : Gen a -> Gen (RRBVector (length xs) a)
+rrbvectorOf g = do
+  xs <- list (linear 0 20) g
+  fromList <$> (pure xs)
 
-rrbvectorOf' : Gen a -> Gen (RRBVector a)
+rrbvectorOf' : Gen a -> Gen (RRBVector n a)
 rrbvectorOf' g = fromList <$> list (linear 1 20) g
 
 rrbvectorBits : Gen (RRBVector Bits8)
