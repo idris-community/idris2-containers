@@ -298,12 +298,18 @@ log2 x =
 --          RRB Vectors
 --------------------------------------------------------------------------------
 
-||| A relaxed radix balanced vector (RRB-Vector).
+||| A relaxed radix balanced vector (RRBVector).
 ||| It supports fast indexing, iteration, concatenation and splitting.
 public export
-data RRBVector a = Root Nat   -- size
-                        Shift -- shift (blockshift * height)
-                        (Tree a)
-                 | Empty
+data RRBVector : (n : Nat) -> (a : Type) -> Type where
+  Root  :  Shift -- shift (blockshift * height)
+        -> (Tree a)
+        -> RRBVector n a
+  Empty :  RRBVector n a
+
+--data RRBVector a = Root Nat   -- size
+--                        Shift -- shift (blockshift * height)
+--                        (Tree a)
+--                 | Empty
 
 %runElab derive "RRBVector" [Eq,Ord,Show]
