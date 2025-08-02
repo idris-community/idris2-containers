@@ -15,150 +15,225 @@ import Data.Seq.Internal
 
 %default total
 
-err : String -> a
+err :  String
+    -> a
 err s = assert_total (idris_crash s)
 
 ||| A two-end finite sequence, with length in its type.
 export
 data Seq : Nat -> Type -> Type where
-  MkSeq : FingerTree (Elem e) -> Seq n e
+  MkSeq :  FingerTree (Elem e)
+        -> Seq n e
 
-||| O(1). The empty sequence.
+||| The empty sequence. O(1)
 export
 empty : Seq 0 e
-empty = MkSeq Empty
+empty =
+  MkSeq Empty
 
-||| O(1). A singleton sequence.
+||| A singleton sequence. O(1)
 export
-singleton : e -> Seq 1 e
-singleton a = MkSeq (Single (MkElem a))
+singleton :  e
+          -> Seq 1 e
+singleton a =
+  MkSeq (Single (MkElem a))
 
-||| O(n). A sequence of length n with a the value of every element.
+||| A sequence of length n with a the value of every element. O(n)
 export
-replicate : (n : Nat) -> (a : e) -> Seq n e
-replicate n a = MkSeq (replicate' n a)
+replicate :  (n : Nat)
+          -> (a : e)
+          -> Seq n e
+replicate n a =
+  MkSeq (replicate' n a)
 
-||| O(1). The number of elements in the sequence.
+||| The number of elements in the sequence. O(1)
 export
-length : {n : Nat} -> Seq n a -> Nat
-length _ = n
+length :  {n : Nat}
+       -> Seq n a
+       -> Nat
+length _ =
+  n
 
-||| O(n). Reverse the sequence.
+||| Reverse the sequence. O(n)
 export
-reverse : Seq n a -> Seq n a
-reverse (MkSeq tr) = MkSeq (reverseTree id tr)
+reverse :  Seq n a
+        -> Seq n a
+reverse (MkSeq tr) =
+  MkSeq (reverseTree id tr)
 
 export infixr 5 `cons`
-||| O(1). Add an element to the left end of a sequence.
+||| Add an element to the left end of a sequence. O(1)
 export
-cons : e -> Seq n e -> Seq (S n) e
-a `cons` MkSeq tr = MkSeq (MkElem a `consTree` tr)
+cons :  e
+     -> Seq n e
+     -> Seq (S n) e
+a `cons` MkSeq tr =
+  MkSeq (MkElem a `consTree` tr)
 
 export infixl 5 `snoc`
-||| O(1). Add an element to the right end of a sequence.
+||| Add an element to the right end of a sequence. O(1)
 export
-snoc : Seq n e -> e -> Seq (S n) e
-MkSeq tr `snoc` a = MkSeq (tr `snocTree` MkElem a)
+snoc :  Seq n e
+     -> e
+     -> Seq (S n) e
+MkSeq tr `snoc` a =
+  MkSeq (tr `snocTree` MkElem a)
 
-||| O(log(min(m, n))). Concatenate two sequences.
+||| Concatenate two sequences. O(log(min(m, n)))
 export
-(++) : Seq m e -> Seq n e -> Seq (m + n) e
-MkSeq t1 ++ MkSeq t2 = MkSeq (addTree0 t1 t2)
+(++) :  Seq m e
+     -> Seq n e
+     -> Seq (m + n) e
+MkSeq t1 ++ MkSeq t2 =
+  MkSeq (addTree0 t1 t2)
 
-||| O(1). View from the left of the sequence.
+||| View from the left of the sequence. O(1)
 export
-viewl : Seq (S n) a -> (a, Seq n a)
-viewl (MkSeq tr) = case viewLTree tr of
-  Just (MkElem a, tr') => (a, MkSeq tr')
-  Nothing              => err "viewl"
+viewl :  Seq (S n) a
+      -> (a, Seq n a)
+viewl (MkSeq tr) =
+  case viewLTree tr of
+    Just (MkElem a, tr') =>
+      (a, MkSeq tr')
+    Nothing              =>
+      err "viewl"
 
-||| O(1). The first element of the sequence.
+||| The first element of the sequence. O(1)
 export
-head : Seq (S n) a -> a
-head = fst . viewl
+head :  Seq (S n) a
+     -> a
+head =
+  fst . viewl
 
-||| O(1). The elements after the head of the sequence.
+||| The elements after the head of the sequence. O(1)
 export
-tail : Seq (S n) a -> Seq n a
-tail = snd . viewl
+tail :  Seq (S n) a
+     -> Seq n a
+tail =
+  snd . viewl
 
-||| O(1). View from the right of the sequence.
+||| View from the right of the sequence. O(1)
 export
-viewr : Seq (S n) a -> (Seq n a, a)
-viewr (MkSeq tr) = case viewRTree tr of
-  Just (tr', MkElem a) => (MkSeq tr', a)
-  Nothing              => err "viewr"
+viewr :  Seq (S n) a
+      -> (Seq n a, a)
+viewr (MkSeq tr) =
+  case viewRTree tr of
+    Just (tr', MkElem a) =>
+      (MkSeq tr', a)
+    Nothing              =>
+      err "viewr"
 
-||| O(1). The elements before the last element of the sequence.
+||| The elements before the last element of the sequence. O(1)
 export
-init : Seq (S n) a -> Seq n a
-init = fst . viewr
+init :  Seq (S n) a
+     -> Seq n a
+init =
+  fst . viewr
 
-||| O(1). The last element of the sequence.
+||| The last element of the sequence. O(1)
 export
-last : Seq (S n) a -> a
-last = snd . viewr
+last :  Seq (S n) a
+     -> a
+last =
+  snd . viewr
 
-||| O(n). Turn a vector into a sequence.
+||| Turn a vector into a sequence. O(n)
 export
-fromVect : Vect n a -> Seq n a
-fromVect xs = MkSeq (foldr (\x, t => MkElem x `consTree` t) Empty xs)
+fromVect :  Vect n a
+         -> Seq n a
+fromVect xs =
+  MkSeq (foldr (\x, t => MkElem x `consTree` t) Empty xs)
 
-||| O(n). Turn a list into a sequence.
+||| Turn a list into a sequence. O(n)
 export
-fromList : (xs : List a) -> Seq (length xs) a
-fromList xs = fromVect (Vect.fromList xs)
+fromList :  (xs : List a)
+         -> Seq (length xs) a
+fromList xs =
+  fromVect (Vect.fromList xs)
 
-||| O(n). Turn a sequence into a vector.
+||| Turn a sequence into a vector. O(n)
 export
-toVect : {n :Nat} -> Seq n a -> Vect n a
-toVect _  {n = 0}   = []
+toVect :  {n :Nat}
+       -> Seq n a
+       -> Vect n a
+toVect _  {n = 0}   =
+  []
 toVect ft {n = S _} =
   let (x, ft') = viewl ft
-  in x :: toVect ft'
+    in x :: toVect ft'
 
-||| O(log(min(i, n-i))). The element at the specified position.
+||| The element at the specified position. O(log(min(i, n-i)))
 export
-index : (i : Nat) -> (t : Seq n a) -> {auto ok : LT i n} -> a
-index i (MkSeq t) = let (_, MkElem a) = lookupTree i t in a
+index :  (i : Nat)
+      -> (t : Seq n a)
+      -> {auto ok : LT i n}
+      -> a
+index i (MkSeq t) =
+  let (_, MkElem a) = lookupTree i t
+    in a
 
-||| O(log(min(i, n-i))). The element at the specified position.
-||| Use Fin n to index instead.
+||| The element at the specified position.
+||| Use Fin n to index instead. O(log(min(i, n-i)))
 export
-index' : (t : Seq n a) -> (i : Fin n) -> a
-index' (MkSeq t) fn = let (_, MkElem a) = lookupTree (finToNat fn) t in a
+index' :  (t : Seq n a)
+       -> (i : Fin n)
+       -> a
+index' (MkSeq t) fn =
+  let (_, MkElem a) = lookupTree (finToNat fn) t
+    in a
 
-||| O(log(min(i, n-i))). Update the element at the specified position.
+||| Update the element at the specified position. O(log(min(i, n-i)))
 export
-adjust : (f : a -> a) -> (i : Nat) -> (t : Seq n a) -> {auto ok : LT i n} -> Seq n a
-adjust f i (MkSeq t) = MkSeq $ adjustTree (const (map f)) i t
+adjust :  (f : a -> a)
+       -> (i : Nat)
+       -> (t : Seq n a)
+       -> {auto ok : LT i n}
+       -> Seq n a
+adjust f i (MkSeq t) =
+  MkSeq $ adjustTree (const (map f)) i t
 
-||| O(log(min(i, n-i))). Replace the element at the specified position.
+||| Replace the element at the specified position. O(log(min(i, n-i)))
 export
-update : (i : Nat) -> a -> (t : Seq n a) -> {auto ok : LT i n} -> Seq n a
-update i a t = adjust (const a) i t
+update :  (i : Nat)
+       -> a
+       -> (t : Seq n a)
+       -> {auto ok : LT i n}
+       -> Seq n a
+update i a t =
+  adjust (const a) i t
 
-||| O(log(min(i, n-i))). Split a sequence at a given position.
+||| Split a sequence at a given position. O(log(min(i, n-i)))
 export
-splitAt : (i : Nat) -> Seq (i + j) a -> (Seq i a, Seq j a)
+splitAt :  (i : Nat)
+        -> Seq (i + j) a
+        -> (Seq i a, Seq j a)
 splitAt i (MkSeq xs) =
   let (l, r) = split i xs
-  in (MkSeq l, MkSeq r)
+    in (MkSeq l, MkSeq r)
 
-||| O(log(min(i, n-i))). The first i elements of a sequence.
+||| The first i elements of a sequence. O(log(min(i, n-i)))
 export
-take : (i : Nat) -> Seq (i + j) a -> Seq i a
-take i seq = fst (splitAt i seq)
+take :  (i : Nat)
+     -> Seq (i + j) a
+     -> Seq i a
+take i seq =
+  fst (splitAt i seq)
 
-||| O(log(min(i, n-i))). Elements of a sequence after the first i.
+||| Elements of a sequence after the first i. O(log(min(i, n-i)))
 export
-drop : (i : Nat) -> Seq (i + j) a -> Seq j a
-drop i seq = snd (splitAt i seq)
+drop :  (i : Nat)
+     -> Seq (i + j) a
+     -> Seq j a
+drop i seq =
+  snd (splitAt i seq)
 
 ||| Dump the internal structure of the finger tree.
 export
-show' : Show a => Seq n a -> String
-show' (MkSeq tr) = showPrec Open tr
+show' :  Show a
+      => Seq n a
+      -> String
+show' (MkSeq tr) =
+  showPrec Open tr
 
 public export
 implementation Eq a => Eq (Seq n a) where

@@ -10,6 +10,7 @@ import OrdPSQ
 import RRBVector.Sized
 import RRBVector.Unsized
 import RRBVector1
+import Seq.Sized
 import Seq.Unsized
 import Set
 
@@ -26,6 +27,7 @@ main = test
   , RRBVector.Sized.props
   , RRBVector.Unsized.props
   , RRBVector1.props
+  , Seq.Sized.props
   , Seq.Unsized.props
   , Set.props
   ]
