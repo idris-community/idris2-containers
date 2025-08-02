@@ -43,13 +43,15 @@ infixl 5 |>
 ||| The empty vector. O(1)
 export
 empty : RRBVector n a
-empty = Empty
+empty =
+  Empty
 
 ||| A vector with a single element. O(1)
 export
 singleton :  a
           -> RRBVector 1 a
-singleton x = Root 0 (Leaf $ A 1 $ fill 1 x)
+singleton x =
+  Root 0 (Leaf $ A 1 $ fill 1 x)
 
 ||| Create a new vector from a list. O(n)
 export
