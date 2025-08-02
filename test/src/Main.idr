@@ -7,7 +7,8 @@ import LRUCache
 import Map
 import NatPSQ
 import OrdPSQ
-import RRBVector
+import RRBVector.Sized
+import RRBVector.Unsized
 import RRBVector1
 import Seq.Unsized
 import Set
@@ -22,7 +23,8 @@ main = test
   , Map.props
   , NatPSQ.props
   , OrdPSQ.props
-  , RRBVector.props
+  , RRBVector.Sized.props
+  , RRBVector.Unsized.props
   , RRBVector1.props
   , Seq.Unsized.props
   , Set.props

@@ -1,7 +1,7 @@
 ||| Relaxed Radix Balanced Vectors (RRBVector)
-module Data.RRBVector
+module Data.RRBVector.Unsized
 
-import public Data.RRBVector.Internal
+import public Data.RRBVector.Unsized.Internal
 
 import Control.Monad.ST
 import Data.Array
@@ -1197,11 +1197,11 @@ showRRBVectorRep (Root size sh t) =
 
 export
 Eq a => Eq (RRBVector a) where
-  xs == ys = length xs == length ys && Data.RRBVector.toList xs == Data.RRBVector.toList ys
+  xs == ys = length xs == length ys && Data.RRBVector.Unsized.toList xs == Data.RRBVector.Unsized.toList ys
 
 export
 Ord a => Ord (RRBVector a) where
-  compare xs ys = compare (Data.RRBVector.toList xs) (Data.RRBVector.toList ys)
+  compare xs ys = compare (Data.RRBVector.Unsized.toList xs) (Data.RRBVector.Unsized.toList ys)
 
 export
 Functor RRBVector where
@@ -1209,14 +1209,14 @@ Functor RRBVector where
 
 export
 Foldable RRBVector where
-  foldl f z           = Data.RRBVector.foldl f z
-  foldr f z           = Data.RRBVector.foldr f z
+  foldl f z           = Data.RRBVector.Unsized.foldl f z
+  foldr f z           = Data.RRBVector.Unsized.foldr f z
   null                = null
 
 export
 Applicative RRBVector where
   pure      = singleton
-  fs <*> xs = Data.RRBVector.foldl (\acc, f => acc >< map f xs) empty fs
+  fs <*> xs = Data.RRBVector.Unsized.foldl (\acc, f => acc >< map f xs) empty fs
 
 export
 Semigroup (RRBVector a) where
@@ -1228,4 +1228,4 @@ Semigroup (RRBVector a) => Monoid (RRBVector a) where
 
 export
 Monad RRBVector where
-  xs >>= f = Data.RRBVector.foldl (\acc, x => acc >< f x) empty xs
+  xs >>= f = Data.RRBVector.Unsized.foldl (\acc, x => acc >< f x) empty xs

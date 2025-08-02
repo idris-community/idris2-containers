@@ -1,8 +1,8 @@
-module RRBVector
+module RRBVector.Unsized
 
 import Hedgehog
 import Data.List
-import Data.RRBVector
+import Data.RRBVector.Unsized
 
 %hide Prelude.toList
 %hide Prelude.Ops.infixl.(|>)
@@ -39,7 +39,7 @@ prop_from_to_list = property $ do
 prop_null : Property
 prop_null = property $ do
   vs <- forAll rrbvectorBits
-  Data.RRBVector.null vs === null (toList vs)
+  Data.RRBVector.Unsized.null vs === null (toList vs)
 
 prop_size : Property
 prop_size = property $ do
@@ -49,7 +49,7 @@ prop_size = property $ do
 prop_replicate : Property
 prop_replicate = property $ do
   vs <- forAll rrbvectorBits
-  toList (Data.RRBVector.replicate 5 1) === replicate 5 1
+  toList (Data.RRBVector.Unsized.replicate 5 1) === replicate 5 1
 
 prop_take : Property
 prop_take = property $ do
@@ -97,7 +97,7 @@ prop_deleteAt = property $ do
 
 export
 props : Group
-props = MkGroup "RRBVector"
+props = MkGroup "RRBVector (Unsized)"
   [ ("prop_eq_refl", prop_eq_refl)
   , ("prop_map_id", prop_map_id)
   , ("prop_from_to_list", prop_from_to_list)
