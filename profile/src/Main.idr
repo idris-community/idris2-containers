@@ -11,6 +11,7 @@ import Data.RRBVector.Unsized.Internal
 import Data.RRBVector1.Internal
 import Data.SortedMap as SM
 import Data.Set as S
+import Data.Seq.Sized as SS
 import Data.Seq.Unsized as SU
 import Data.SortedSet as SS
 import Profile
@@ -34,6 +35,9 @@ createRRBVectorSized xs = VS.fromList xs
 
 createRRBVectorUnsized : Nat -> RRBVector Nat
 createRRBVectorUnsized n = VU.fromList [0..n]
+
+createSeqSized : (xs : List Nat) -> Seq (length xs) Nat
+createSeqSized xs = SS.fromList xs
 
 createSeqUnsized : Nat -> Seq Nat
 createSeqUnsized n = SU.fromList [0..n]
@@ -349,18 +353,32 @@ consRRBVectorUnsized n = do
       v = 18 <| v
   19 <| v
 
+consSeqSized : (xs : List Nat) -> Seq (S (S (S (S (S (S (S (S (S (S (length xs))))))))))) Nat
+consSeqSized xs = do
+  let s = SS.fromList xs
+      s = cons 10 s
+      s = cons 11 s
+      s = cons 12 s
+      s = cons 13 s
+      s = cons 14 s
+      s = cons 15 s
+      s = cons 16 s
+      s = cons 17 s
+      s = cons 18 s
+  cons 19 s
+
 consSeqUnsized : Nat -> Seq Nat
 consSeqUnsized n = do
   let s = SU.fromList [0..n]
-  let s = cons 10 s
-  let s = cons 11 s
-  let s = cons 12 s
-  let s = cons 13 s
-  let s = cons 14 s
-  let s = cons 15 s
-  let s = cons 16 s
-  let s = cons 17 s
-  let s = cons 18 s
+      s = cons 10 s
+      s = cons 11 s
+      s = cons 12 s
+      s = cons 13 s
+      s = cons 14 s
+      s = cons 15 s
+      s = cons 16 s
+      s = cons 17 s
+      s = cons 18 s
   cons 19 s
 
 snocRRBVectorSized : (n : Nat) -> (n' ** RRBVector n' Nat)
@@ -392,18 +410,32 @@ snocRRBVectorUnsized n = do
       v = v |> 18
   v |> 19
 
+snocSeqSized : (n : Nat) -> Seq (S (S (S (S (S (S (S (S (S (S (length [0..n]))))))))))) Nat
+snocSeqSized n = do
+  let s = SS.fromList [0..n]
+      s = snoc s 10
+      s = snoc s 11
+      s = snoc s 12
+      s = snoc s 13
+      s = snoc s 14
+      s = snoc s 15
+      s = snoc s 16
+      s = snoc s 17
+      s = snoc s 18
+  snoc s 19
+
 snocSeqUnsized : Nat -> Seq Nat
 snocSeqUnsized n = do
   let s = SU.fromList [0..n]
-  let s = snoc s 10
-  let s = snoc s 11
-  let s = snoc s 12
-  let s = snoc s 13
-  let s = snoc s 14
-  let s = snoc s 15
-  let s = snoc s 16
-  let s = snoc s 17
-  let s = snoc s 18
+      s = snoc s 10
+      s = snoc s 11
+      s = snoc s 12
+      s = snoc s 13
+      s = snoc s 14
+      s = snoc s 15
+      s = snoc s 16
+      s = snoc s 17
+      s = snoc s 18
   snoc s 19
 
 appendRRBVectorSized : (n : Nat) -> (n' ** RRBVector n' Nat)
@@ -416,6 +448,11 @@ appendRRBVectorUnsized : Nat -> RRBVector Nat
 appendRRBVectorUnsized n = do
   let v = VU.fromList [0..n]
   v >< v
+
+appendSeqSized : (xs : List Nat) -> Seq (length xs + length xs) Nat
+appendSeqSized xs = do
+  let s = SS.fromList xs
+  s ++ s
 
 appendSeqUnsized : Nat -> Seq Nat
 appendSeqUnsized n = do
@@ -450,6 +487,11 @@ mapRRBVectorUnsized n = do
   let v = VU.fromList [0..n]
   map (\x => plus x 1) v
 
+mapSeqSized : (xs : List Nat) -> Seq (length xs) Nat
+mapSeqSized xs = do
+  let v = SS.fromList xs
+  map (\x => plus x 1) v
+
 mapSeqUnsized : Nat -> Seq Nat
 mapSeqUnsized n = do
   let s = SU.fromList [0..n]
@@ -462,6 +504,10 @@ replicateRRBVectorSized n = do
 replicateRRBVectorUnsized : Nat -> RRBVector Nat
 replicateRRBVectorUnsized n = do
   VU.replicate n 0
+
+replicateSeqSized : (n : Nat) -> Seq n Nat
+replicateSeqSized n = do
+  SS.replicate n 0
 
 replicateSeqUnsized : Nat -> Seq Nat
 replicateSeqUnsized n = do
@@ -476,6 +522,12 @@ splitAtRRBVectorUnsized : Nat -> (RRBVector Nat, RRBVector Nat)
 splitAtRRBVectorUnsized n = do
   let v = VU.fromList [0..n]
   VU.splitAt (n `div` 2) v
+
+splitAtSeqSized : (xs : List Nat) -> Seq (length xs) Nat
+splitAtSeqSized xs = do
+  let v         = SS.fromList xs
+      (v', v'') = SS.splitAt Z v
+  v''
 
 splitAtSeqUnsized : Nat -> (Seq Nat, Seq Nat)
 splitAtSeqUnsized n = do
@@ -492,10 +544,15 @@ reverseRRBVectorUnsized n = do
   let v = VU.fromList [0..n]
   VU.reverse v
 
+reverseSeqSized : (xs : List Nat) -> Seq (length xs) Nat
+reverseSeqSized xs = do
+  let v = SS.fromList xs
+  SS.reverse v
+
 reverseSeqUnsized : Nat -> Seq Nat
 reverseSeqUnsized n = do
-  let s = SU.fromList [0..n]
-  SU.reverse s
+  let v = SU.fromList [0..n]
+  SU.reverse v
 
 partial
 bench : Benchmark Void
