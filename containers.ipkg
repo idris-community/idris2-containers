@@ -24,9 +24,11 @@ modules = Data.BoundedQueue
         , Data.OrdPSQ
         , Data.OrdPSQ.Internal
         , Data.Queue
-        , Data.RRBVector
+        , Data.RRBVector.Sized
+        , Data.RRBVector.Unsized
+        , Data.RRBVector.Sized.Internal
+        , Data.RRBVector.Unsized.Internal
         , Data.RRBVector1
-        , Data.RRBVector.Internal
         , Data.RRBVector1.Internal
         , Data.Seq.Internal
         , Data.Seq.Sized
