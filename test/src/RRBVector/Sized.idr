@@ -54,13 +54,15 @@ prop_take : Property
 prop_take = property $ do
   xs <- forAll (list (linear 0 20) anyBits8)
   vs <- forAll $ rrbvectorBits xs
-  toList (take 1 vs) === take 1 (toList vs)
+  let (_ ** vs') = take 1 vs
+  toList vs' === take 1 (toList vs)
 
 prop_drop : Property
 prop_drop = property $ do
   xs <- forAll (list (linear 0 20) anyBits8)
   vs <- forAll $ rrbvectorBits xs
-  toList (drop ((length vs) `minus` 1) vs) === drop ((length vs) `minus` 1) (toList vs)
+  let (_ ** vs') = drop ((length vs) `minus` 1) vs
+  toList vs' === drop ((length vs) `minus` 1) (toList vs)
 
 prop_cons : Property
 prop_cons = property $ do

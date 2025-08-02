@@ -564,23 +564,23 @@ export
 take :  {n : Nat}
      -> Nat
      -> RRBVector n a
-     -> RRBVector n a
+     -> (n' ** RRBVector n' a)
 take _ Empty            =
-  Empty
+  (0 ** empty)
 take t v@(Root sh tree) =
   case compare t 0 of
     LT =>
-      empty
+      (0 ** empty)
     EQ =>
-      empty
+      (0 ** empty)
     GT =>
       case compare t n of
         LT =>
-          normalize $ Root sh (takeTree (minus t 1) sh tree)
+          ((minus t n) ** normalize $ Root sh (takeTree (minus t 1) sh tree))
         EQ =>
-          v
+          (n ** v)
         GT =>
-          v
+          (n ** v)
 
 ||| The vector without the first i elements.
 ||| If the vector contains less than or equal to i elements, the empty vector is returned. O(log n)
@@ -588,48 +588,48 @@ export
 drop :  {n : Nat}
      -> Nat
      -> RRBVector n a
-     -> RRBVector n a
+     -> (n' ** RRBVector n' a)
 drop _ Empty            =
-  Empty
+  (0 ** empty)
 drop d v@(Root sh tree) =
   case compare d 0 of
     LT =>
-      v
+      (n ** v)
     EQ =>
-      v
+      (n ** v)
     GT =>
       case compare d n of
         LT =>
-          normalize $ Root sh (dropTree d sh tree)
+          ((minus n d) ** normalize $ Root sh (dropTree d sh tree))
         EQ =>
-          empty
+          (0 ** empty)
         GT =>
-          empty
+          (0 ** empty)
 
 ||| Split the vector at the given index. O(log n)
 export
 splitAt :  {n : Nat}
         -> Nat
         -> RRBVector n a
-        -> (RRBVector n a, RRBVector n a)
+        -> ((n' ** RRBVector n' a), (n'' ** RRBVector n'' a))
 splitAt _ Empty            =
-  (Empty, Empty)
+  ((0 ** empty), (0 ** empty))
 splitAt s v@(Root sh tree) =
   case compare s 0 of
     LT =>
-      (empty, v)
+      ((0 ** empty), (n ** v))
     EQ =>
-      (empty, v)
+      ((0 ** empty), (n ** v))
     GT =>
       case compare s n of
         LT =>
-          let left  = normalize $ Root sh (takeTree (minus s 1) sh tree)
-              right = normalize $ Root sh (dropTree s sh tree)
-            in (left, right)
+          let (t ** left)  = take s v
+              (d ** right) = drop s v
+            in ((t ** left), (d ** right))
         EQ =>
-          (v, empty)
+          ((n ** v), (0 ** empty))
         GT =>
-          (v, empty)
+          ((n ** v), (0 ** empty))
 
 --------------------------------------------------------------------------------
 --          Deconstruction
@@ -639,12 +639,12 @@ splitAt s v@(Root sh tree) =
 export
 viewl :  {n : Nat}
       -> RRBVector n a
-      -> Maybe (a, RRBVector n a)
+      -> (n' ** Maybe (a, RRBVector n' a))
 viewl Empty           =
-  Nothing
+  (0 ** Nothing)
 viewl v@(Root _ tree) =
-  let tail = drop 1 v
-    in Just (headTree tree, tail)
+  let (d ** tail) = drop 1 v
+    in (d ** Just (headTree tree, tail))
   where
     headTree :  Tree a
              -> a
@@ -671,12 +671,12 @@ viewl v@(Root _ tree) =
 export
 viewr :  {n : Nat}
       -> RRBVector n a
-      -> Maybe (RRBVector n a, a)
+      -> (n' ** Maybe (RRBVector n' a, a))
 viewr Empty           =
-  Nothing
+  (0 ** Nothing)
 viewr v@(Root _ tree) =
-  let init = take (minus n 1) v
-    in Just (init, lastTree tree)
+  let (t ** init) = take (minus n 1) v
+    in (t ** Just (init, lastTree tree))
   where
     lastTree : Tree a -> a
     lastTree (Balanced arr)     =
@@ -1218,8 +1218,8 @@ insertAt :  {n : Nat}
          -> RRBVector n a
          -> (n' ** RRBVector n' a)
 insertAt i x v =
-  let (left, right)      = splitAt i v
-      (l' ** left')      = left |> x
+  let ((_ ** left), (_ ** right)) = splitAt i v
+      (l' ** left')               = left |> x
     in left' >< right
 
 ||| Delete the element at the given index.
@@ -1230,8 +1230,8 @@ deleteAt :  {n : Nat}
          -> RRBVector n a
          -> (n' ** RRBVector n' a)
 deleteAt i v =
-  let (left, right)      = splitAt (plus i 1) v
-      left'              = take i left
+  let ((_ ** left), (_ ** right)) = splitAt (plus i 1) v
+      (_ ** left')                = take i left
     in left' >< right
 
 --------------------------------------------------------------------------------

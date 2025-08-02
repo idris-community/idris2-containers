@@ -4,8 +4,10 @@ import Data.Linear.Ref1
 import Data.Linear.Token
 import Data.List
 import Data.Map as M
-import Data.RRBVector as V
-import Data.RRBVector.Internal
+import Data.RRBVector.Sized as VS
+import Data.RRBVector.Unsized as VU
+import Data.RRBVector.Sized.Internal
+import Data.RRBVector.Unsized.Internal
 import Data.RRBVector1.Internal
 import Data.SortedMap as SM
 import Data.Set as S
@@ -27,8 +29,11 @@ createList n = map (\x => (x,plus x 1)) [0..n]
 createMap : Nat -> Map Nat Nat
 createMap n = M.fromList $ map (\x => (x,plus x 1)) [0..n]
 
-createRRBVector : (xs : List Nat) -> RRBVector (length xs) Nat
-createRRBVector xs = V.fromList xs
+createRRBVectorSized : (xs : List Nat) -> RRBVector (length xs) Nat
+createRRBVectorSized xs = VS.fromList xs
+
+createRRBVectorUnsized : Nat -> RRBVector Nat
+createRRBVectorUnsized n = VU.fromList [0..n]
 
 createSeqUnsized : Nat -> Seq Nat
 createSeqUnsized n = SU.fromList [0..n]
@@ -315,9 +320,9 @@ intersectionSortedSet n = do
       s' = SS.fromList [(n `div` 2)..n]
   intersection s s'
 
-consRRBVector : (n : Nat) -> (n' ** RRBVector n' Nat)
-consRRBVector n = do
-  let v          = V.fromList [0..n]
+consRRBVectorSized : (n : Nat) -> (n' ** RRBVector n' Nat)
+consRRBVectorSized n = do
+  let v          = VS.fromList [0..n]
       (_ ** v)   = 10 <| v
       (_ ** v)   = 11 <| v
       (_ ** v)   = 12 <| v
@@ -329,6 +334,20 @@ consRRBVector n = do
       (_ ** v)   = 18 <| v
       (n' ** v') = 19 <| v
   (n' ** v')
+
+consRRBVectorUnsized : Nat -> RRBVector Nat
+consRRBVectorUnsized n = do
+  let v = VU.fromList [0..n]
+      v = 10 <| v
+      v = 11 <| v
+      v = 12 <| v
+      v = 13 <| v
+      v = 14 <| v
+      v = 15 <| v
+      v = 16 <| v
+      v = 17 <| v
+      v = 18 <| v
+  19 <| v
 
 consSeqUnsized : Nat -> Seq Nat
 consSeqUnsized n = do
@@ -344,9 +363,9 @@ consSeqUnsized n = do
   let s = cons 18 s
   cons 19 s
 
-snocRRBVector : (n : Nat) -> (n' ** RRBVector n' Nat)
-snocRRBVector n = do
-  let v          = V.fromList [0..n]
+snocRRBVectorSized : (n : Nat) -> (n' ** RRBVector n' Nat)
+snocRRBVectorSized n = do
+  let v          = VS.fromList [0..n]
       (_ ** v)   = v |> 10
       (_ ** v)   = v |> 11
       (_ ** v)   = v |> 12
@@ -358,6 +377,20 @@ snocRRBVector n = do
       (_ ** v)   = v |> 18
       (n' ** v') = v |> 19
   (n' ** v')
+
+snocRRBVectorUnsized : Nat -> RRBVector Nat
+snocRRBVectorUnsized n = do
+  let v = VU.fromList [0..n]
+      v = v |> 10
+      v = v |> 11
+      v = v |> 12
+      v = v |> 13
+      v = v |> 14
+      v = v |> 15
+      v = v |> 16
+      v = v |> 17
+      v = v |> 18
+  v |> 19
 
 snocSeqUnsized : Nat -> Seq Nat
 snocSeqUnsized n = do
@@ -373,22 +406,33 @@ snocSeqUnsized n = do
   let s = snoc s 18
   snoc s 19
 
-appendRRBVector : (n : Nat) -> (n' ** RRBVector n' Nat)
-appendRRBVector n = do
-  let v          = V.fromList [0..n]
+appendRRBVectorSized : (n : Nat) -> (n' ** RRBVector n' Nat)
+appendRRBVectorSized n = do
+  let v          = VS.fromList [0..n]
       (n' ** v') = v >< v
   (n' ** v')
+
+appendRRBVectorUnsized : Nat -> RRBVector Nat
+appendRRBVectorUnsized n = do
+  let v = VU.fromList [0..n]
+  v >< v
 
 appendSeqUnsized : Nat -> Seq Nat
 appendSeqUnsized n = do
   let s = SU.fromList [0..n]
   s ++ s
 
-indexRRBVector : Nat -> Maybe ()
-indexRRBVector n = do
-  let v = V.fromList [0..n]
+indexRRBVectorSized : Nat -> Maybe ()
+indexRRBVectorSized n = do
+  let v = VS.fromList [0..n]
   for_ (Prelude.id v) $ \v' =>
-    V.lookup v' v
+    VS.lookup v' v
+
+indexRRBVectorUnsized : Nat -> Maybe ()
+indexRRBVectorUnsized n = do
+  let v = VU.fromList [0..n]
+  for_ (Prelude.id v) $ \v' =>
+    VU.lookup v' v
 
 indexSeqUnsized : Nat -> Maybe ()
 indexSeqUnsized n = do
@@ -396,9 +440,14 @@ indexSeqUnsized n = do
   for_ (Prelude.id s) $ \s' =>
     SU.index s' s
 
-mapRRBVector : (n : Nat) -> RRBVector (length [0..n]) Nat
-mapRRBVector n = do
-  let v = V.fromList [0..n]
+mapRRBVectorSized : (n : Nat) -> RRBVector (length [0..n]) Nat
+mapRRBVectorSized n = do
+  let v = VS.fromList [0..n]
+  map (\x => plus x 1) v
+
+mapRRBVectorUnsized : Nat -> RRBVector Nat
+mapRRBVectorUnsized n = do
+  let v = VU.fromList [0..n]
   map (\x => plus x 1) v
 
 mapSeqUnsized : Nat -> Seq Nat
@@ -406,28 +455,42 @@ mapSeqUnsized n = do
   let s = SU.fromList [0..n]
   map (\x => plus x 1) s
 
-replicateRRBVector : (n : Nat) -> RRBVector n Nat
-replicateRRBVector n = do
-  V.replicate n 0
+replicateRRBVectorSized : (n : Nat) -> RRBVector n Nat
+replicateRRBVectorSized n = do
+  VS.replicate n 0
+
+replicateRRBVectorUnsized : Nat -> RRBVector Nat
+replicateRRBVectorUnsized n = do
+  VU.replicate n 0
 
 replicateSeqUnsized : Nat -> Seq Nat
 replicateSeqUnsized n = do
   SU.replicate n 0
 
-splitAtRRBVector : (n : Nat) -> (RRBVector (length [0..n]) Nat, RRBVector (length [0..n]) Nat)
-splitAtRRBVector n = do
-  let v = V.fromList [0..n]
-  V.splitAt (n `div` 2) v
+splitAtRRBVectorSized : (n : Nat) -> ((n' ** RRBVector n' Nat), (n'' ** RRBVector n'' Nat))
+splitAtRRBVectorSized n = do
+  let v = VS.fromList [0..n]
+  VS.splitAt (n `div` 2) v
+
+splitAtRRBVectorUnsized : Nat -> (RRBVector Nat, RRBVector Nat)
+splitAtRRBVectorUnsized n = do
+  let v = VU.fromList [0..n]
+  VU.splitAt (n `div` 2) v
 
 splitAtSeqUnsized : Nat -> (Seq Nat, Seq Nat)
 splitAtSeqUnsized n = do
   let s = SU.fromList [0..n]
   SU.splitAt (n `div` 2) s
 
-reverseRRBVector : (n : Nat) -> (n ** RRBVector n Nat)
-reverseRRBVector n = do
-  let v = V.fromList [0..n]
-  V.reverse v
+reverseRRBVectorSized : (n : Nat) -> (n ** RRBVector n Nat)
+reverseRRBVectorSized n = do
+  let v = VS.fromList [0..n]
+  VS.reverse v
+
+reverseRRBVectorUnsized : Nat -> RRBVector Nat
+reverseRRBVectorUnsized n = do
+  let v = VU.fromList [0..n]
+  VU.reverse v
 
 reverseSeqUnsized : Nat -> Seq Nat
 reverseSeqUnsized n = do
@@ -438,71 +501,71 @@ partial
 bench : Benchmark Void
 bench = Group "containers"
   [ Group "List"
-     [ Single "1"       (basic createList 0)
-     , Single "100"     (basic createList 99)
-     , Single "1000"    (basic createList 999)
+     [ Single "1"    (basic createList 0)
+     , Single "100"  (basic createList 99)
+     , Single "1000" (basic createList 999)
      ]
   , Group "fromListMap"
-      [ Single "1"       (basic createMap 0)
-      , Single "100"     (basic createMap 99)
-      , Single "1000"    (basic createMap 999)
+      [ Single "1"    (basic createMap 0)
+      , Single "100"  (basic createMap 99)
+      , Single "1000" (basic createMap 999)
       ]
   , Group "fromListSortedMap"
-      [ Single "1"      (basic createSortedMap 0)
-      , Single "100"    (basic createSortedMap 99)
-      , Single "1000"   (basic createSortedMap 999)
+      [ Single "1"    (basic createSortedMap 0)
+      , Single "100"  (basic createSortedMap 99)
+      , Single "1000" (basic createSortedMap 999)
       ]
   , Group "fromListSet"
-      [ Single "1"       (basic createSet 0)
-      , Single "100"     (basic createSet 99)
-      , Single "1000"    (basic createSet 999)
+      [ Single "1"    (basic createSet 0)
+      , Single "100"  (basic createSet 99)
+      , Single "1000" (basic createSet 999)
       ]
   , Group "fromListSortedSet"
-      [ Single "1"      (basic createSortedSet 0)
-      , Single "100"    (basic createSortedSet 99)
-      , Single "1000"   (basic createSortedSet 999)
+      [ Single "1"    (basic createSortedSet 0)
+      , Single "100"  (basic createSortedSet 99)
+      , Single "1000" (basic createSortedSet 999)
       ]
   , Group "insertMap"
-      [ Single "10"      (basic insertMap 0)
+      [ Single "10" (basic insertMap 0)
       ]
   , Group "insertSortedMap"
-      [ Single "10"      (basic insertSortedMap 0)
+      [ Single "10" (basic insertSortedMap 0)
       ]
   , Group "insertSet"
-      [ Single "10"      (basic insertSet 0)
+      [ Single "10" (basic insertSet 0)
       ]
   , Group "insertSortedSet"
-      [ Single "10"      (basic insertSortedSet 0)
+      [ Single "10" (basic insertSortedSet 0)
       ]
   , Group "deleteMap"
-      [ Single "10"      (basic deleteMap 9)
+      [ Single "10" (basic deleteMap 9)
       ]
   , Group "deleteSortedMap"
-      [ Single "10"      (basic deleteSortedMap 9)
+      [ Single "10" (basic deleteSortedMap 9)
       ]
   , Group "deleteSet"
-      [ Single "10"      (basic deleteSet 9)
+      [ Single "10" (basic deleteSet 9)
       ]
   , Group "deleteSortedSet"
-      [ Single "10"      (basic deleteSortedSet 9)
+      [ Single "10" (basic deleteSortedSet 9)
       ]
   , Group "updateMap"
-      [ Single "10"      (basic updateMap 9)
+      [ Single "10" (basic updateMap 9)
       ]
   , Group "updateSortedMap"
-      [ Single "10"      (basic updateSortedMap 9)
+      [ Single "10" (basic updateSortedMap 9)
       ]
   , Group "lookupMap"
-      [ Single "10"      (basic lookupMap 9)
+      [ Single "10" (basic lookupMap 9)
       ]
   , Group "lookupSortedMap"
-      [ Single "10"      (basic lookupSortedMap 9)
+      [ Single "10" (basic lookupSortedMap 9)
       ]
   , Group "memberSet"
-      [ Single "10"      (basic memberSet 9)
+      [ Single "10" (basic memberSet 9)
       ]
   , Group "containsSortedSet"
-      [ Single "10"      (basic containsSortedSet 9)
+      [ Single "10" (basic containsSortedSet 9)
       ]
   , Group "keysMap"
       [ Single "1000000" (basic keysMap 999999)
@@ -534,96 +597,139 @@ bench = Group "containers"
   , Group "intersectionSortedSet"
       [ Single "1000" (basic intersectionSortedSet 999)
       ]
-  , Group "fromListRRBVector"
-      [ Single "1"      (basic createRRBVector [0..0])
-      , Single "100"    (basic createRRBVector [0..99])
-      , Single "1000"   (basic createRRBVector [0..999])
+--  , Group "fromListRRBVectorSized"
+--      [ Single "1"    (basic createRRBVectorSized [0..0])
+--      , Single "100"  (basic createRRBVectorSized [0..99])
+--      , Single "1000" (basic createRRBVectorSized [0..999])
+--      ]
+  , Group "fromListRRBVectorUnsized"
+      [ Single "1"    (basic createRRBVectorUnsized 0)
+      , Single "100"  (basic createRRBVectorUnsized 99)
+      , Single "1000" (basic createRRBVectorUnsized 999)
       ]
   , Group "fromListSeqUnsized"
-      [ Single "1"      (basic createSeqUnsized 0)
-      , Single "100"    (basic createSeqUnsized 99)
-      , Single "1000"   (basic createSeqUnsized 999)
+      [ Single "1"    (basic createSeqUnsized 0)
+      , Single "100"  (basic createSeqUnsized 99)
+      , Single "1000" (basic createSeqUnsized 999)
       ]
-  , Group "consRRBVector"
-      [ Single "10"      (basic consRRBVector 9)
+  , Group "consRRBVectorSized"
+      [ Single "10" (basic consRRBVectorSized 9)
+      ]
+  , Group "consRRBVectorUnsized"
+      [ Single "10" (basic consRRBVectorUnsized 9)
       ]
   , Group "consSeqUnsized"
-      [ Single "10"      (basic consSeqUnsized 9)
+      [ Single "10" (basic consSeqUnsized 9)
       ]
-  , Group "snocRRBVector"
-      [ Single "10"      (basic snocRRBVector 9)
+  , Group "snocRRBVectorSized"
+      [ Single "10" (basic snocRRBVectorSized 9)
+      ]
+  , Group "snocRRBVectorUnsized"
+      [ Single "10" (basic snocRRBVectorUnsized 9)
       ]
   , Group "snocSeqUnsized"
-      [ Single "10"      (basic snocSeqUnsized 9)
+      [ Single "10" (basic snocSeqUnsized 9)
       ]
-  , Group "appendRRBVector"
-      [ Single "10"      (basic appendRRBVector 9)
+  , Group "appendRRBVectorSized"
+      [ Single "10" (basic appendRRBVectorSized 9)
+      ]
+  , Group "appendRRBVectorUnsized"
+      [ Single "10" (basic appendRRBVectorUnsized 9)
       ]
   , Group "appendSeqUnsized"
-      [ Single "10"      (basic appendSeqUnsized 9)
+      [ Single "10" (basic appendSeqUnsized 9)
       ]
-  , Group "indexRRBVector"
-      [ Single "1"      (basic indexRRBVector 0)
-      , Single "100"    (basic indexRRBVector 99)
-      , Single "1000"   (basic indexRRBVector 999)
-      , Single "10000"  (basic indexRRBVector 9999)
+  , Group "indexRRBVectorSized"
+      [ Single "1"     (basic indexRRBVectorSized 0)
+      , Single "100"   (basic indexRRBVectorSized 99)
+      , Single "1000"  (basic indexRRBVectorSized 999)
+      , Single "10000" (basic indexRRBVectorSized 9999)
+      ]
+  , Group "indexRRBVectorUnsized"
+      [ Single "1"     (basic indexRRBVectorUnsized 0)
+      , Single "100"   (basic indexRRBVectorUnsized 99)
+      , Single "1000"  (basic indexRRBVectorUnsized 999)
+      , Single "10000" (basic indexRRBVectorUnsized 9999)
       ]
   , Group "indexSeqUnsized"
-      [ Single "1"      (basic indexSeqUnsized 0)
-      , Single "100"    (basic indexSeqUnsized 99)
-      , Single "1000"   (basic indexSeqUnsized 999)
-      , Single "10000"  (basic indexSeqUnsized 9999)
+      [ Single "1"     (basic indexSeqUnsized 0)
+      , Single "100"   (basic indexSeqUnsized 99)
+      , Single "1000"  (basic indexSeqUnsized 999)
+      , Single "10000" (basic indexSeqUnsized 9999)
       ]
---  , Group "mapRRBVector"
---      [ Single "1"       (basic mapRRBVector 0)
---      , Single "100"     (basic mapRRBVector 99)
---      , Single "1000"    (basic mapRRBVector 999)
---      , Single "10000"   (basic mapRRBVector 9999)
+--  , Group "mapRRBVectorSized"
+--      [ Single "1"     (basic mapRRBVectorSized 0)
+--      , Single "100"   (basic mapRRBVectorSized 99)
+--      , Single "1000"  (basic mapRRBVectorSized 999)
+--      , Single "10000" (basic mapRRBVectorSized 9999)
 --      ]
+  , Group "mapRRBVectorUnsized"
+      [ Single "1"     (basic mapRRBVectorUnsized 0)
+      , Single "100"   (basic mapRRBVectorUnsized 99)
+      , Single "1000"  (basic mapRRBVectorUnsized 999)
+      , Single "10000" (basic mapRRBVectorUnsized 9999)
+      ]
   , Group "mapSeqUnsized"
-      [ Single "1"       (basic mapSeqUnsized 0)
-      , Single "100"     (basic mapSeqUnsized 99)
-      , Single "1000"    (basic mapSeqUnsized 999)
-      , Single "10000"   (basic mapSeqUnsized 9999)
+      [ Single "1"     (basic mapSeqUnsized 0)
+      , Single "100"   (basic mapSeqUnsized 99)
+      , Single "1000"  (basic mapSeqUnsized 999)
+      , Single "10000" (basic mapSeqUnsized 9999)
       ]
---  , Group "replicateRRBVector"
---      [ Single "1"       (basic replicateRRBVector 0)
---      , Single "100"     (basic replicateRRBVector 99)
---      , Single "1000"    (basic replicateRRBVector 999)
---      , Single "10000"   (basic replicateRRBVector 9999)
+--  , Group "replicateRRBVectorSized"
+--      [ Single "1"     (basic replicateRRBVectorSized 0)
+--      , Single "100"   (basic replicateRRBVectorSized 99)
+--      , Single "1000"  (basic replicateRRBVectorSized 999)
+--      , Single "10000" (basic replicateRRBVectorSized 9999)
 --      ]
-  , Group "replicateSeqUnsized"
-      [ Single "1"       (basic replicateSeqUnsized 0)
-      , Single "100"     (basic replicateSeqUnsized 99)
-      , Single "1000"    (basic replicateSeqUnsized 999)
-      , Single "10000"   (basic replicateSeqUnsized 9999)
+  , Group "replicateRRBVectorUnsized"
+      [ Single "1"     (basic replicateRRBVectorUnsized 0)
+      , Single "100"   (basic replicateRRBVectorUnsized 99)
+      , Single "1000"  (basic replicateRRBVectorUnsized 999)
+      , Single "10000" (basic replicateRRBVectorUnsized 9999)
       ]
-  , Group "reverseRRBVector"
-      [ Single "1"       (basic reverseRRBVector 0)
-      , Single "100"     (basic reverseRRBVector 99)
-      , Single "1000"    (basic reverseRRBVector 999)
-      , Single "10000"   (basic reverseRRBVector 9999)
+  , Group "replicateSeqUnsized"
+      [ Single "1"     (basic replicateSeqUnsized 0)
+      , Single "100"   (basic replicateSeqUnsized 99)
+      , Single "1000"  (basic replicateSeqUnsized 999)
+      , Single "10000" (basic replicateSeqUnsized 9999)
+      ]
+  , Group "reverseRRBVectorSized"
+      [ Single "1"     (basic reverseRRBVectorSized 0)
+      , Single "100"   (basic reverseRRBVectorSized 99)
+      , Single "1000"  (basic reverseRRBVectorSized 999)
+      , Single "10000" (basic reverseRRBVectorSized 9999)
+      ]
+  , Group "reverseRRBVectorUnsized"
+      [ Single "1"     (basic reverseRRBVectorUnsized 0)
+      , Single "100"   (basic reverseRRBVectorUnsized 99)
+      , Single "1000"  (basic reverseRRBVectorUnsized 999)
+      , Single "10000" (basic reverseRRBVectorUnsized 9999)
       ]
   , Group "reverseSeqUnsized"
-      [ Single "1"       (basic reverseSeqUnsized 0)
-      , Single "100"     (basic reverseSeqUnsized 99)
-      , Single "1000"    (basic reverseSeqUnsized 999)
-      , Single "10000"   (basic reverseSeqUnsized 9999)
+      [ Single "1"     (basic reverseSeqUnsized 0)
+      , Single "100"   (basic reverseSeqUnsized 99)
+      , Single "1000"  (basic reverseSeqUnsized 999)
+      , Single "10000" (basic reverseSeqUnsized 9999)
       ]
---  , Group "splitAtRRBVector"
---      [ Single "1"       (basic splitAtRRBVector 0)
---      , Single "100"     (basic splitAtRRBVector 99)
---      , Single "1000"    (basic splitAtRRBVector 999)
---      , Single "10000"   (basic splitAtRRBVector 9999)
+--  , Group "splitAtRRBVectorSized"
+--      [ Single "1"     (basic splitAtRRBVectorSized 0)
+--      , Single "100"   (basic splitAtRRBVectorSized 99)
+--      , Single "1000"  (basic splitAtRRBVectorSized 999)
+--      , Single "10000" (basic splitAtRRBVectorSized 9999)
 --      ]
+  , Group "splitAtRRBVectorUnsized"
+      [ Single "1"     (basic splitAtRRBVectorUnsized 0)
+      , Single "100"   (basic splitAtRRBVectorUnsized 99)
+      , Single "1000"  (basic splitAtRRBVectorUnsized 999)
+      , Single "10000" (basic splitAtRRBVectorUnsized 9999)
+      ]
   , Group "splitAtSeqUnsized"
-      [ Single "1"       (basic splitAtSeqUnsized 0)
-      , Single "100"     (basic splitAtSeqUnsized 99)
-      , Single "1000"    (basic splitAtSeqUnsized 999)
-      , Single "10000"   (basic splitAtSeqUnsized 9999)
+      [ Single "1"     (basic splitAtSeqUnsized 0)
+      , Single "100"   (basic splitAtSeqUnsized 99)
+      , Single "1000"  (basic splitAtSeqUnsized 999)
+      , Single "10000" (basic splitAtSeqUnsized 9999)
       ]
   ]
-
 
 partial
 main : IO ()
