@@ -597,11 +597,6 @@ bench = Group "containers"
   , Group "intersectionSortedSet"
       [ Single "1000" (basic intersectionSortedSet 999)
       ]
---  , Group "fromListRRBVectorSized"
---      [ Single "1"    (basic createRRBVectorSized [0..0])
---      , Single "100"  (basic createRRBVectorSized [0..99])
---      , Single "1000" (basic createRRBVectorSized [0..999])
---      ]
   , Group "fromListRRBVectorUnsized"
       [ Single "1"    (basic createRRBVectorUnsized 0)
       , Single "100"  (basic createRRBVectorUnsized 99)
@@ -657,12 +652,6 @@ bench = Group "containers"
       , Single "1000"  (basic indexSeqUnsized 999)
       , Single "10000" (basic indexSeqUnsized 9999)
       ]
---  , Group "mapRRBVectorSized"
---      [ Single "1"     (basic mapRRBVectorSized 0)
---      , Single "100"   (basic mapRRBVectorSized 99)
---      , Single "1000"  (basic mapRRBVectorSized 999)
---      , Single "10000" (basic mapRRBVectorSized 9999)
---      ]
   , Group "mapRRBVectorUnsized"
       [ Single "1"     (basic mapRRBVectorUnsized 0)
       , Single "100"   (basic mapRRBVectorUnsized 99)
@@ -675,12 +664,6 @@ bench = Group "containers"
       , Single "1000"  (basic mapSeqUnsized 999)
       , Single "10000" (basic mapSeqUnsized 9999)
       ]
---  , Group "replicateRRBVectorSized"
---      [ Single "1"     (basic replicateRRBVectorSized 0)
---      , Single "100"   (basic replicateRRBVectorSized 99)
---      , Single "1000"  (basic replicateRRBVectorSized 999)
---      , Single "10000" (basic replicateRRBVectorSized 9999)
---      ]
   , Group "replicateRRBVectorUnsized"
       [ Single "1"     (basic replicateRRBVectorUnsized 0)
       , Single "100"   (basic replicateRRBVectorUnsized 99)
@@ -711,12 +694,6 @@ bench = Group "containers"
       , Single "1000"  (basic reverseSeqUnsized 999)
       , Single "10000" (basic reverseSeqUnsized 9999)
       ]
---  , Group "splitAtRRBVectorSized"
---      [ Single "1"     (basic splitAtRRBVectorSized 0)
---      , Single "100"   (basic splitAtRRBVectorSized 99)
---      , Single "1000"  (basic splitAtRRBVectorSized 999)
---      , Single "10000" (basic splitAtRRBVectorSized 9999)
---      ]
   , Group "splitAtRRBVectorUnsized"
       [ Single "1"     (basic splitAtRRBVectorUnsized 0)
       , Single "100"   (basic splitAtRRBVectorUnsized 99)
