@@ -1,5 +1,5 @@
 ||| RRB Vector Internals
-module Data.RRBVector.Internal
+module Data.RRBVector.Unsized.Internal
 
 import Data.Array
 import Data.Array.Core
@@ -298,7 +298,7 @@ log2 x =
 --          RRB Vectors
 --------------------------------------------------------------------------------
 
-||| A relaxed radix balanced vector (RRB-Vector).
+||| A relaxed radix balanced vector (RRBVector).
 ||| It supports fast indexing, iteration, concatenation and splitting.
 public export
 data RRBVector a = Root Nat   -- size
