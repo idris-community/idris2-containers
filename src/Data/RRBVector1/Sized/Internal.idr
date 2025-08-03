@@ -1,5 +1,5 @@
 ||| Linear RRB Vector Internals
-module Data.RRBVector1.Internal
+module Data.RRBVector1.Sized.Internal
 
 import Data.Array.Core
 import Data.Array.Indexed
@@ -318,12 +318,11 @@ log2 x =
 --          Linear RRB Vectors
 --------------------------------------------------------------------------------
 
-||| A linear relaxed radix balanced vector (RRB-Vector).
+||| A linear relaxed radix balanced vector (RRBVector1).
 ||| It supports fast indexing, iteration, concatenation and splitting.
 public export
-data RRBVector1 : (s : Type) -> Type -> Type where
-  Root :  Nat   -- size
-       -> Shift -- shift (blockshift * height)
-       -> Tree1 s a
-       -> RRBVector1 s a
-  Empty : RRBVector1 s a
+data RRBVector1 : (s : Type) -> (n : Nat) -> Type -> Type where
+  Root  :  Shift -- shift (blockshift * height)
+        -> Tree1 s a
+        -> RRBVector1 s n a
+  Empty : RRBVector1 s n a

@@ -1,7 +1,7 @@
 ||| Linear Relaxed Radix Balanced Vectors (RRBVector1)
-module Data.RRBVector1
+module Data.RRBVector1.Unsized
 
-import public Data.RRBVector1.Internal
+import public Data.RRBVector1.Unsized.Internal
 
 import Data.Array.Core
 import Data.Array.Index
@@ -823,11 +823,11 @@ newBranch :  a
           -> Shift
           -> F1 s (Tree1 s a)
 newBranch x 0  t =
-  let x' # t := Data.RRBVector1.Internal.singleton x t
+  let x' # t := Data.RRBVector1.Unsized.Internal.singleton x t
     in (Leaf {lsize=1} (1 ** x')) # t
 newBranch x sh t =
   let branch # t := assert_total $ newBranch x (down sh) t
-      x'     # t := Data.RRBVector1.Internal.singleton' branch t
+      x'     # t := Data.RRBVector1.Unsized.Internal.singleton' branch t
     in (Balanced {bsize=1} (1 ** x')) # t
 
 ||| Create a new tree with shift sh.
@@ -839,7 +839,7 @@ newBranch' tree 0  t =
   (assert_total $ idris_crash "Data.RRBVector1.newBranch': impossible zero shift with a (Tree1 s a).") # t
 newBranch' tree sh t =
   let branch  # t := assert_total $ newBranch' tree (down sh) t
-      tree'   # t := Data.RRBVector1.Internal.singleton' branch t
+      tree'   # t := Data.RRBVector1.Unsized.Internal.singleton' branch t
     in (Balanced {bsize=1} (1 ** tree')) # t
 
 ||| Add an element to the left end of the vector. O(log n)
@@ -1516,7 +1516,7 @@ insertAt :  Nat
          -> RRBVector1 s a
          -> F1 s (RRBVector1 s a)
 insertAt i x v t =
-  let (left, right) # t := Data.RRBVector1.splitAt i v t
+  let (left, right) # t := Data.RRBVector1.Unsized.splitAt i v t
       left'         # t := ((|>) left x) t
     in (><) left' right t
 
@@ -1527,6 +1527,6 @@ deleteAt :  Nat
          -> RRBVector1 s a
          -> F1 s (RRBVector1 s a)
 deleteAt i v t =
-  let (left, right) # t := Data.RRBVector1.splitAt (plus i 1) v t
+  let (left, right) # t := Data.RRBVector1.Unsized.splitAt (plus i 1) v t
       left'         # t := take i left t
     in (><) left' right t
