@@ -28,6 +28,7 @@ modules = Data.BoundedQueue
         , Data.RRBVector.Unsized
         , Data.RRBVector.Sized.Internal
         , Data.RRBVector.Unsized.Internal
+        , Data.RRBVector1.Sized
         , Data.RRBVector1.Unsized
         , Data.RRBVector1.Sized.Internal
         , Data.RRBVector1.Unsized.Internal
