@@ -9,7 +9,8 @@ import NatPSQ
 import OrdPSQ
 import RRBVector.Sized
 import RRBVector.Unsized
-import RRBVector1
+import RRBVector1.Sized
+import RRBVector1.Unsized
 import Seq.Sized
 import Seq.Unsized
 import Set
@@ -26,7 +27,8 @@ main = test
   , OrdPSQ.props
   , RRBVector.Sized.props
   , RRBVector.Unsized.props
-  , RRBVector1.props
+  , RRBVector1.Sized.props
+  , RRBVector1.Unsized.props
   , Seq.Sized.props
   , Seq.Unsized.props
   , Set.props

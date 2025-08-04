@@ -1,10 +1,10 @@
-module RRBVector1
+module RRBVector1.Unsized
 
 import Hedgehog
 import Data.Linear.Ref1
 import Data.Linear.Token
 import Data.List
-import Data.RRBVector1
+import Data.RRBVector1.Unsized
 
 %hide Prelude.toList
 %hide Prelude.Ops.infixl.(|>)
@@ -38,7 +38,7 @@ prop_map_id = property $ do
   vs <- forAll listBits
   ( run1 $ \t =>
       let vs'  # t := fromList vs t
-          vs'' # t := Data.RRBVector1.map id vs' t
+          vs'' # t := Data.RRBVector1.Unsized.map id vs' t
         in toList vs'' t ) === map id vs
 
 prop_from_to_list : Property
@@ -53,19 +53,19 @@ prop_null = property $ do
   vs <- forAll listBits
   ( run1 $ \t =>
       let vs' # t := fromList vs t
-        in Data.RRBVector1.null vs' t ) === null vs
+        in Data.RRBVector1.Unsized.null vs' t ) === null vs
 
 prop_size : Property
 prop_size = property $ do
   vs <- forAll listBits
   ( run1 $ \t =>
       let vs' # t := fromList vs t
-        in Data.RRBVector1.length vs' t ) === length vs
+        in Data.RRBVector1.Unsized.length vs' t ) === length vs
 
 prop_replicate : Property
 prop_replicate = property $ do
   ( run1 $ \t =>
-      let vs' # t := Data.RRBVector1.replicate 5 1 t
+      let vs' # t := Data.RRBVector1.Unsized.replicate 5 1 t
         in toList vs' t ) === replicate 5 1
 
 prop_take : Property
@@ -73,7 +73,7 @@ prop_take = property $ do
   vs <- forAll listBits
   ( run1 $ \t =>
       let vs'  # t := fromList vs t
-          vs'' # t := Data.RRBVector1.take 1 vs' t
+          vs'' # t := Data.RRBVector1.Unsized.take 1 vs' t
         in toList vs'' t ) === take 1 vs
 
 prop_drop : Property
@@ -81,7 +81,7 @@ prop_drop = property $ do
   vs <- forAll listBits
   ( run1 $ \t =>
       let vs'  # t := fromList vs t
-          vs'' # t := Data.RRBVector1.drop ((length vs) `minus` 1) vs' t
+          vs'' # t := Data.RRBVector1.Unsized.drop ((length vs) `minus` 1) vs' t
         in toList vs'' t ) === drop ((length vs) `minus` 1) vs
 
 prop_cons : Property
@@ -89,7 +89,7 @@ prop_cons = property $ do
   vs <- forAll listBits
   ( run1 $ \t =>
       let vs'  # t := fromList vs t
-          vs'' # t := (Data.RRBVector1.(<|)) 1 vs' t
+          vs'' # t := (Data.RRBVector1.Unsized.(<|)) 1 vs' t
         in toList vs'' t ) === 1 :: vs
 
 prop_snoc : Property
@@ -97,7 +97,7 @@ prop_snoc = property $ do
   vs <- forAll listBits
   ( run1 $ \t =>
       let vs'  # t := fromList vs t
-          vs'' # t := Data.RRBVector1.(|>) vs' 1 t
+          vs'' # t := Data.RRBVector1.Unsized.(|>) vs' 1 t
         in toList vs'' t ) === vs ++ [1]
 
 prop_concat : Property
@@ -119,7 +119,7 @@ prop_insertAt = property $ do
     Yes prf =>
       ( run1 $ \t =>
           let vs'  # t := fromList vs t
-              vs'' # t := Data.RRBVector1.insertAt 0 0 vs' t
+              vs'' # t := Data.RRBVector1.Unsized.insertAt 0 0 vs' t
             in toList vs'' t ) === insertAt 0 0 @{prf} vs
 
 prop_deleteAt : Property
@@ -131,12 +131,12 @@ prop_deleteAt = property $ do
     Yes prf =>
       ( run1 $ \t =>
           let vs'  # t := fromList vs t
-              vs'' # t := Data.RRBVector1.deleteAt 0 vs' t
+              vs'' # t := Data.RRBVector1.Unsized.deleteAt 0 vs' t
             in toList vs'' t ) === deleteAt 0 vs @{prf}
 
 export
 props : Group
-props = MkGroup "RRBVector1"
+props = MkGroup "RRBVector1 (Unsized)"
   [ ("prop_eq_refl", prop_eq_refl)
   , ("prop_map_id", prop_map_id)
   , ("prop_from_to_list", prop_from_to_list)
