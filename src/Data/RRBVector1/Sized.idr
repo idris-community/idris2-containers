@@ -1171,14 +1171,16 @@ export
 
 ||| Concatenates two vectors. O(log(max(n1,n2)))
 export
-(><) :  RRBVector1 s a
-     -> RRBVector1 s a
-     -> F1 s (RRBVector1 s a)
-(Empty                >< v)                    t =
-  v # t
-(v                    >< Empty)                t =
-  v # t
-(Root size1 sh1 tree1 >< Root size2 sh2 tree2) t =
+(><) :  {n1 : Nat}
+     -> {n2 : Nat}
+     -> RRBVector1 s n1 a
+     -> RRBVector1 s n2 a
+     -> F1 s (n' ** RRBVector1 s n' a)
+(Empty          >< v)              t =
+  (n2 ** v) # t
+(v              >< Empty)          t =
+  (n1 ** v) # t
+(Root sh1 tree1 >< Root sh2 tree2) t =
   let upmaxshift := case compare sh1 sh2 of
                       LT =>
                         up sh2
@@ -1188,8 +1190,9 @@ export
                         up sh1
       (_ ** arr) # t := mergeTrees tree1 sh1 tree2 sh2 t
       arr'       # t := computeSizes upmaxshift arr t
-      arr''          := Root (plus size1 size2) upmaxshift arr'
-    in normalize arr'' t
+      arr''          := Root upmaxshift arr'
+      arr'''     # t := normalize arr'' t
+    in ((plus n1 n2) ** arr''') #  t
   where
     viewlArr :  {n : Nat}
              -> MArray s n (Tree1 s a)
@@ -1530,22 +1533,24 @@ export
 ||| If the index is negative, add the element to the left end of the vector.
 ||| If the index is bigger than or equal to the length of the vector, add the element to the right end of the vector. O(log n)
 export
-insertAt :  Nat
+insertAt :  {n : Nat}
+         -> Nat
          -> a
-         -> RRBVector1 s a
-         -> F1 s (RRBVector1 s a)
+         -> RRBVector1 s n a
+         -> F1 s (n' ** RRBVector1 s n' a)
 insertAt i x v t =
-  let (left, right) # t := Data.RRBVector1.Unsized.splitAt i v t
-      left'         # t := ((|>) left x) t
+  let ((tt ** left), (dt ** right)) # t := Data.RRBVector1.Sized.splitAt i v t
+      (l  ** left')                 # t := ((|>) left x) t
     in (><) left' right t
 
 ||| Delete the element at the given index.
 ||| If the index is out of range, return the original vector. O(log n)
 export
-deleteAt :  Nat
-         -> RRBVector1 s a
-         -> F1 s (RRBVector1 s a)
+deleteAt :  {n : Nat}
+         -> Nat
+         -> RRBVector1 s n a
+         -> F1 s (n' ** RRBVector1 s n' a)
 deleteAt i v t =
-  let (left, right) # t := Data.RRBVector1.Unsized.splitAt (plus i 1) v t
-      left'         # t := take i left t
+  let ((tt ** left), (dt ** right)) # t := Data.RRBVector1.Sized.splitAt (plus i 1) v t
+      (l' ** left')                 # t := take i left t
     in (><) left' right t
