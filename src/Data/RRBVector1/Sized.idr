@@ -675,7 +675,7 @@ splitAt i v@(Root sh tree) t =
     GT =>
       case compare i n of
         LT =>
-          let (dt ** right) # t := drop i v t 
+          let (dt ** right) # t := drop i v t
               (tt ** left)  # t := take i v t
             in ((tt ** left), (dt ** right)) # t
         EQ =>
