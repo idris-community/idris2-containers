@@ -6,9 +6,12 @@ import Data.List
 import Data.Map as M
 import Data.RRBVector.Sized as VS
 import Data.RRBVector.Unsized as VU
-import Data.RRBVector.Sized.Internal
-import Data.RRBVector.Unsized.Internal
-import Data.RRBVector1.Internal
+import Data.RRBVector1.Sized as VS1
+import Data.RRBVector1.Unsized as VU1
+import Data.RRBVector.Sized.Internal as VUI
+import Data.RRBVector.Unsized.Internal as VSI
+import Data.RRBVector1.Sized.Internal as VS1I
+import Data.RRBVector1.Unsized.Internal as VU1I
 import Data.SortedMap as SM
 import Data.Set as S
 import Data.Seq.Sized as SS
@@ -35,6 +38,11 @@ createRRBVectorSized xs = VS.fromList xs
 
 createRRBVectorUnsized : Nat -> RRBVector Nat
 createRRBVectorUnsized n = VU.fromList [0..n]
+
+createRRBVector1Sized : (n : Nat) -> VS1I.RRBVector1 (Prelude.List.length [0..n]) Nat
+createRRBVector1Sized n =
+  run1 $ \t =>
+    VS1.fromList [0..n] t
 
 createSeqSized : (xs : List Nat) -> Seq (length xs) Nat
 createSeqSized xs = SS.fromList xs
