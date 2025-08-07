@@ -6,9 +6,12 @@ import Data.List
 import Data.Map as M
 import Data.RRBVector.Sized as VS
 import Data.RRBVector.Unsized as VU
-import Data.RRBVector.Sized.Internal
-import Data.RRBVector.Unsized.Internal
-import Data.RRBVector1.Internal
+import Data.RRBVector1.Sized as VS1
+import Data.RRBVector1.Unsized as VU1
+import Data.RRBVector.Sized.Internal as VUI
+import Data.RRBVector.Unsized.Internal as VSI
+import Data.RRBVector1.Sized.Internal as VS1I
+import Data.RRBVector1.Unsized.Internal as VU1I
 import Data.SortedMap as SM
 import Data.Set as S
 import Data.Seq.Sized as SS
@@ -35,6 +38,16 @@ createRRBVectorSized xs = VS.fromList xs
 
 createRRBVectorUnsized : Nat -> RRBVector Nat
 createRRBVectorUnsized n = VU.fromList [0..n]
+
+createRRBVector1Sized : (n : Nat) -> IO ()
+createRRBVector1Sized n =
+  ignore $ runIO $ \t =>
+    VS1.fromList [0..n] t
+
+createRRBVector1Unsized : (n : Nat) -> IO ()
+createRRBVector1Unsized n =
+  ignore $ runIO $ \t =>
+    VU1.fromList [0..n] t
 
 createSeqSized : (xs : List Nat) -> Seq (length xs) Nat
 createSeqSized xs = SS.fromList xs
@@ -353,6 +366,36 @@ consRRBVectorUnsized n = do
       v = 18 <| v
   19 <| v
 
+consRRBVector1Sized : (n : Nat) -> IO ()
+consRRBVector1Sized n =
+  ignore $ runIO $ \t =>
+    let vs         # t := VS1.fromList [0..n] t
+        (_ ** vs') # t := VS1.(<|) 10 vs t
+        (_ ** vs') # t := VS1.(<|) 11 vs' t
+        (_ ** vs') # t := VS1.(<|) 12 vs' t
+        (_ ** vs') # t := VS1.(<|) 13 vs' t
+        (_ ** vs') # t := VS1.(<|) 14 vs' t
+        (_ ** vs') # t := VS1.(<|) 15 vs' t
+        (_ ** vs') # t := VS1.(<|) 16 vs' t
+        (_ ** vs') # t := VS1.(<|) 17 vs' t
+        (_ ** vs') # t := VS1.(<|) 18 vs' t
+      in VS1.(<|) 19 vs' t
+
+consRRBVector1Unsized : (n : Nat) -> IO ()
+consRRBVector1Unsized n =
+  ignore $ runIO $ \t =>
+    let vs  # t := VU1.fromList [0..n] t
+        vs' # t := VU1.(<|) 10 vs t
+        vs' # t := VU1.(<|) 11 vs' t
+        vs' # t := VU1.(<|) 12 vs' t
+        vs' # t := VU1.(<|) 13 vs' t
+        vs' # t := VU1.(<|) 14 vs' t
+        vs' # t := VU1.(<|) 15 vs' t
+        vs' # t := VU1.(<|) 16 vs' t
+        vs' # t := VU1.(<|) 17 vs' t
+        vs' # t := VU1.(<|) 18 vs' t
+      in VU1.(<|) 19 vs' t
+
 consSeqSized : (xs : List Nat) -> Seq (S (S (S (S (S (S (S (S (S (S (length xs))))))))))) Nat
 consSeqSized xs = do
   let s = SS.fromList xs
@@ -410,6 +453,36 @@ snocRRBVectorUnsized n = do
       v = v |> 18
   v |> 19
 
+snocRRBVector1Sized : (n : Nat) -> IO ()
+snocRRBVector1Sized n =
+  ignore $ runIO $ \t =>
+    let vs         # t := VS1.fromList [0..n] t
+        (_ ** vs') # t := VS1.(|>) vs 10 t
+        (_ ** vs') # t := VS1.(|>) vs' 11 t
+        (_ ** vs') # t := VS1.(|>) vs' 12 t
+        (_ ** vs') # t := VS1.(|>) vs' 13 t
+        (_ ** vs') # t := VS1.(|>) vs' 14 t
+        (_ ** vs') # t := VS1.(|>) vs' 15 t
+        (_ ** vs') # t := VS1.(|>) vs' 16 t
+        (_ ** vs') # t := VS1.(|>) vs' 17 t
+        (_ ** vs') # t := VS1.(|>) vs' 18 t
+      in VS1.(|>) vs' 19 t
+
+snocRRBVector1Unsized : (n : Nat) -> IO ()
+snocRRBVector1Unsized n =
+  ignore $ runIO $ \t =>
+    let vs  # t := VU1.fromList [0..n] t
+        vs' # t := VU1.(|>) vs 10 t
+        vs' # t := VU1.(|>) vs' 11 t
+        vs' # t := VU1.(|>) vs' 12 t
+        vs' # t := VU1.(|>) vs' 13 t
+        vs' # t := VU1.(|>) vs' 14 t
+        vs' # t := VU1.(|>) vs' 15 t
+        vs' # t := VU1.(|>) vs' 16 t
+        vs' # t := VU1.(|>) vs' 17 t
+        vs' # t := VU1.(|>) vs' 18 t
+      in VU1.(|>) vs' 19 t
+
 snocSeqSized : (n : Nat) -> Seq (S (S (S (S (S (S (S (S (S (S (length [0..n]))))))))))) Nat
 snocSeqSized n = do
   let s = SS.fromList [0..n]
@@ -449,6 +522,18 @@ appendRRBVectorUnsized n = do
   let v = VU.fromList [0..n]
   v >< v
 
+appendRRBVector1Sized : Nat -> IO ()
+appendRRBVector1Sized n =
+  ignore $ runIO $ \t =>
+    let v # t := VS1.fromList [0..n] t
+      in VS1.(><) v v t
+
+appendRRBVector1Unsized : Nat -> IO ()
+appendRRBVector1Unsized n =
+  ignore $ runIO $ \t =>
+    let v # t := VU1.fromList [0..n] t
+      in VU1.(><) v v t
+
 appendSeqSized : (xs : List Nat) -> Seq (length xs + length xs) Nat
 appendSeqSized xs = do
   let s = SS.fromList xs
@@ -486,6 +571,18 @@ mapRRBVectorUnsized : Nat -> RRBVector Nat
 mapRRBVectorUnsized n = do
   let v = VU.fromList [0..n]
   map (\x => plus x 1) v
+
+mapRRBVector1Sized : Nat -> IO ()
+mapRRBVector1Sized n =
+  ignore $ runIO $ \t =>
+    let v # t := VS1.fromList [0..n] t
+      in VS1.map id v t
+
+mapRRBVector1Unsized : Nat -> IO ()
+mapRRBVector1Unsized n =
+  ignore $ runIO $ \t =>
+    let v # t := VU1.fromList [0..n] t
+      in VU1.map id v t
 
 mapSeqSized : (xs : List Nat) -> Seq (length xs) Nat
 mapSeqSized xs = do
@@ -659,6 +756,16 @@ bench = Group "containers"
       , Single "100"  (basic createRRBVectorUnsized 99)
       , Single "1000" (basic createRRBVectorUnsized 999)
       ]
+  , Group "fromListRRBVector1Sized"
+      [ Single "1"    (basic createRRBVector1Sized 0)
+      , Single "100"  (basic createRRBVector1Sized 100)
+      , Single "1000" (basic createRRBVector1Sized 1000)
+      ]
+  , Group "fromListRRBVector1Unsized"
+      [ Single "1"    (basic createRRBVector1Unsized 0)
+      , Single "100"  (basic createRRBVector1Unsized 100)
+      , Single "1000" (basic createRRBVector1Unsized 1000)
+      ]
   , Group "fromListSeqUnsized"
       [ Single "1"    (basic createSeqUnsized 0)
       , Single "100"  (basic createSeqUnsized 99)
@@ -670,6 +777,12 @@ bench = Group "containers"
   , Group "consRRBVectorUnsized"
       [ Single "10" (basic consRRBVectorUnsized 9)
       ]
+  , Group "consRRBVector1Sized"
+      [ Single "10" (basic consRRBVector1Sized 9)
+      ]
+  , Group "consRRBVector1Unsized"
+      [ Single "10" (basic consRRBVector1Unsized 9)
+      ]
   , Group "consSeqUnsized"
       [ Single "10" (basic consSeqUnsized 9)
       ]
@@ -679,6 +792,12 @@ bench = Group "containers"
   , Group "snocRRBVectorUnsized"
       [ Single "10" (basic snocRRBVectorUnsized 9)
       ]
+  , Group "snocRRBVector1Sized"
+      [ Single "10" (basic snocRRBVector1Sized 9)
+      ]
+  , Group "snocRRBVector1Unsized"
+      [ Single "10" (basic snocRRBVector1Unsized 9)
+      ]
   , Group "snocSeqUnsized"
       [ Single "10" (basic snocSeqUnsized 9)
       ]
@@ -687,6 +806,12 @@ bench = Group "containers"
       ]
   , Group "appendRRBVectorUnsized"
       [ Single "10" (basic appendRRBVectorUnsized 9)
+      ]
+  , Group "appendRRBVector1Sized"
+      [ Single "10" (basic appendRRBVector1Sized 9)
+      ]
+  , Group "appendRRBVector1Unsized"
+      [ Single "10" (basic appendRRBVector1Unsized 9)
       ]
   , Group "appendSeqUnsized"
       [ Single "10" (basic appendSeqUnsized 9)
@@ -714,6 +839,18 @@ bench = Group "containers"
       , Single "100"   (basic mapRRBVectorUnsized 99)
       , Single "1000"  (basic mapRRBVectorUnsized 999)
       , Single "10000" (basic mapRRBVectorUnsized 9999)
+      ]
+  , Group "mapRRBVector1Sized"
+      [ Single "1"     (basic mapRRBVector1Sized 0)
+      , Single "100"   (basic mapRRBVector1Sized 99)
+      , Single "1000"  (basic mapRRBVector1Sized 999)
+      , Single "10000" (basic mapRRBVector1Sized 9999)
+      ]
+  , Group "mapRRBVector1Sized"
+      [ Single "1"     (basic mapRRBVector1Unsized 0)
+      , Single "100"   (basic mapRRBVector1Unsized 99)
+      , Single "1000"  (basic mapRRBVector1Unsized 999)
+      , Single "10000" (basic mapRRBVector1Unsized 9999)
       ]
   , Group "mapSeqUnsized"
       [ Single "1"     (basic mapSeqUnsized 0)
