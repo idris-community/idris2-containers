@@ -39,7 +39,7 @@ createRRBVectorSized xs = VS.fromList xs
 createRRBVectorUnsized : Nat -> RRBVector Nat
 createRRBVectorUnsized n = VU.fromList [0..n]
 
-createRRBVector1Sized : (n : Nat) -> IO () 
+createRRBVector1Sized : (n : Nat) -> IO ()
 createRRBVector1Sized n =
   ignore $ runIO $ \t =>
     VS1.fromList [0..n] t
