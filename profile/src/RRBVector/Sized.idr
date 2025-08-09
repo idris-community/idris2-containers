@@ -1,4 +1,4 @@
-module RRBVector.Sized 
+module RRBVector.Sized
 
 import Data.RRBVector.Sized as VS
 import Data.RRBVector.Sized.Internal as VUI
