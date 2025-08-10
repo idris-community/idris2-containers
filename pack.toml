@@ -2,6 +2,7 @@
 type   = "local"
 path   = "."
 ipkg   = "containers.ipkg"
+test   = "test/test.ipkg"
 
 [custom.all.ref1]
 type   = "git"
