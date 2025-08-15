@@ -9,7 +9,8 @@ depends    = base         >= 0.6.0
            , elab-util
            , hashable
            , ref1
-modules    = Data.BoundedQueue
+modules    = Data.BoundedQueue.Sized
+           , Data.BoundedQueue.Unsized
            , Data.FVect
            , Data.FVect.Capacity
            , Data.HashPSQ

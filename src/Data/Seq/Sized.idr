@@ -153,7 +153,7 @@ fromList xs =
 
 ||| Turn a sequence into a vector. O(n)
 export
-toVect :  {n :Nat}
+toVect :  {n : Nat}
        -> Seq n a
        -> Vect n a
 toVect _  {n = 0}   =
