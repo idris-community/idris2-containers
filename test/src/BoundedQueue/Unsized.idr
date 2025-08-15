@@ -1,8 +1,8 @@
-module BoundedQueue
+module BoundedQueue.Unsized
 
 import Hedgehog
 import Data.List
-import Data.BoundedQueue
+import Data.BoundedQueue.Unsized
 
 %hide Prelude.Interfaces.toList
 %hide Prelude.Ops.infixl.(|>)
@@ -43,7 +43,7 @@ prop_from_to_list = property $ do
 prop_null : Property
 prop_null = property $ do
   vs <- forAll boundedqueueBits
-  null vs === null (Data.BoundedQueue.toList vs)
+  null vs === null (Data.BoundedQueue.Unsized.toList vs)
 
 prop_size : Property
 prop_size = property $ do
@@ -62,7 +62,7 @@ prop_prepend = property $ do
 
 export
 props : Group
-props = MkGroup "BoundedQueue"
+props = MkGroup "BoundedQueue (Unsized)"
   [ ("prop_eq_refl", prop_eq_refl)
   , ("prop_map_id", prop_map_id)
   , ("prop_from_to_list", prop_from_to_list)
