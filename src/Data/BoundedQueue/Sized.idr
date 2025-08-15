@@ -174,3 +174,7 @@ export
 Functor (BoundedQueue m n) where
   map f (MkBoundedQueue queue) =
     MkBoundedQueue (map f queue)
+
+export
+Show a => Show (BoundedQueue m n a) where
+  show (MkBoundedQueue queue) = show queue

@@ -5,8 +5,6 @@ import Data.List
 import Data.BoundedQueue.Unsized
 
 %hide Prelude.Interfaces.toList
-%hide Prelude.Ops.infixl.(|>)
-%hide Prelude.Ops.infixr.(<|)
 %hide Prelude.Stream.(::)
 
 boundedqueueOf : Gen a -> Gen (BoundedQueue a)
