@@ -17,6 +17,8 @@ data BoundedQueue : (a : Type) -> Type where
                  -> Nat   -- size
                  -> BoundedQueue a
 
+%runElab derive "BoundedQueue" [Show,Eq,Ord]
+
 ||| The empty `BoundedQueue`. O(1)
 export
 empty :  Nat
@@ -181,8 +183,6 @@ length (MkBoundedQueue _ _ queuesize) =
 --------------------------------------------------------------------------------
 --          Interfaces
 --------------------------------------------------------------------------------
-
-%runElab derive "BoundedQueue" [Show,Eq]
 
 export
 Semigroup (BoundedQueue a) where
