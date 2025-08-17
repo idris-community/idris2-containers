@@ -11,6 +11,8 @@ depends    = base         >= 0.6.0
            , ref1
 modules    = Data.BoundedQueue.Sized
            , Data.BoundedQueue.Unsized
+           , Data.BoundedQueue.Sized.Internal
+           , Data.BoundedQueue.Unsized.Internal
            , Data.FVect
            , Data.FVect.Capacity
            , Data.HashPSQ

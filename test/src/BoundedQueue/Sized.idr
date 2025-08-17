@@ -3,6 +3,7 @@ module BoundedQueue.Sized
 import Hedgehog
 import Data.List
 import Data.BoundedQueue.Sized
+import Data.BoundedQueue.Sized.Internal
 
 %hide Prelude.Interfaces.toList
 %hide Prelude.Stream.(::)
