@@ -1,6 +1,8 @@
 ||| Bounded Queues
 module Data.BoundedQueue.Sized
 
+import Data.BoundedQueue.Sized.Internal
+
 import Data.Seq.Sized
 import Derive.Prelude
 
@@ -10,15 +12,6 @@ import Derive.Prelude
 %language ElabReflection
 
 %default total
-
-||| An immutable, bounded first-in first-out structure which keeps
-||| track of its size, with amortized O(1) enqueue and dequeue operations.
-||| The `m` argument tracks the `BoundedQueue`s limit,
-||| and the `n` argument tracks the `BoundedQueue`s size.
-export
-data BoundedQueue : (m : Nat) -> (n : Nat) -> (a : Type) -> Type where
-  MkBoundedQueue :  Seq n a -- queue
-                 -> BoundedQueue m n a
 
 ||| The empty `BoundedQueue`. O(1)
 export
