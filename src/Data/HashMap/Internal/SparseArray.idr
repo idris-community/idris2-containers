@@ -13,6 +13,16 @@ import Data.String
 import Derive.Prelude
 import Syntax.T1 as T1
 
+%hide Data.List.drop
+%hide Data.List.take
+%hide Data.List.Quantifiers.All.drop
+%hide Data.List.Quantifiers.All.take
+%hide Data.Vect.drop
+%hide Data.Vect.take
+%hide Data.Vect.Quantifiers.All.drop
+%hide Data.Vect.Stream.take
+%hide Prelude.take
+
 %default total
 %language ElabReflection
 
@@ -41,24 +51,24 @@ bits32SortNub :  List (Bits32, a)
 bits32SortNub []            acc =
   acc
 bits32SortNub lst@(x :: xs) acc =
-  let (lt, gt) = seperate (fst x) xs [] []
+  let (lt, gt) = separate (fst x) xs [] []
     in bits32SortNub (assert_smaller lst lt) $ x :: bits32SortNub (assert_smaller lst gt) acc
   where
-    seperate :  Bits32
+    separate :  Bits32
              -> List (Bits32, a)
              -> (lt : List (Bits32, a))
              -> (gt : List (Bits32, a))
              -> (List (Bits32, a), List (Bits32, a))
-    seperate x []        lt gt =
+    separate x []        lt gt =
       (lt, gt)
-    seperate x (y :: xs) lt gt =
+    separate x (y :: xs) lt gt =
       case compare (fst y) x of
         LT =>
-          seperate x xs (y :: lt) gt
+          separate x xs (y :: lt) gt
         EQ =>
-          seperate x xs lt gt
+          separate x xs lt gt
         GT =>
-          seperate x xs lt (y :: gt)
+          separate x xs lt (y :: gt)
 
 --------------------------------------------------------------------------------
 --          Creating SparseArrays
@@ -91,15 +101,15 @@ fromList :  List (Bits32, a)
 fromList xs =
   let xs     = bits32SortNub xs []
       bitmap = foldl (\acc, (idx, _) =>
-                        let idx' = cast {to=Nat} idx
-                          in case tryNatToFin idx' of
+                        let idx'  = cast {to=Bits64} idx
+                            idx'' = cast {to=Nat} idx'
+                          in case tryNatToFin idx'' of
                                Nothing   =>
                                  assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.fromList: couldn't convert Nat to Fin"
-                               Just idx' =>
-                                 setBit acc idx'
-                     ) 0 xs
+                               Just idx''' =>
+                                 setBit acc idx''') (the Bits32 0) xs
       arr    = fromList (map snd xs)
-    in MkSparseArray bitmap
+    in MkSparseArray (cast {to=Bits64} bitmap)
                      arr
 
 ||| An array with two elements.
@@ -229,9 +239,9 @@ set sparseidx val arr@(MkSparseArray bitmap array) =
              Just sparseidx''' =>
                let bitmap'      = setBit bitmap sparseidx'''
                    arridx       = findIndex sparseidx bitmap
-                   preidxarray  = take arridx array.arr
+                   preidxarray  = Data.Array.take (cast {to=Nat} arridx) array
                    atidxarray   = fill 1 val
-                   postidxarray = drop (arridx `plus` 1) array.arr
+                   postidxarray = Data.Array.drop ((cast {to=Nat} arridx) `plus` 1) array
                    array'       = preidxarray <+> atidxarray <+> postidxarray
                  in MkSparseArray bitmap'
                                   array'
@@ -250,13 +260,19 @@ delete :  (idx : Bits32)
 delete idx arr@(MkSparseArray bitmap array) =
   case hasEntry idx arr of
     True  =>
-      let arridx       = findIndex idx bitmap
-          bitmap'      = clearBit bitmap idx
-          preidxarray  = take arridx array.arr
-          postidxarray = drop (arridx `plus` 1) array.arr
-          array'       = preidxarray <+> postidxarray
-        in MkSparseArray bitmap'
-                         array'
+      let idx'  = cast {to=Bits64} idx
+          idx'' = cast {to=Nat} idx'
+        in case tryNatToFin idx'' of
+             Nothing     =>
+               assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.delete: couldn't convert Nat to Fin"
+             Just idx''' =>
+               let arridx       = findIndex idx bitmap
+                   bitmap'      = clearBit bitmap idx'''
+                   preidxarray  = Data.Array.take (cast {to=Nat} arridx) array
+                   postidxarray = Data.Array.drop ((cast {to=Nat} arridx) `plus` 1) array
+                   array'       = preidxarray <+> postidxarray
+                 in MkSparseArray bitmap'
+                                  array'
     False => 
       arr
 
