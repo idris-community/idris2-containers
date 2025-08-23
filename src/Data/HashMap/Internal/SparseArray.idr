@@ -297,3 +297,40 @@ indices :  SparseArray a
         -> List Bits32
 indices arr =
   filter (\idx => hasEntry idx arr) [0..63]
+
+--------------------------------------------------------------------------------
+--          Interfaces
+--------------------------------------------------------------------------------
+
+export
+Functor SparseArray where
+  map f (MkSparseArray bitmap array) = MkSparseArray bitmap (map f array) 
+
+export
+Foldable SparseArray where
+    foldr f z (MkSparseArray _ array) = foldr f z array.arr
+    foldl f z (MkSparseArray _ array) = foldl f z array.arr
+    null (MkSparseArray bitmap _)     = bitmap == 0
+    toList (MkSparseArray _ array)    = toList array.arr
+    foldMap f (MkSparseArray _ array) = foldMap f array.arr
+
+export
+Show a => Show (SparseArray a) where
+    show (MkSparseArray _ array) = "[" ++ fastConcat (intersperse ", " (map show (toList array.arr))) ++ "]"
+
+export
+Eq a => Eq (SparseArray a) where
+  x == y = length x == length y &&
+  all (\idx => index idx x == index idx y)
+      (indices x)
+
+--------------------------------------------------------------------------------
+--          Creating Lists from SparseArrays
+--------------------------------------------------------------------------------
+
+export
+toList :  SparseArray a
+       -> List (Bits32, a)
+toList arr =
+  zip (indices arr)
+      (toList arr)

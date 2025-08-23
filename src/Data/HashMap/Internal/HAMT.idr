@@ -111,53 +111,72 @@ lookupEntry :  {0 key : Type}
             -> {0 val : key -> Type}
             -> (k : key)
             -> (idx : Bits32)
-            -> List (k ** val k)
             -> (keyeq : (x : key) -> (y : key) -> Bool)
+            -> List (k ** val k)
             -> Maybe (Bits32, (k ** val k))
-lookupEntry k idx []                    _     =
+lookupEntry k idx _     []                    =
   Nothing
-lookupEntry k idx ((k' ** entry) :: xs) keyeq =
+lookupEntry k idx keyeq ((k' ** entry) :: xs) =
   case keyeq k k' of
     True  =>
       Just (idx, (k' ** entry))
     False =>
       lookupEntry k
                   (idx + 1)
-                  xs
                   keyeq
+                  xs
 
-{-
 ||| Lookup a value in a HAMT based on a key, hash and depth.
 export
-lookupWithHash : (k : key)
+lookupWithHash :  (k : key)
                -> (hash : Bits64)
                -> (depth : Bits64)
+               -> (keyeq : (x : key) -> (y : key) -> Bool)
                -> HAMT key val
                -> Maybe (k ** val k)
-lookupWithHash k0 hash0 depth (Leaf hash1 k1 val) =
+lookupWithHash k0 hash0 depth keyeq (Leaf hash1 k1 val)   =
   case hash0 == hash1 of
     True  =>
-      case keyEq 
-    False =>  
-
-if hash0 == hash1
-        then if keyEq k0 k1
-            then Just (k1 ** val)
-            else Nothing
-        else Nothing
-    lookupWithHash k0 hash0 depth (Node arr) =
-        let idx = getIndex depth hash0
-         in index idx arr >>=
-            lookupWithHash k0 hash0 (assert_smaller depth $ depth + 1)
-    lookupWithHash k0 hash0 depth (Collision hash1 arr) = if hash0 == hash1
-        then
-            let arrL = toList arr
-             in snd <$> lookupEntry k0 0 arrL
-        else Nothing
--}
+      case keyeq k0 k1 of
+        True  =>
+          Just (k1 ** val)
+        False =>
+          Nothing
+    False =>
+      Nothing
+lookupWithHash k0 hash0 depth keyeq (Node arr)            =
+  let idx  = getIndex depth hash0
+      idx' = index idx arr
+    in case idx' of
+         Nothing    =>
+           Nothing
+         Just idx'' =>
+           lookupWithHash k0
+                          hash0
+                          (assert_smaller depth $ depth + 1)
+                          keyeq
+                          idx''
+lookupWithHash k0 hash0 depth keyeq (Collision hash1 arr) =
+  case hash0 == hash1 of
+    True  =>
+      let arrl  = toList arr
+          arrl' = lookupEntry k0
+                              0
+                              keyeq
+                              arrl
+        in snd <$> arrl'
+    False =>
+      Nothing
 
 ||| Lookup a value in a HAMT based on a key.
 lookup :  Hashable key
        => (k : key)
        -> HAMT key val
+       -> (keyeq : (x : key) -> (y : key) -> Bool)
        -> Maybe (k ** val k)
+lookup k hamt keyeq =
+  lookupWithHash k
+                 (hash k)
+                 0
+                 keyeq
+                 hamt
