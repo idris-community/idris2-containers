@@ -65,7 +65,7 @@ getMask depth =
   let basemask        = 0b111111
       depthchunksize  = depth * chunksize
       depthchunksize' = cast {to=Nat} depthchunksize
-    in case tryNatToFin depthchunksize' of 
+    in case tryNatToFin depthchunksize' of
          Nothing               =>
            assert_total $ idris_crash "Data.HashMap.Internal.HAMT.getMask: couldn't convert Nat to Fin"
          Just depthchunksize'' =>
@@ -222,7 +222,7 @@ node2 hamt0 hash0 hamt1 hash1 depth =
 ||| replacing existing entries on key equality,
 ||| or creating a collision node when distinct keys share a hash.
 export
-insertWithHash :  (keyEq : (x : key) -> (y : key) -> Bool) 
+insertWithHash :  (keyEq : (x : key) -> (y : key) -> Bool)
                -> (k : key)
                -> val k
                -> (hash : Bits64)
@@ -242,7 +242,7 @@ insertWithHash keyEq k0 val0 hash0 depth hamt@(Leaf hash1 k1 val1)    =
         True  =>
           Leaf hash0
                k0
-               val0 
+               val0
         False =>
           Collision hash0
                     (fromList [(k0 ** val0), (k1 ** val1)])
@@ -330,7 +330,7 @@ deleteWithHash keyEq k hash depth hamt0@(Node array)        =
              let hamt1' = deleteWithHash keyEq
                                          k
                                          hash
-                                         (depth + 1) 
+                                         (depth + 1)
                                          (assert_smaller hamt0 hamt1)
                in case hamt1' of
                     Just hamt2 =>
@@ -381,7 +381,7 @@ deleteWithHash keyEq k h0   depth hamt@(Collision h1 array) =
                       _ =>
                         Just ( Collision h1 array'
                              )
-    False =>    
+    False =>
       Just hamt
 
 ||| Removes a key from the HAMT

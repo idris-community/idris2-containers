@@ -4,7 +4,7 @@ import Data.HashMap.Internal.HAMT
 
 import public Data.Hashable
 
-||| A high-level hash map type implemented using a HAMT (Hash Array Mapped Trie).  
+||| A high-level hash map type implemented using a HAMT (Hash Array Mapped Trie).
 ||| `Empty` represents an empty map.
 ||| `Trie` wraps a HAMT containing the key–value pairs.
 export

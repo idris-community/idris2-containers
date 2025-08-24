@@ -194,7 +194,7 @@ export
 index :  (idx : Bits32)
       -> (arr : SparseArray a)
       -> Maybe a
-index idx sa@(MkSparseArray bitmap array) = 
+index idx sa@(MkSparseArray bitmap array) =
   case hasEntry idx sa of
     True  =>
       let arridx  = findIndex idx bitmap
@@ -273,7 +273,7 @@ delete idx arr@(MkSparseArray bitmap array) =
                    array'       = preidxarray <+> postidxarray
                  in MkSparseArray bitmap'
                                   array'
-    False => 
+    False =>
       arr
 
 --------------------------------------------------------------------------------
@@ -291,7 +291,7 @@ length (MkSparseArray bitmap _) =
 --          Indices
 --------------------------------------------------------------------------------
 
-||| Return the list of all indices that have entries set in the array. 
+||| Return the list of all indices that have entries set in the array.
 export
 indices :  SparseArray a
         -> List Bits32
@@ -304,7 +304,7 @@ indices arr =
 
 export
 Functor SparseArray where
-  map f (MkSparseArray bitmap array) = MkSparseArray bitmap (map f array) 
+  map f (MkSparseArray bitmap array) = MkSparseArray bitmap (map f array)
 
 export
 Foldable SparseArray where
