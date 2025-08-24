@@ -214,26 +214,34 @@ insertWithHash k0 val0 hash0 depth keyeq hamt@(Leaf hash1 k1 val1)  =
     False =>
       case keyeq k0 k1 of
         True  =>
-          Leaf hash0 k0 k1
+          Leaf hash0 k0 val0 
         False =>
           Collision hash0 (fromList [(k0 ** val0), (k1 ** val1)])
 insertWithHash k val hash0 depth keyeq   (Node array)               =
   let idx = getIndex depth hash0
     in case index idx array of
          Just hamt =>
-           Node $ set idx
-                  (insertWithHash k val hash0 (assert_smaller depth $ depth + 1) hamt)
-                  array
-        Nothing =>
-          Node $ set idx (singletonWithHash hash0 k val) array
-insertWithHash k val hash0 depth _       hamt@(Collision hash1 array) =
+           Node $
+             set idx
+                 (insertWithHash k val hash0 (assert_smaller depth $ depth + 1) keyeq hamt)
+                 array
+         Nothing =>
+           Node $ set idx (singletonWithHash hash0 k val) array
+insertWithHash k val hash0 depth keyeq   hamt@(Collision hash1 array) =
   case hash0 == hash1 of
     True  =>
-      case lookupEntry k 0 (toList array) of
+      case lookupEntry k 0 keyeq (toList array) of
         Just (idx, _) =>
-          Collision hash1 (update array [idx, (k ** val)])
+          let idx' = cast {to=Nat} idx
+            in case tryNatToFin idx' of
+                 Nothing    =>
+                   assert_total $ idris_crash "Data.HashMap.Internal.HAMT.insertWithHash: couldn't convert Nat to Fin"
+                 Just idx'' =>
+                   let array' = setAt idx'' (k ** val) array.arr
+                     in Collision hash1 (A array.size array')
         Nothing       =>
-          Collision hash1 (append (k ** val) array)
+          let array' = append array.arr (fill 1 (k ** val))
+            in Collision hash1 (A (array.size `plus` 1) array')
     False =>
       node2 (singletonWithHash hash0 k val) hash0 hamt hash1 depth
 
