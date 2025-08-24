@@ -55,7 +55,8 @@ chunksize = 6
 maxdepth : Bits64
 maxdepth = 10
 
-||| Get the mask based on the depth.
+||| Computes a bitmask for the current depth in the HAMT,
+||| shifting a base mask by `depth * chunksize`.
 getMask :  (depth : Bits64)
         -> Bits64
 getMask depth =
@@ -68,7 +69,8 @@ getMask depth =
          Just depthchunksize'' =>
            basemask `shiftL` depthchunksize''
 
-||| Get the index based on the depth and hash.
+||| Computes the index for a given hash
+||| at the specified depth by masking and shifting the hash.
 export
 getIndex :  (depth : Bits64)
          -> (hash : Bits64)
@@ -87,14 +89,16 @@ getIndex depth hash =
 --          Creating HAMTs
 --------------------------------------------------------------------------------
 
-||| An HAMT with a single element. 
+||| An HAMT with a single element via a precomputed hash.
 export
 singletonWithHash :  (hash : Bits64)
                   -> (k : key)
                   -> (v : val k)
                   -> HAMT key val
 singletonWithHash hash k v =
-  Leaf hash k v
+  Leaf hash
+       k
+       v
 
 ||| An HAMT with a single element.
 export
@@ -103,13 +107,16 @@ singleton :  Hashable key
           -> (v : val k)
           -> HAMT key val
 singleton k v =
-  singletonWithHash (hash k) k v
+  singletonWithHash (hash k)
+                    k
+                    v
 
 --------------------------------------------------------------------------------
 --          Lookups
 --------------------------------------------------------------------------------
 
-||| Lookup a value in a list based on a key, index and a key equality function.
+||| Searches a list of key–value pairs for the given key.
+||| Returns the index and entry if found.
 lookupEntry :  {0 key : Type}
             -> {0 val : key -> Type}
             -> (k : key)
@@ -129,7 +136,8 @@ lookupEntry k idx keyeq ((k' ** entry) :: xs) =
                   keyeq
                   xs
 
-||| Lookup a value in a HAMT based on a key, hash and depth.
+||| Looks up a key in the HAMT using a precomputed hash.
+||| Returns the key–value pair if found.
 export
 lookupWithHash :  (k : key)
                -> (hash : Bits64)
@@ -171,7 +179,7 @@ lookupWithHash k0 hash0 depth keyeq (Collision hash1 arr) =
     False =>
       Nothing
 
-||| Lookup a value in a HAMT based on a key.
+||| Finds a key in the HAMT via it's hash.
 export
 lookup :  Hashable key
        => (k : key)
@@ -185,6 +193,9 @@ lookup k hamt keyeq =
                  keyeq
                  hamt
 
+||| Constructs an internal node combining two subtrees.
+||| If the hash fragments at the current depth collide,
+||| it recurses one level deeper, otherwise, it creates a node with both entries.
 export
 node2 :  (tree0 : HAMT key val)
       -> (hash0 : Bits64)
@@ -204,6 +215,10 @@ node2 hamt0 hash0 hamt1 hash1 depth =
                             (idx1, hamt1)
                 )
 
+||| Inserts a key–value pair into the HAMT using a precomputed hash.
+||| Collisions are resolved by branching,
+||| replacing existing entries on key equality,
+||| or creating a collision node when distinct keys share a hash.
 export
 insertWithHash :  (k : key)
                -> val k
@@ -215,13 +230,20 @@ insertWithHash :  (k : key)
 insertWithHash k0 val0 hash0 depth keyeq hamt@(Leaf hash1 k1 val1)  =
   case hash0 /= hash1 of
     True  =>
-      node2 (singletonWithHash hash0 k0 val0) hash0 hamt hash1 depth
+      node2 (singletonWithHash hash0 k0 val0)
+            hash0
+            hamt
+            hash1
+            depth
     False =>
       case keyeq k0 k1 of
         True  =>
-          Leaf hash0 k0 val0 
+          Leaf hash0
+               k0
+               val0 
         False =>
-          Collision hash0 (fromList [(k0 ** val0), (k1 ** val1)])
+          Collision hash0
+                    (fromList [(k0 ** val0), (k1 ** val1)])
 insertWithHash k val hash0 depth keyeq   (Node array)               =
   let idx = getIndex depth hash0
     in case index idx array of
@@ -246,13 +268,21 @@ insertWithHash k val hash0 depth keyeq   hamt@(Collision hash1 array) =
                    assert_total $ idris_crash "Data.HashMap.Internal.HAMT.insertWithHash: couldn't convert Nat to Fin"
                  Just idx'' =>
                    let array' = setAt idx'' (k ** val) array.arr
-                     in Collision hash1 (A array.size array')
+                     in Collision hash1
+                                  (A array.size array')
         Nothing       =>
           let array' = append array.arr (fill 1 (k ** val))
-            in Collision hash1 (A (array.size `plus` 1) array')
+            in Collision hash1
+                         (A (array.size `plus` 1) array')
     False =>
-      node2 (singletonWithHash hash0 k val) hash0 hamt hash1 depth
+      node2 (singletonWithHash hash0 k val)
+            hash0
+            hamt
+            hash1
+            depth
 
+||| Inserts a key–value pair into the HAMT
+||| by hashing the key and delegating to `insertWithHash`.
 export
 insert :  Hashable key
        => (k : key)
@@ -268,6 +298,9 @@ insert k x keyeq hamt =
                  keyeq
                  hamt
 
+||| Removes a key from the HAMT using a precomputed hash.
+||| Returns `Nothing` if the entry is deleted and collapsing
+||| nodes when possible to maintain a compact structure.
 export
 deleteWithHash :  Hashable key
                => (k : key)
@@ -343,6 +376,8 @@ deleteWithHash k h0   depth keyeq hamt@(Collision h1 array) =
     False =>    
       Just hamt
 
+||| Removes a key from the HAMT
+||| by hashing the key and delegating to `deleteWithHash`.
 export
 delete :  Hashable key
        => (k : key)
