@@ -342,3 +342,16 @@ deleteWithHash k h0   depth keyeq hamt@(Collision h1 array) =
                              )
     False =>    
       Just hamt
+
+export
+delete :  Hashable key
+       => (k : key)
+       -> (keyEq : (x : key) -> (y : key) -> Bool)
+       -> HAMT key val
+       -> Maybe (HAMT key val)
+delete k keyeq hamt =
+  deleteWithHash k
+                 (hash k)
+                 0
+                 keyeq
+                 hamt
