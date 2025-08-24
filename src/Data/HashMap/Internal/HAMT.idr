@@ -48,10 +48,12 @@ data HAMT : (key : Type) -> (val : key -> Type) -> Type where
 --------------------------------------------------------------------------------
 
 ||| The HAMT chunk size.
+private
 chunksize : Bits64
 chunksize = 6
 
 ||| The max depth of a HAMT. (10 * 6 + 4)
+private
 maxdepth : Bits64
 maxdepth = 10
 
@@ -119,61 +121,61 @@ singleton k v =
 ||| Returns the index and entry if found.
 lookupEntry :  {0 key : Type}
             -> {0 val : key -> Type}
+            -> (keyEq : (x : key) -> (y : key) -> Bool)
             -> (k : key)
             -> (idx : Bits32)
-            -> (keyeq : (x : key) -> (y : key) -> Bool)
             -> List (k ** val k)
             -> Maybe (Bits32, (k ** val k))
-lookupEntry k idx _     []                    =
+lookupEntry _     k idx []                    =
   Nothing
-lookupEntry k idx keyeq ((k' ** entry) :: xs) =
-  case keyeq k k' of
+lookupEntry keyEq k idx ((k' ** entry) :: xs) =
+  case keyEq k k' of
     True  =>
       Just (idx, (k' ** entry))
     False =>
-      lookupEntry k
+      lookupEntry keyEq
+                  k
                   (idx + 1)
-                  keyeq
                   xs
 
 ||| Looks up a key in the HAMT using a precomputed hash.
 ||| Returns the key–value pair if found.
 export
-lookupWithHash :  (k : key)
+lookupWithHash :  (keyEq : (x : key) -> (y : key) -> Bool)
+               -> (k : key)
                -> (hash : Bits64)
                -> (depth : Bits64)
-               -> (keyeq : (x : key) -> (y : key) -> Bool)
                -> HAMT key val
                -> Maybe (k ** val k)
-lookupWithHash k0 hash0 depth keyeq (Leaf hash1 k1 val)   =
+lookupWithHash keyEq k0 hash0 depth (Leaf hash1 k1 val)   =
   case hash0 == hash1 of
     True  =>
-      case keyeq k0 k1 of
+      case keyEq k0 k1 of
         True  =>
           Just (k1 ** val)
         False =>
           Nothing
     False =>
       Nothing
-lookupWithHash k0 hash0 depth keyeq (Node arr)            =
+lookupWithHash keyEq k0 hash0 depth (Node arr)            =
   let idx  = getIndex depth hash0
       idx' = index idx arr
     in case idx' of
          Nothing    =>
            Nothing
          Just idx'' =>
-           lookupWithHash k0
+           lookupWithHash keyEq
+                          k0
                           hash0
                           (assert_smaller depth $ depth + 1)
-                          keyeq
                           idx''
-lookupWithHash k0 hash0 depth keyeq (Collision hash1 arr) =
+lookupWithHash keyEq k0 hash0 depth (Collision hash1 arr) =
   case hash0 == hash1 of
     True  =>
       let arrl  = toList arr
-          arrl' = lookupEntry k0
+          arrl' = lookupEntry keyEq
+                              k0
                               0
-                              keyeq
                               arrl
         in snd <$> arrl'
     False =>
@@ -182,15 +184,15 @@ lookupWithHash k0 hash0 depth keyeq (Collision hash1 arr) =
 ||| Finds a key in the HAMT via it's hash.
 export
 lookup :  Hashable key
-       => (k : key)
+       => (keyEq : (x : key) -> (y : key) -> Bool)
+       -> (k : key)
        -> HAMT key val
-       -> (keyeq : (x : key) -> (y : key) -> Bool)
        -> Maybe (k ** val k)
-lookup k hamt keyeq =
-  lookupWithHash k
+lookup keyEq k hamt =
+  lookupWithHash keyEq
+                 k
                  (hash k)
                  0
-                 keyeq
                  hamt
 
 ||| Constructs an internal node combining two subtrees.
@@ -220,14 +222,14 @@ node2 hamt0 hash0 hamt1 hash1 depth =
 ||| replacing existing entries on key equality,
 ||| or creating a collision node when distinct keys share a hash.
 export
-insertWithHash :  (k : key)
+insertWithHash :  (keyEq : (x : key) -> (y : key) -> Bool) 
+               -> (k : key)
                -> val k
                -> (hash : Bits64)
                -> (depth : Bits64)
-               -> (keyEq : (x : key) -> (y : key) -> Bool)
                -> HAMT key val
                -> HAMT key val
-insertWithHash k0 val0 hash0 depth keyeq hamt@(Leaf hash1 k1 val1)  =
+insertWithHash keyEq k0 val0 hash0 depth hamt@(Leaf hash1 k1 val1)    =
   case hash0 /= hash1 of
     True  =>
       node2 (singletonWithHash hash0 k0 val0)
@@ -236,7 +238,7 @@ insertWithHash k0 val0 hash0 depth keyeq hamt@(Leaf hash1 k1 val1)  =
             hash1
             depth
     False =>
-      case keyeq k0 k1 of
+      case keyEq k0 k1 of
         True  =>
           Leaf hash0
                k0
@@ -244,12 +246,18 @@ insertWithHash k0 val0 hash0 depth keyeq hamt@(Leaf hash1 k1 val1)  =
         False =>
           Collision hash0
                     (fromList [(k0 ** val0), (k1 ** val1)])
-insertWithHash k val hash0 depth keyeq   (Node array)               =
+insertWithHash keyEq k val hash0 depth   (Node array)                 =
   let idx = getIndex depth hash0
     in case index idx array of
          Just hamt =>
            Node ( set idx
-                      (insertWithHash k val hash0 (assert_smaller depth $ depth + 1) keyeq hamt)
+                      ( insertWithHash keyEq
+                                       k
+                                       val
+                                       hash0
+                                       (assert_smaller depth $ depth + 1)
+                                       hamt
+                      )
                       array
                 )
          Nothing =>
@@ -257,10 +265,10 @@ insertWithHash k val hash0 depth keyeq   (Node array)               =
                       (singletonWithHash hash0 k val)
                       array
                 )
-insertWithHash k val hash0 depth keyeq   hamt@(Collision hash1 array) =
+insertWithHash keyEq k val hash0 depth   hamt@(Collision hash1 array) =
   case hash0 == hash1 of
     True  =>
-      case lookupEntry k 0 keyeq (toList array) of
+      case lookupEntry keyEq k 0 (toList array) of
         Just (idx, _) =>
           let idx' = cast {to=Nat} idx
             in case tryNatToFin idx' of
@@ -285,17 +293,17 @@ insertWithHash k val hash0 depth keyeq   hamt@(Collision hash1 array) =
 ||| by hashing the key and delegating to `insertWithHash`.
 export
 insert :  Hashable key
-       => (k : key)
+       => (keyEq : (x : key) -> (y : key) -> Bool)
+       -> (k : key)
        -> val k
-       -> (keyEq : (x : key) -> (y : key) -> Bool)
        -> HAMT key val
        -> HAMT key val
-insert k x keyeq hamt =
-  insertWithHash k
+insert keyEq k x hamt =
+  insertWithHash keyEq
+                 k
                  x
                  (hash k)
                  0
-                 keyeq
                  hamt
 
 ||| Removes a key from the HAMT using a precomputed hash.
@@ -303,26 +311,26 @@ insert k x keyeq hamt =
 ||| nodes when possible to maintain a compact structure.
 export
 deleteWithHash :  Hashable key
-               => (k : key)
+               => (keyEq : (x : key) -> (y : key) -> Bool)
+               -> (k : key)
                -> (hash : Bits64)
                -> (depth : Bits64)
-               -> (keyEq : (x : key) -> (y : key) -> Bool)
                -> HAMT key val
                -> Maybe (HAMT key val)
-deleteWithHash k0 h0  depth keyeq hamt@(Leaf h1 k1 _)       =
-  case h0 == h1 && keyeq k0 k1 of
+deleteWithHash keyEq k0 h0  depth hamt@(Leaf h1 k1 _)       =
+  case h0 == h1 && keyEq k0 k1 of
     True  =>
       Nothing
     False =>
       Just hamt
-deleteWithHash k hash depth keyeq hamt0@(Node array)        =
+deleteWithHash keyEq k hash depth hamt0@(Node array)        =
     let idx = getIndex depth hash
       in case index idx array of
            Just hamt1 =>
-             let hamt1' = deleteWithHash k
+             let hamt1' = deleteWithHash keyEq
+                                         k
                                          hash
-                                         (depth + 1)
-                                         keyeq
+                                         (depth + 1) 
                                          (assert_smaller hamt0 hamt1)
                in case hamt1' of
                     Just hamt2 =>
@@ -347,11 +355,11 @@ deleteWithHash k hash depth keyeq hamt0@(Node array)        =
                                 Node array'
            Nothing =>
              Just hamt0
-deleteWithHash k h0   depth keyeq hamt@(Collision h1 array) =
+deleteWithHash keyEq k h0   depth hamt@(Collision h1 array) =
   case h0 == h1 of
     True  =>
       let vect = toVect array.arr
-          idx  = findIndex (keyeq k . fst) vect
+          idx  = findIndex (keyEq k . fst) vect
         in case idx of
              Nothing   =>
                Just hamt
@@ -380,13 +388,49 @@ deleteWithHash k h0   depth keyeq hamt@(Collision h1 array) =
 ||| by hashing the key and delegating to `deleteWithHash`.
 export
 delete :  Hashable key
-       => (k : key)
-       -> (keyEq : (x : key) -> (y : key) -> Bool)
+       => (keyEq : (x : key) -> (y : key) -> Bool)
+       -> (k : key)
        -> HAMT key val
        -> Maybe (HAMT key val)
-delete k keyeq hamt =
-  deleteWithHash k
+delete keyEq k hamt =
+  deleteWithHash keyEq
+                 k
                  (hash k)
                  0
-                 keyeq
                  hamt
+
+||| Maps a function over all values stored in a HAMT,
+||| preserving the keys and structure.
+export
+trieMap :  ({k : _} -> val0 k -> val1 k)
+        -> HAMT key val0
+        -> HAMT key val1
+trieMap f (Leaf hash k v)        =
+  Leaf hash k (f v)
+trieMap f (Node array)           =
+  Node ( assert_total $
+           map (trieMap f) array
+       )
+trieMap f (Collision hash array) =
+  Collision hash
+            ( map (\(k ** v) => (k ** (f v))) array
+            )
+
+||| Folds over all key–value pairs in a HAMT,
+||| combining them with an accumulator while preserving the traversal order.
+export
+foldWithKey :  ((k : _) -> val k -> acc -> acc)
+            -> acc
+            -> HAMT key val
+            -> acc
+foldWithKey f z (Leaf hash k v)        =
+  f k v z
+foldWithKey f z (Node array)           =
+  assert_total $
+    foldr (\trie, acc => foldWithKey f acc trie)
+          z
+          array
+foldWithKey f z (Collision hash array) =
+  foldr (\(k ** v), acc => f k v z)
+        z
+        array
