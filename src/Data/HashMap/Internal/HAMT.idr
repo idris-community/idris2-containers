@@ -195,6 +195,10 @@ lookup keyEq k hamt =
                  0
                  hamt
 
+--------------------------------------------------------------------------------
+--          Constructing nodes
+--------------------------------------------------------------------------------
+
 ||| Constructs an internal node combining two subtrees.
 ||| If the hash fragments at the current depth collide,
 ||| it recurses one level deeper, otherwise, it creates a node with both entries.
@@ -216,6 +220,10 @@ node2 hamt0 hash0 hamt1 hash1 depth =
            Node ( doubleton (idx0, hamt0)
                             (idx1, hamt1)
                 )
+
+--------------------------------------------------------------------------------
+--          Insertion
+--------------------------------------------------------------------------------
 
 ||| Inserts a key–value pair into the HAMT using a precomputed hash.
 ||| Collisions are resolved by branching,
@@ -305,6 +313,10 @@ insert keyEq k x hamt =
                  (hash k)
                  0
                  hamt
+
+--------------------------------------------------------------------------------
+--          Deletion
+--------------------------------------------------------------------------------
 
 ||| Removes a key from the HAMT using a precomputed hash.
 ||| Returns `Nothing` if the entry is deleted and collapsing
@@ -398,6 +410,10 @@ delete keyEq k hamt =
                  (hash k)
                  0
                  hamt
+
+--------------------------------------------------------------------------------
+--          Maps/Folds
+--------------------------------------------------------------------------------
 
 ||| Maps a function over all values stored in a HAMT,
 ||| preserving the keys and structure.
