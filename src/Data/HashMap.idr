@@ -4,12 +4,15 @@ import Data.HashMap.Internal.HAMT
 
 import public Data.Hashable
 
-||| A hashmap.
+||| A high-level hash map type implemented using a HAMT (Hash Array Mapped Trie).  
+||| `Empty` represents an empty map.
+||| `Trie` wraps a HAMT containing the key–value pairs.
 export
 data HashMap : (key : Type) -> (val : Type) -> Type where
   Empty : Hashable key => Eq key => HashMap key val
   Trie  : Hashable key => Eq key => HAMT key (const val) -> HashMap key val
 
+||| Constructs an empty `HashMap`.
 export
 empty :  Hashable key
       => Eq key
@@ -17,6 +20,8 @@ empty :  Hashable key
 empty =
   Empty
 
+||| Looks up a key in the `HashMap`.
+||| Returns `Just val` if found or `Nothing` if the key is absent.
 export
 lookup :  key
        -> HashMap key val
@@ -33,6 +38,8 @@ lookup key (Trie hamt) =
          Just (_ ** val') =>
            Just val'
 
+||| Inserts a key–value pair into the `HashMap`.
+||| Replaces any existing value for the key.
 export
 insert :  key
        -> val
@@ -45,6 +52,8 @@ insert key val (Trie hamt) =
   Trie ( insert (==) key val hamt
        )
 
+||| Deletes a key from the `HashMap`.
+||| If the key is not present, returns the map unchanged.
 export
 delete :  key
        -> HashMap key val
@@ -58,6 +67,8 @@ delete key (Trie hamt) =
     Just hamt' =>
       Trie hamt'
 
+||| Folds over all key–value pairs in the `HashMap`,
+||| combining them with an accumulator.
 export
 foldWithKey :  (f : k -> v -> acc -> acc)
             -> acc
@@ -68,18 +79,21 @@ foldWithKey f z Empty       =
 foldWithKey f z (Trie hamt) =
   foldWithKey f z hamt
 
+||| Converts the `HashMap` to a list of key–value pairs.
 export
 toList :  HashMap k v
        -> List (k, v)
 toList hm =
   foldWithKey (\key, val, acc => (key, val) :: acc) [] hm
 
+||| Returns a list of all keys in the `HashMap`.
 export
 keys :  HashMap k v
      -> List k
 keys hm =
   foldWithKey (\key, val, acc => key :: acc) [] hm
 
+||| Constructs a `HashMap` from a list of key–value pairs.
 export
 fromList :  Hashable k
          => Eq k
