@@ -169,6 +169,7 @@ lookupWithHash k0 hash0 depth keyeq (Collision hash1 arr) =
       Nothing
 
 ||| Lookup a value in a HAMT based on a key.
+export
 lookup :  Hashable key
        => (k : key)
        -> HAMT key val
@@ -176,6 +177,76 @@ lookup :  Hashable key
        -> Maybe (k ** val k)
 lookup k hamt keyeq =
   lookupWithHash k
+                 (hash k)
+                 0
+                 keyeq
+                 hamt
+
+export
+node2 :  (tree0 : HAMT key val)
+      -> (hash0 : Bits64)
+      -> (tree1 : HAMT key val)
+      -> (hash1 : Bits64)
+      -> (depth : Bits64)
+      -> HAMT key val
+node2 hamt0 hash0 hamt1 hash1 depth =
+  let idx0 = getIndex depth hash0
+      idx1 = getIndex depth hash1
+    in case idx0 == idx1 of
+         True  =>
+           Node $ singleton (idx0, (node2 hamt0 hash0 hamt1 hash1 (assert_smaller depth $ depth + 1)))
+         False =>
+           Node $ doubleton (idx0, hamt0)
+                            (idx1, hamt1)
+
+export
+insertWithHash :  (k : key)
+               -> val k
+               -> (hash : Bits64)
+               -> (depth : Bits64)
+               -> (keyEq : (x : key) -> (y : key) -> Bool)
+               -> HAMT key val
+               -> HAMT key val
+insertWithHash k0 val0 hash0 depth keyeq hamt@(Leaf hash1 k1 val1)  =
+  case hash0 /= hash1 of
+    True  =>
+      node2 (singletonWithHash hash0 k0 val0) hash0 hamt hash1 depth
+    False =>
+      case keyeq k0 k1 of
+        True  =>
+          Leaf hash0 k0 k1
+        False =>
+          Collision hash0 (fromList [(k0 ** val0), (k1 ** val1)])
+insertWithHash k val hash0 depth keyeq   (Node array)               =
+  let idx = getIndex depth hash0
+    in case index idx array of
+         Just hamt =>
+           Node $ set idx
+                  (insertWithHash k val hash0 (assert_smaller depth $ depth + 1) hamt)
+                  array
+        Nothing =>
+          Node $ set idx (singletonWithHash hash0 k val) array
+insertWithHash k val hash0 depth _       hamt@(Collision hash1 array) =
+  case hash0 == hash1 of
+    True  =>
+      case lookupEntry k 0 (toList array) of
+        Just (idx, _) =>
+          Collision hash1 (update array [idx, (k ** val)])
+        Nothing       =>
+          Collision hash1 (append (k ** val) array)
+    False =>
+      node2 (singletonWithHash hash0 k val) hash0 hamt hash1 depth
+
+export
+insert :  Hashable key
+       => (k : key)
+       -> val k
+       -> (keyEq : (x : key) -> (y : key) -> Bool)
+       -> HAMT key val
+       -> HAMT key val
+insert k x keyeq hamt =
+  insertWithHash k
+                 x
                  (hash k)
                  0
                  keyeq
