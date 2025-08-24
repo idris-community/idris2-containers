@@ -259,3 +259,60 @@ insert k x keyeq hamt =
                  0
                  keyeq
                  hamt
+
+export
+deleteWithHash :  Hashable key
+               => (k : key)
+               -> (hash : Bits64)
+               -> (depth : Bits64)
+               -> (keyEq : (x : key) -> (y : key) -> Bool)
+               -> HAMT key val
+               -> Maybe (HAMT key val)
+deleteWithHash k0 h0   depth keyeq hamt@(Leaf h1 k1 _) =
+  case h0 == h1 && keyeq k0 k1 of
+    True  =>
+      Nothing
+    False =>
+      Just hamt
+deleteWithHash k  hash depth _     hamt0@(Node array)    =
+    let idx = getIndex depth hash
+     in case index idx array of
+        Just hamt1 =>
+          let hamt1' = deleteWithHash k
+                                      hash
+                                      (depth + 1)
+                                      keyeq
+                                      (assert_smaller hamt0 hamt1)
+          case hamt1' of
+            Just hamt2 =>
+              Just $
+                Node $
+                  set idx hamt2 arr
+            Nothing =>
+              let array' = delete idx array
+               in case length array' of
+                    0 =>
+                      Nothing
+                    1 =>
+                      case index array' 0 of
+                        Just (Node _) =>
+                          Just $
+                            Node array'
+                        hamt2         =>
+                          hamt2
+                    _ =>
+                      Just $
+                        Node array'
+        Nothing =>
+          Just hamt0
+deleteWithHash k h0 depth hamt@(Collision h1 arr) =
+    if h0 == h1
+        then case findIndex (keyEq k . fst) arr of
+            Nothing => Just hamt
+            Just idx =>
+                let arr' = delete idx arr
+                 in case length arr' of
+                    0 => Nothing
+                    1 => map (\(key ** val) => Leaf h1 key val) $ index arr' 0
+                    _ => Just $ Collision h1 arr'
+        else Just hamt
