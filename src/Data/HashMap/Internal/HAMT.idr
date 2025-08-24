@@ -22,7 +22,10 @@ import Syntax.T1 as T1
 %hide Data.List.Quantifiers.All.take
 %hide Data.Vect.drop
 %hide Data.Vect.take
+%hide Data.Vect.toVect
+%hide Data.Vect.updateAt
 %hide Data.Vect.Quantifiers.All.drop
+%hide Data.Vect.Quantifiers.All.updateAt
 %hide Data.Vect.Stream.take
 %hide Prelude.take
 
@@ -194,10 +197,12 @@ node2 hamt0 hash0 hamt1 hash1 depth =
       idx1 = getIndex depth hash1
     in case idx0 == idx1 of
          True  =>
-           Node $ singleton (idx0, (node2 hamt0 hash0 hamt1 hash1 (assert_smaller depth $ depth + 1)))
+           Node ( singleton (idx0, (node2 hamt0 hash0 hamt1 hash1 (assert_smaller depth $ depth + 1)))
+                )
          False =>
-           Node $ doubleton (idx0, hamt0)
+           Node ( doubleton (idx0, hamt0)
                             (idx1, hamt1)
+                )
 
 export
 insertWithHash :  (k : key)
@@ -221,12 +226,15 @@ insertWithHash k val hash0 depth keyeq   (Node array)               =
   let idx = getIndex depth hash0
     in case index idx array of
          Just hamt =>
-           Node $
-             set idx
-                 (insertWithHash k val hash0 (assert_smaller depth $ depth + 1) keyeq hamt)
-                 array
+           Node ( set idx
+                      (insertWithHash k val hash0 (assert_smaller depth $ depth + 1) keyeq hamt)
+                      array
+                )
          Nothing =>
-           Node $ set idx (singletonWithHash hash0 k val) array
+           Node ( set idx
+                      (singletonWithHash hash0 k val)
+                      array
+                )
 insertWithHash k val hash0 depth keyeq   hamt@(Collision hash1 array) =
   case hash0 == hash1 of
     True  =>
@@ -268,51 +276,69 @@ deleteWithHash :  Hashable key
                -> (keyEq : (x : key) -> (y : key) -> Bool)
                -> HAMT key val
                -> Maybe (HAMT key val)
-deleteWithHash k0 h0   depth keyeq hamt@(Leaf h1 k1 _) =
+deleteWithHash k0 h0  depth keyeq hamt@(Leaf h1 k1 _)       =
   case h0 == h1 && keyeq k0 k1 of
     True  =>
       Nothing
     False =>
       Just hamt
-deleteWithHash k  hash depth _     hamt0@(Node array)    =
+deleteWithHash k hash depth keyeq hamt0@(Node array)        =
     let idx = getIndex depth hash
-     in case index idx array of
-        Just hamt1 =>
-          let hamt1' = deleteWithHash k
-                                      hash
-                                      (depth + 1)
-                                      keyeq
-                                      (assert_smaller hamt0 hamt1)
-          case hamt1' of
-            Just hamt2 =>
-              Just $
-                Node $
-                  set idx hamt2 arr
-            Nothing =>
-              let array' = delete idx array
-               in case length array' of
-                    0 =>
-                      Nothing
-                    1 =>
-                      case index array' 0 of
-                        Just (Node _) =>
-                          Just $
-                            Node array'
-                        hamt2         =>
-                          hamt2
-                    _ =>
-                      Just $
-                        Node array'
-        Nothing =>
-          Just hamt0
-deleteWithHash k h0 depth hamt@(Collision h1 arr) =
-    if h0 == h1
-        then case findIndex (keyEq k . fst) arr of
-            Nothing => Just hamt
-            Just idx =>
-                let arr' = delete idx arr
-                 in case length arr' of
-                    0 => Nothing
-                    1 => map (\(key ** val) => Leaf h1 key val) $ index arr' 0
-                    _ => Just $ Collision h1 arr'
-        else Just hamt
+      in case index idx array of
+           Just hamt1 =>
+             let hamt1' = deleteWithHash k
+                                         hash
+                                         (depth + 1)
+                                         keyeq
+                                         (assert_smaller hamt0 hamt1)
+               in case hamt1' of
+                    Just hamt2 =>
+                      Just ( Node
+                               ( set idx hamt2 array
+                               )
+                           )
+                    Nothing =>
+                      let array' = delete idx array
+                       in case length array' of
+                            0 =>
+                              Nothing
+                            1 =>
+                              case index 0 array' of
+                                Just (Node _) =>
+                                  Just ( Node array'
+                                       )
+                                hamt2         =>
+                                  hamt2
+                            _ =>
+                              Just $
+                                Node array'
+           Nothing =>
+             Just hamt0
+deleteWithHash k h0   depth keyeq hamt@(Collision h1 array) =
+  case h0 == h1 of
+    True  =>
+      let vect = toVect array.arr
+          idx  = findIndex (keyeq k . fst) vect
+        in case idx of
+             Nothing   =>
+               Just hamt
+             Just idx' =>
+               let preidxarray  = Data.Array.take (cast {to=Nat} idx') array
+                   postidxarray = Data.Array.drop ((cast {to=Nat} idx') `plus` 1) array
+                   array'       = preidxarray <+> postidxarray
+                 in case array'.size of
+                      0 =>
+                        Nothing
+                      1 =>
+                        case tryNatToFin 0 of
+                          Nothing   =>
+                            assert_total $ idris_crash "Data.HashMap.Internal.HAMT.deleteWithHash: couldn't convert Nat to Fin"
+                          Just zero =>
+                            let (key ** val) = at array'.arr zero
+                               in Just ( Leaf h1 key val
+                                       )
+                      _ =>
+                        Just ( Collision h1 array'
+                             )
+    False =>    
+      Just hamt
