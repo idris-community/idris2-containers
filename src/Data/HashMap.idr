@@ -77,21 +77,27 @@ foldWithKey :  (f : k -> v -> acc -> acc)
 foldWithKey f z Empty       =
   z
 foldWithKey f z (Trie hamt) =
-  foldWithKey f z hamt
+  foldWithKey f
+              z
+              hamt
 
 ||| Converts the `HashMap` to a list of key–value pairs.
 export
 toList :  HashMap k v
        -> List (k, v)
 toList hm =
-  foldWithKey (\key, val, acc => (key, val) :: acc) [] hm
+  foldWithKey (\key, val, acc => (key, val) :: acc)
+              []
+              hm
 
 ||| Returns a list of all keys in the `HashMap`.
 export
 keys :  HashMap k v
      -> List k
 keys hm =
-  foldWithKey (\key, val, acc => key :: acc) [] hm
+  foldWithKey (\key, val, acc => key :: acc)
+              []
+              hm
 
 ||| Constructs a `HashMap` from a list of key–value pairs.
 export
@@ -100,7 +106,9 @@ fromList :  Hashable k
          => List (k, v)
          -> HashMap k v
 fromList lst =
-  foldr (\(k, v) => insert k v) empty lst
+  foldr (\(k, v) => insert k v)
+        empty
+        lst
 
 export
 Functor (HashMap key) where

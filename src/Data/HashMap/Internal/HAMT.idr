@@ -36,7 +36,7 @@ import Syntax.T1 as T1
 --          HAMT
 --------------------------------------------------------------------------------
 
-||| A non-empty dependently-typed hash-array mapped trie.
+||| A non-empty dependently-typed hash-array mapped trie (HAMT).
 public export
 data HAMT : (key : Type) -> (val : key -> Type) -> Type where
   Leaf      : (hash : Bits64) -> (k : key) -> (v : val k) -> HAMT key val
