@@ -3,6 +3,7 @@ module HashMap
 import Hedgehog
 import Data.Vect
 import Data.HashMap
+import Data.HashMap.Internal
 import Data.Hashable
 import Data.List
 import Data.SortedMap

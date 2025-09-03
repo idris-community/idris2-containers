@@ -16,6 +16,7 @@ modules    = Data.BoundedQueue.Sized
            , Data.FVect
            , Data.FVect.Capacity
            , Data.HashMap
+           , Data.HashMap.Internal
            , Data.HashMap.Internal.HAMT
            , Data.HashMap.Internal.SparseArray
            , Data.HashPSQ
