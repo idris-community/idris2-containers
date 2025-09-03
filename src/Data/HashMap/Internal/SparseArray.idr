@@ -178,15 +178,19 @@ findIndex :  Bits32
           -> Bits64
           -> Bits32
 findIndex idx bitmap =
-  let mask   = 64 - idx
-      mask'  = cast {to=Bits64} mask
-      mask'' = cast {to=Nat} mask'
-    in case tryNatToFin mask'' of
-         Nothing      =>
-           assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.findIndex: couldn't convert Nat to Fin"
-         Just mask''' =>
-           let mask'''' = (the Bits64 oneBits) `shiftR` mask'''
-             in cast {to=Bits32} $ popCount $ bitmap .&. mask''''
+  case idx == 0 of
+    True  =>
+      cast {to=Bits32} 0
+    False =>
+      let mask   = 64 - idx
+          mask'  = cast {to=Bits64} mask
+          mask'' = cast {to=Nat} mask'
+        in case tryNatToFin mask'' of
+             Nothing      =>
+               assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.findIndex: couldn't convert Nat to Fin"
+             Just mask''' =>
+               let mask'''' = (the Bits64 oneBits) `shiftR` mask'''
+                 in cast {to=Bits32} $ popCount $ bitmap .&. mask''''
 
 ||| Looks up the element at the given index in the array,
 ||| returning `Nothing` if no entry exists at that position.
