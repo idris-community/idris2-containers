@@ -62,14 +62,18 @@ maxdepth = 10
 getMask :  (depth : Bits64)
         -> Bits64
 getMask depth =
-  let basemask        = 0b111111
-      depthchunksize  = depth * chunksize
-      depthchunksize' = cast {to=Nat} depthchunksize
-    in case tryNatToFin depthchunksize' of
-         Nothing               =>
-           assert_total $ idris_crash "Data.HashMap.Internal.HAMT.getMask: couldn't convert Nat to Fin"
-         Just depthchunksize'' =>
-           basemask `shiftL` depthchunksize''
+  case depth >= 64 of
+    True  =>
+      0
+    False =>
+      let basemask        = 0b111111
+          depthchunksize  = depth * chunksize
+          depthchunksize' = cast {to=Nat} depthchunksize
+        in case tryNatToFin depthchunksize' of
+             Nothing               =>
+               assert_total $ idris_crash "Data.HashMap.Internal.HAMT.getMask: couldn't convert Nat to Fin"
+             Just depthchunksize'' =>
+               basemask `shiftL` depthchunksize''
 
 ||| Computes the index for a given hash
 ||| at the specified depth by masking and shifting the hash.
@@ -78,14 +82,18 @@ getIndex :  (depth : Bits64)
          -> (hash : Bits64)
          -> Bits32
 getIndex depth hash =
-  let depthchunksize  = depth * chunksize
-      depthchunksize' = cast {to=Nat} depthchunksize
-    in case tryNatToFin depthchunksize' of
-         Nothing              =>
-           assert_total $ idris_crash "Data.HashMap.Internal.HAMT.getMask: couldn't convert Nat to Fin"
-         Just depthchunksize'' =>
-           let mask = getMask depth
-             in cast {to=Bits32} $ (mask .&. hash) `shiftR` depthchunksize''
+  case depth >= 64 of
+    True  =>
+      0
+    False =>
+      let depthchunksize  = depth * chunksize
+          depthchunksize' = cast {to=Nat} depthchunksize
+        in case tryNatToFin depthchunksize' of
+             Nothing              =>
+               assert_total $ idris_crash "Data.HashMap.Internal.HAMT.getIndex: couldn't convert Nat to Fin"
+             Just depthchunksize'' =>
+               let mask = getMask depth
+                 in cast {to=Bits32} $ (mask .&. hash) `shiftR` depthchunksize''
 
 --------------------------------------------------------------------------------
 --          Creating HAMTs

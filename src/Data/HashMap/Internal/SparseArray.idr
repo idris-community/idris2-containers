@@ -162,17 +162,17 @@ export
 hasEntry :  Bits32
          -> SparseArray a
          -> Bool
-hasEntry idx (MkSparseArray bitmap _) =
-  let idx' = cast {to=Nat} idx
-    in case idx' >= 64 of
-         True  =>
-           False
-         False =>
-           case tryNatToFin idx' of
+hasEntry sparseidx (MkSparseArray bitmap _) =
+  case sparseidx >= 64 of
+    True  =>
+      False
+    False =>
+      let sparseidx' = cast {to=Nat} sparseidx
+        in case tryNatToFin sparseidx' of
              Nothing     =>
                assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.hasEntry: couldn't convert Nat to Fin"
-             Just idx'' =>
-               testBit bitmap idx''
+             Just sparseidx'' =>
+               testBit bitmap sparseidx''
 
 ||| Computes the rank of the given bit index by counting how many bits
 ||| are set up to and including that position in the bitmap.
@@ -198,22 +198,26 @@ findIndex idx bitmap =
 ||| Looks up the element at the given index in the array,
 ||| returning `Nothing` if no entry exists at that position.
 export
-index :  (idx : Bits32)
+index :  (sparseidx : Bits32)
       -> (arr : SparseArray a)
       -> Maybe a
-index idx sa@(MkSparseArray bitmap array) =
-  case hasEntry idx sa of
+index sparseidx sa@(MkSparseArray bitmap array) =
+  case sparseidx >= 64 of
     True  =>
-      let arridx  = findIndex idx bitmap
-          arridx' = cast {to=Nat} arridx
-        in case tryNatToFin arridx' of
-             Nothing       =>
-               Nothing
-             Just arridx'' =>
-               Just ( at array.arr arridx''
-                    )
-    False =>
       Nothing
+    False =>  
+      case hasEntry sparseidx sa of
+        True  =>
+          let arridx  = findIndex sparseidx bitmap
+              arridx' = cast {to=Nat} arridx
+            in case tryNatToFin arridx' of
+                 Nothing       =>
+                   Nothing
+                 Just arridx'' =>
+                   Just ( at array.arr arridx''
+                        )
+        False =>
+          Nothing
 
 --------------------------------------------------------------------------------
 --          Insertion
@@ -228,7 +232,7 @@ set :  (sparseidx : Bits32)
 set sparseidx val arr@(MkSparseArray bitmap array) =
   case sparseidx >= 64 of
     True  =>
-      assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.set: couldn't convert Nat to Fin"
+      assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.set: sparse index out of bounds"
     False =>
       case hasEntry sparseidx arr of
         True  =>
@@ -265,27 +269,31 @@ set sparseidx val arr@(MkSparseArray bitmap array) =
 ||| Returns the original array if the
 ||| value doesn't exist in the array.
 export
-delete :  (idx : Bits32)
+delete :  (sparseidx : Bits32)
        -> (arr : SparseArray a)
        -> SparseArray a
-delete idx arr@(MkSparseArray bitmap array) =
-  case hasEntry idx arr of
+delete sparseidx arr@(MkSparseArray bitmap array) =
+  case sparseidx >= 64 of
     True  =>
-      let idx'  = cast {to=Bits64} idx
-          idx'' = cast {to=Nat} idx'
-        in case tryNatToFin idx'' of
-             Nothing     =>
-               assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.delete: couldn't convert Nat to Fin"
-             Just idx''' =>
-               let arridx       = findIndex idx bitmap
-                   bitmap'      = clearBit bitmap idx'''
-                   preidxarray  = Data.Array.take (cast {to=Nat} arridx) array
-                   postidxarray = Data.Array.drop ((cast {to=Nat} arridx) `plus` 1) array
-                   array'       = preidxarray <+> postidxarray
-                 in MkSparseArray bitmap'
-                                  array'
+      assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.delete: sparse index out of bounds"
     False =>
-      arr
+      case hasEntry sparseidx arr of
+        True  =>
+          let sparseidx'  = cast {to=Bits64} sparseidx
+              sparseidx'' = cast {to=Nat} sparseidx'
+            in case tryNatToFin sparseidx'' of
+                 Nothing     =>
+                   assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.delete: couldn't convert Nat to Fin"
+                 Just sparseidx''' =>
+                   let arridx       = findIndex sparseidx bitmap
+                       bitmap'      = clearBit bitmap sparseidx'''
+                       preidxarray  = Data.Array.take (cast {to=Nat} arridx) array
+                       postidxarray = Data.Array.drop ((cast {to=Nat} arridx) `plus` 1) array
+                       array'       = preidxarray <+> postidxarray
+                     in MkSparseArray bitmap'
+                                      array'
+        False =>
+          arr
 
 --------------------------------------------------------------------------------
 --          Length
