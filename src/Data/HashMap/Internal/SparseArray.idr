@@ -163,13 +163,16 @@ hasEntry :  Bits32
          -> SparseArray a
          -> Bool
 hasEntry idx (MkSparseArray bitmap _) =
-  let idx'  = cast {to=Bits64} idx
-      idx'' = cast {to=Nat} idx'
-    in case tryNatToFin idx'' of
-         Nothing     =>
-           assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.hasEntry: couldn't convert Nat to Fin"
-         Just idx''' =>
-           testBit bitmap idx'''
+  let idx' = cast {to=Nat} idx
+    in case idx' >= 64 of
+         True  =>
+           False
+         False =>
+           case tryNatToFin idx' of
+             Nothing     =>
+               assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.hasEntry: couldn't convert Nat to Fin"
+             Just idx'' =>
+               testBit bitmap idx''
 
 ||| Computes the rank of the given bit index by counting how many bits
 ||| are set up to and including that position in the bitmap.
@@ -223,32 +226,36 @@ set :  (sparseidx : Bits32)
     -> (arr : SparseArray a)
     -> SparseArray a
 set sparseidx val arr@(MkSparseArray bitmap array) =
-  case hasEntry sparseidx arr of
+  case sparseidx >= 64 of
     True  =>
-      let arridx  = findIndex sparseidx bitmap
-          arridx' = cast {to=Nat} arridx
-        in case tryNatToFin arridx' of
-             Nothing       =>
-               assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.set: couldn't convert Nat to Fin"
-             Just arridx'' =>
-               let array' = setAt arridx'' val array.arr
-                 in MkSparseArray bitmap
-                                  (A array.size array')
+      assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.set: couldn't convert Nat to Fin"
     False =>
-      let sparseidx'  = cast {to=Bits64} sparseidx
-          sparseidx'' = cast {to=Nat} sparseidx'
-        in case tryNatToFin sparseidx'' of
-             Nothing           =>
-               assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.set: couldn't convert Nat to Fin"
-             Just sparseidx''' =>
-               let bitmap'      = setBit bitmap sparseidx'''
-                   arridx       = findIndex sparseidx bitmap
-                   preidxarray  = Data.Array.take (cast {to=Nat} arridx) array
-                   atidxarray   = fill 1 val
-                   postidxarray = Data.Array.drop ((cast {to=Nat} arridx) `plus` 1) array
-                   array'       = preidxarray <+> atidxarray <+> postidxarray
-                 in MkSparseArray bitmap'
-                                  array'
+      case hasEntry sparseidx arr of
+        True  =>
+          let arridx  = findIndex sparseidx bitmap
+              arridx' = cast {to=Nat} arridx
+            in case tryNatToFin arridx' of
+                 Nothing       =>
+                   assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.set: couldn't convert Nat to Fin"
+                 Just arridx'' =>
+                   let array' = setAt arridx'' val array.arr
+                     in MkSparseArray bitmap
+                                      (A array.size array')
+        False =>
+          let sparseidx'  = cast {to=Bits64} sparseidx
+              sparseidx'' = cast {to=Nat} sparseidx'
+            in case tryNatToFin sparseidx'' of
+                 Nothing           =>
+                   assert_total $ idris_crash "Data.HashMap.Internal.SparseArray.set: couldn't convert Nat to Fin"
+                 Just sparseidx''' =>
+                   let bitmap'      = setBit bitmap sparseidx'''
+                       arridx       = findIndex sparseidx bitmap
+                       preidxarray  = Data.Array.take (cast {to=Nat} arridx) array
+                       atidxarray   = fill 1 val
+                       postidxarray = Data.Array.drop ((cast {to=Nat} arridx) `plus` 1) array
+                       array'       = preidxarray <+> atidxarray <+> postidxarray
+                     in MkSparseArray bitmap'
+                                      array'
 
 --------------------------------------------------------------------------------
 --          Deletion
