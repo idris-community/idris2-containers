@@ -79,7 +79,7 @@ relaxedRadixIndex sizes i sh =
                  False =>
                    let idx' = case tryNatToFin $ minus idx 1 of
                                 Nothing    =>
-                                  assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex: index out of bounds"
+                                  assert_total $ idris_crash "Data.RRBVector.Unsized.Internal.relaxedRadixIndex: index out of bounds"
                                 Just idx'' =>
                                   idx''
                      in minus i (at sizes.arr idx')
@@ -91,7 +91,7 @@ relaxedRadixIndex sizes i sh =
     loop sizes idx =
       let current = case tryNatToFin idx of
                       Nothing       =>
-                        assert_total $ idris_crash "Data.RRBVector.Internal.relaxedRadixIndex.loop: index out of bounds"
+                        assert_total $ idris_crash "Data.RRBVector.Unsized.Internal.relaxedRadixIndex.loop: index out of bounds"
                       Just idx' =>
                         at sizes.arr idx' -- idx will always be in range for a well-formed tree
         in case i < current of
@@ -146,7 +146,7 @@ treeToArray (Balanced arr)     =
 treeToArray (Unbalanced arr _) =
   arr
 treeToArray (Leaf _)           =
-  assert_total $ idris_crash "Data.RRBVector.Internal.treeToArray: leaf"
+  assert_total $ idris_crash "Data.RRBVector.Unsized.Internal.treeToArray: leaf"
 
 export
 treeBalanced :  Tree a
@@ -174,7 +174,7 @@ treeSize = go 0
     go acc _  (Unbalanced arr sizes) =
       let i = case tryNatToFin $ minus arr.size 1 of
                 Nothing =>
-                  assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds"
+                  assert_total $ idris_crash "Data.RRBVector.Unsized.Internal.treeSize: index out of bounds"
                 Just i' =>
                   i'
         in plus acc (at sizes.arr i)
@@ -182,7 +182,7 @@ treeSize = go 0
       let i  = minus arr.size 1
           i' = case tryNatToFin i of
                  Nothing  =>
-                   assert_total $ idris_crash "Data.RRBVector.Internal.treeSize: index out of bounds"
+                   assert_total $ idris_crash "Data.RRBVector.Unsized.Internal.treeSize: index out of bounds"
                  Just i'' =>
                    i''
         in go (plus acc (mult i (integerToNat (1 `shiftL` sh))))
@@ -212,7 +212,7 @@ computeSizes sh arr =
     loop sh cur acc n (x :: xs) r =
       case tryNatToFin cur of
         Nothing   =>
-          assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.go: can't convert Nat to Fin"
+          assert_total $ idris_crash "Data.RRBVector.Unsized.Internal.computeSizes.go: can't convert Nat to Fin"
         Just cur' =>
           let acc' = plus acc (treeSize (down sh) x)
             in T1.do set r cur' acc'
@@ -231,7 +231,7 @@ computeSizes sh arr =
         go i =
           let subtree = case tryNatToFin i of
                           Nothing =>
-                            assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.isBalanced: can't convert Nat to Fin"
+                            assert_total $ idris_crash "Data.RRBVector.Unsized.Internal.computeSizes.isBalanced: can't convert Nat to Fin"
                           Just i' =>
                             at arr.arr i'
             in case i < lenM1 of
@@ -256,7 +256,7 @@ countTrailingZeros x =
         False =>
           case tryNatToFin i of
             Nothing =>
-              assert_total $ idris_crash "Data.RRBVector.Internal.countTrailingZeros: can't convert Nat to Fin"
+              assert_total $ idris_crash "Data.RRBVector.Unsized.Internal.countTrailingZeros: can't convert Nat to Fin"
             Just i' =>
               case testBit (the Int (cast x)) i' of
                 True  =>
@@ -286,7 +286,7 @@ log2 x =
             False =>
               case tryNatToFin i of
                 Nothing =>
-                  assert_total $ idris_crash "Data.RRBVector.Internal.log2: can't convert Nat to Fin"
+                  assert_total $ idris_crash "Data.RRBVector.Unsized.Internal.log2: can't convert Nat to Fin"
                 Just i' =>
                   case testBit (the Int (cast x)) i' of
                     True  =>
