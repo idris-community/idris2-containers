@@ -200,7 +200,7 @@ Foldable Tree where
 public export
 Eq a => Eq (Tree a) where
   (Balanced (bsize1 ** arr1)) == (Balanced (bsize2 ** arr2))         =
-    assert_total $ bsize1 == bsize2 && (toList arr1) == (toList arr2)
+    assert_total $ bsize1 == bsize2 && toList arr1 == toList arr2
   (Unbalanced (usize1 ** arr1) _) == (Unbalanced (usize2 ** arr2) _) =
     assert_total $ usize1 == usize2 && toList arr1 == toList arr2
   (Leaf (lsize1 ** arr1)) == (Leaf (lsize2 ** arr2))                 =
