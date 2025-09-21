@@ -1264,7 +1264,14 @@ showRRBVectorRep (Root sh t) =
 
 export
 {n : Nat} -> Eq a => Eq (RRBVector n a) where
-  xs == ys = length xs == length ys && Data.RRBVector.Sized.toList xs == Data.RRBVector.Sized.toList ys
+  (Root sh1 tree1) == (Root sh2 tree2) =
+    sh1 == sh2 && Data.RRBVector.Sized.Internal.toList tree1 == Data.RRBVector.Sized.Internal.toList tree2
+  Empty            == Empty            =
+    True
+  (Root _   _    ) == Empty            =
+    False
+  Empty            == (Root _   _    ) =
+    False
 
 export
 {n : Nat} -> Ord a => Ord (RRBVector n a) where
