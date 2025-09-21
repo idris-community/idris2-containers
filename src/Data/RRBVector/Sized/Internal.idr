@@ -170,12 +170,15 @@ foldr f acc tree =
 --          Creating Lists from Trees
 --------------------------------------------------------------------------------
 
-private
+export
 toList :  Tree a
        -> List a
-toList (Balanced (_ ** arr))     = assert_total $ concat (map toList (toList arr))
-toList (Unbalanced (_ ** arr) _) = assert_total $ concat (map toList (toList arr))
-toList (Leaf (_ ** arr))         = toList arr
+toList (Balanced (_ ** arr))     =
+  assert_total $ concat (map toList (toList arr))
+toList (Unbalanced (_ ** arr) _) =
+  assert_total $ concat (map toList (toList arr))
+toList (Leaf (_ ** arr))         =
+  toList arr
 
 --------------------------------------------------------------------------------
 --          Interfaces (Tree)

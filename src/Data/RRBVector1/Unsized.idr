@@ -749,7 +749,7 @@ viewr v@(Root size _ tree) t =
 
 private
 mapTree :  {n : Nat}
-        -> (F1 s a -> F1 s b)
+        -> (a -> b)
         -> (arr : MArray s n (Tree1 s a))
         -> F1 s (MArray s n (Tree1 s b))
 mapTree f arr t =
@@ -795,7 +795,7 @@ mapTree f arr t =
 
 ||| Apply the function to every element. O(n)
 export
-map :  (F1 s a -> F1 s b)
+map :  (a -> b)
     -> RRBVector1 s a
     -> F1 s (RRBVector1 s b)
 map _ Empty                                        t =
