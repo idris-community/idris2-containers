@@ -763,9 +763,9 @@ viewr v@(Root _ tree) t =
 
 private
 mapTree :  {n : Nat}
-        -> (a -> b)
+        -> (a -> a)
         -> (arr : MArray s n (Tree1 s a))
-        -> F1 s (MArray s n (Tree1 s b))
+        -> F1 s (MArray s n (Tree1 s a))
 mapTree f arr t =
   let tmt # t := unsafeMArray1 n t
     in go 0 n tmt t
@@ -810,9 +810,9 @@ mapTree f arr t =
 ||| Apply the function to every element. O(n)
 export
 map :  {n : Nat}
-    -> (a -> b)
+    -> (a -> a)
     -> RRBVector1 s n a
-    -> F1 s (n' ** RRBVector1 s n' b)
+    -> F1 s (n' ** RRBVector1 s n' a)
 map _ Empty                                   t =
   (0 ** Empty) # t
 map f (Root sh (Balanced (b ** arr)))         t =
