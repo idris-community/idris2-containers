@@ -753,13 +753,12 @@ mapTree :  {n : Nat}
         -> (arr : MArray s n (Tree1 s a))
         -> F1 s (MArray s n (Tree1 s a))
 mapTree f arr t =
-  let tmt # t := unsafeMArray1 n t
-    in go 0 n tmt t
+  go 0 n arr t
   where
     go :  (m, x : Nat)
-       -> (arr' : MArray s n (Tree1 s b))
+       -> (arr' : MArray s n (Tree1 s a))
        -> {auto v : Ix x n}
-       -> F1 s (MArray s n (Tree1 s b))
+       -> F1 s (MArray s n (Tree1 s a))
     go m Z     arr' t =
       arr' # t
     go m (S j) arr' t =
