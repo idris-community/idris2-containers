@@ -788,9 +788,9 @@ mapTree f arr t =
                  Nothing =>
                    (assert_total $ idris_crash "Data.RRBVector.mapTree.go: can't convert Nat to Fin") # t
                  Just m' =>
-                   let arr''' # t := mmap f arr'' t
-                       arr''''    := Leaf {lsize=l} (l ** arr''')
-                       ()     # t := set arr' m' arr'''' t
+                   let ()     # t := mupdate f arr'' t
+                       arr'''     := Leaf {lsize=l} (l ** arr'')
+                       ()     # t := set arr' m' arr''' t
                      in go (S m) j arr' t
 
 ||| Apply the function to every element. O(n)
@@ -809,9 +809,9 @@ map f (Root size sh (Unbalanced (u ** arr) sizes)) t =
       arr''    := Unbalanced (u ** arr') sizes
     in (Root size sh arr'') # t
 map f (Root size sh (Leaf (l ** arr)))             t =
-  let arr' # t := mmap f arr t
-      arr''    := Leaf {lsize=l} (l ** arr')
-    in (Root size sh arr'') # t
+  let ()  # t := mupdate f arr t
+      arr'    := Leaf {lsize=l} (l ** arr)
+    in (Root size sh arr') # t
 
 --------------------------------------------------------------------------------
 --          Concatenation
