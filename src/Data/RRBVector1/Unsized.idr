@@ -749,17 +749,16 @@ viewr v@(Root size _ tree) t =
 
 private
 mapTree :  {n : Nat}
-        -> (a -> b)
+        -> (a -> a)
         -> (arr : MArray s n (Tree1 s a))
-        -> F1 s (MArray s n (Tree1 s b))
+        -> F1 s (MArray s n (Tree1 s a))
 mapTree f arr t =
-  let tmt # t := unsafeMArray1 n t
-    in go 0 n tmt t
+  go 0 n arr t
   where
     go :  (m, x : Nat)
-       -> (arr' : MArray s n (Tree1 s b))
+       -> (arr' : MArray s n (Tree1 s a))
        -> {auto v : Ix x n}
-       -> F1 s (MArray s n (Tree1 s b))
+       -> F1 s (MArray s n (Tree1 s a))
     go m Z     arr' t =
       arr' # t
     go m (S j) arr' t =
@@ -788,16 +787,16 @@ mapTree f arr t =
                  Nothing =>
                    (assert_total $ idris_crash "Data.RRBVector.mapTree.go: can't convert Nat to Fin") # t
                  Just m' =>
-                   let arr''' # t := mmap f arr'' t
-                       arr''''    := Leaf {lsize=l} (l ** arr''')
-                       ()     # t := set arr' m' arr'''' t
+                   let ()     # t := mupdate f arr'' t
+                       arr'''     := Leaf {lsize=l} (l ** arr'')
+                       ()     # t := set arr' m' arr''' t
                      in go (S m) j arr' t
 
 ||| Apply the function to every element. O(n)
 export
-map :  (a -> b)
+map :  (a -> a)
     -> RRBVector1 s a
-    -> F1 s (RRBVector1 s b)
+    -> F1 s (RRBVector1 s a)
 map _ Empty                                        t =
   empty t
 map f (Root size sh (Balanced (b ** arr)))         t =
@@ -809,9 +808,9 @@ map f (Root size sh (Unbalanced (u ** arr) sizes)) t =
       arr''    := Unbalanced (u ** arr') sizes
     in (Root size sh arr'') # t
 map f (Root size sh (Leaf (l ** arr)))             t =
-  let arr' # t := mmap f arr t
-      arr''    := Leaf {lsize=l} (l ** arr')
-    in (Root size sh arr'') # t
+  let ()  # t := mupdate f arr t
+      arr'    := Leaf {lsize=l} (l ** arr)
+    in (Root size sh arr') # t
 
 --------------------------------------------------------------------------------
 --          Concatenation
