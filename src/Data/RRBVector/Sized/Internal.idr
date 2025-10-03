@@ -213,24 +213,8 @@ Eq a => Eq (Tree a) where
 
 public export
 Ord a => Ord (Tree a) where
-  compare (Balanced (_ ** arr1)) (Balanced (_ ** arr2))         =
-    compare arr1 arr2
-  compare (Unbalanced (_ ** arr1) _) (Unbalanced (_ ** arr2) _) =
-    compare arr1 arr2
-  compare (Leaf (_ ** arr1)) (Leaf (_ ** arr2))                 =
-    compare arr1 arr2
-  compare (Balanced _) (Unbalanced _ _)                         =
-    LT
-  compare (Balanced _) (Leaf _)                                 =
-    LT
-  compare (Unbalanced _ _) (Balanced _)                         =
-    GT
-  compare (Unbalanced _ _) (Leaf _)                             =
-    LT
-  compare (Leaf _) (Balanced _)                                 =
-    GT
-  compare (Leaf _) (Unbalanced _ _)                             =
-    GT
+  compare tree1 tree2 =
+    compare (Data.RRBVector.Sized.Internal.toList tree1) (Data.RRBVector.Sized.Internal.toList tree2)
 
 --------------------------------------------------------------------------------
 --          Show Utilities (Tree)
