@@ -213,11 +213,11 @@ Eq a => Eq (Tree a) where
 public export
 Ord a => Ord (Tree a) where
   compare (Balanced arr1) (Balanced arr2)         =
-    compare arr1 arr2
+    assert_total $ compare arr1 arr2
   compare (Unbalanced arr1 _) (Unbalanced arr2 _) =
-    compare arr1 arr2
+    assert_total $ compare arr1 arr2
   compare (Leaf arr1) (Leaf arr2)                 =
-    compare arr1 arr2
+    assert_total $ compare arr1 arr2
   compare (Balanced _) (Unbalanced _ _)           =
     LT
   compare (Balanced _) (Leaf _)                   =
