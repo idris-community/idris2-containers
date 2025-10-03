@@ -203,18 +203,22 @@ Foldable Tree where
 public export
 Eq a => Eq (Tree a) where
   (Balanced (bsize1 ** arr1)) == (Balanced (bsize2 ** arr2))         =
-    assert_total $ bsize1 == bsize2 && toList arr1 == toList arr2
+    assert_total $ bsize1 == bsize2 && arr1 == arr2
   (Unbalanced (usize1 ** arr1) _) == (Unbalanced (usize2 ** arr2) _) =
-    assert_total $ usize1 == usize2 && toList arr1 == toList arr2
+    assert_total $ usize1 == usize2 && arr1 == arr2
   (Leaf (lsize1 ** arr1)) == (Leaf (lsize2 ** arr2))                 =
-    lsize1 == lsize2 && toList arr1 == toList arr2
+    lsize1 == lsize2 && arr1 == arr2
   _                        == _                                      =
     False
 
 public export
 Ord a => Ord (Tree a) where
-  compare tree1 tree2 =
-    compare (Data.RRBVector.Sized.Internal.toList tree1) (Data.RRBVector.Sized.Internal.toList tree2)
+  compare (Balanced (_ ** arr1)) (Balanced (_ ** arr2))         =
+    compare arr1 arr2
+  compare (Unbalanced (_ ** arr1) _) (Unbalanced (_ ** arr2) _) =
+    compare arr1 arr2
+  compare (Leaf (_ ** arr1)) (Leaf (_ ** arr2))                 =
+    compare arr1 arr2
 
 --------------------------------------------------------------------------------
 --          Show Utilities (Tree)

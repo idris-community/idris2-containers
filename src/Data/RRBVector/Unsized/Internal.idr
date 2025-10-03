@@ -110,7 +110,100 @@ data Tree a = Balanced (Array (Tree a))
             | Unbalanced (Array (Tree a)) (Array Nat)
             | Leaf (Array a)
 
-%runElab derive "Tree" [Eq,Ord,Show]
+--------------------------------------------------------------------------------
+--          Query (Tree)
+--------------------------------------------------------------------------------
+
+||| Is the tree empty? O(1)
+private
+null :  Tree a
+     -> Bool
+null (Balanced arr)     =
+  null arr
+null (Unbalanced arr _) =
+  null arr
+null (Leaf arr)         =
+  null arr
+
+--------------------------------------------------------------------------------
+--          Folds (Tree)
+--------------------------------------------------------------------------------
+
+private
+foldl :  (b -> a -> b)
+      -> b
+      -> Tree a
+      -> b
+foldl f acc tree =
+  foldlTree acc tree
+  where
+    foldlTree :  b
+              -> Tree a
+              -> b
+    foldlTree acc' (Balanced arr)     =
+      assert_total $ foldl foldlTree acc' arr
+    foldlTree acc' (Unbalanced arr _) =
+      assert_total $ foldl foldlTree acc' arr
+    foldlTree acc' (Leaf arr)         =
+      assert_total $ foldl f acc' arr
+
+private
+foldr :  (a -> b -> b)
+      -> b
+      -> Tree a
+      -> b
+foldr f acc tree =
+  foldrTree tree acc
+  where
+    foldrTree :  Tree a
+              -> b
+              -> b
+    foldrTree (Balanced arr) acc'     =
+      assert_total $ foldr foldrTree acc' arr
+    foldrTree (Unbalanced arr _) acc' =
+      assert_total $ foldr foldrTree acc' arr
+    foldrTree (Leaf arr) acc'         =
+      assert_total $ foldr f acc' arr
+
+--------------------------------------------------------------------------------
+--          Interfaces (Tree)
+--------------------------------------------------------------------------------
+
+public export
+Show a => Show (Tree a) where
+  show (Balanced arr)     =
+    assert_total $ "Balanced " ++ show arr
+  show (Unbalanced arr _) =
+    assert_total $ "Unbalanced " ++ show arr
+  show (Leaf arr)         =
+    "Leaf " ++ show arr
+
+public export
+Foldable Tree where
+  foldl f z = Data.RRBVector.Unsized.Internal.foldl f z
+  foldr f z = Data.RRBVector.Unsized.Internal.foldr f z
+  toList    = Data.RRBVector.Unsized.Internal.toList
+  null      = Data.RRBVector.Unsized.Internal.null
+
+public export
+Eq a => Eq (Tree a) where
+  (Balanced arr1) == (Balanced arr2)         =
+    assert_total $ arr1 == arr2
+  (Unbalanced arr1 _) == (Unbalanced arr2 _) =
+    assert_total $ arr1 == arr2
+  (Leaf arr1) == (Leaf arr2)                 =
+    arr1 == arr2
+  _                        == _              =
+    False
+
+public export
+Ord a => Ord (Tree a) where
+  compare (Balanced arr1) (Balanced arr2)         =
+    compare arr1 arr2
+  compare (Unbalanced arr1 _) (Unbalanced arr2 _) =
+    compare arr1 arr2
+  compare (Leaf arr1) (Leaf arr2)                 =
+    compare arr1 arr2
 
 --------------------------------------------------------------------------------
 --          Show Utilities (Tree)
