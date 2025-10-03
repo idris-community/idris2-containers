@@ -219,6 +219,18 @@ Ord a => Ord (Tree a) where
     compare arr1 arr2
   compare (Leaf (_ ** arr1)) (Leaf (_ ** arr2))                 =
     compare arr1 arr2
+  compare (Balanced _) (Unbalanced _ _)                         =
+    LT
+  compare (Balanced _) (Leaf _)                                 =
+    LT
+  compare (Unbalanced _ _) (Balanced _)                         =
+    GT
+  compare (Unbalanced _ _) (Leaf _)                             =
+    LT
+  compare (Leaf _) (Balanced _)                                 =
+    GT
+  compare (Leaf _) (Unbalanced _ _)                             =
+    GT
 
 --------------------------------------------------------------------------------
 --          Show Utilities (Tree)

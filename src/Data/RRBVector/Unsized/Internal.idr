@@ -218,18 +218,18 @@ Ord a => Ord (Tree a) where
     compare arr1 arr2
   compare (Leaf arr1) (Leaf arr2)                 =
     compare arr1 arr2
-  compare (Balanced arr1) (Unbalanced arr2 _)     =
-    compare arr1 arr2
-  compare (Balanced arr1) (Leaf arr2)             =
-    compare (concat $ map Data.RRBVector.Unsized.Internal.toList arr1) (toList arr2)
-  compare (Unbalanced arr1 _) (Balanced arr2)     =
-    compare arr1 arr2
-  compare (Unbalanced arr1 _) (Leaf arr2)         =
-    compare (concat $ map Data.RRBVector.Unsized.Internal.toList arr1) (toList arr2)
-  compare (Leaf arr1) (Balanced arr2)             =
-    compare (toList arr1) (concat $ map Data.RRBVector.Unsized.Internal.toList arr2)
-  compare (Leaf arr1) (Unbalanced arr2 _)         =
-    compare (toList arr1) (concat $ map Data.RRBVector.Unsized.Internal.toList arr2)
+  compare (Balanced _) (Unbalanced _ _)           =
+    LT
+  compare (Balanced _) (Leaf _)                   =
+    LT
+  compare (Unbalanced _ _) (Balanced _)           =
+    GT
+  compare (Unbalanced _ _) (Leaf _)               =
+    LT
+  compare (Leaf _) (Balanced _)                   =
+    GT
+  compare (Leaf _) (Unbalanced _ _)               =
+    GT
 
 --------------------------------------------------------------------------------
 --          Show Utilities (Tree)
