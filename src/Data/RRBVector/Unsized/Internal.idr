@@ -166,6 +166,20 @@ foldr f acc tree =
       assert_total $ foldr f acc' arr
 
 --------------------------------------------------------------------------------
+--          Creating Lists from Trees
+--------------------------------------------------------------------------------
+
+export
+toList :  Tree a
+       -> List a
+toList (Balanced arr)     =
+  assert_total $ concat (map toList (toList arr))
+toList (Unbalanced arr _) =
+  assert_total $ concat (map toList (toList arr))
+toList (Leaf arr)         =
+  toList arr
+
+--------------------------------------------------------------------------------
 --          Interfaces (Tree)
 --------------------------------------------------------------------------------
 
