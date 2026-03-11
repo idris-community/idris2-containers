@@ -9,7 +9,7 @@ import Data.So
 
 prop_eviction : Property
 prop_eviction = property1 $
-  case decSo (1 >= 0) of
+  case decSo ((S Z) >= Z) of
     No _    =>
       failure
     Yes prf =>
