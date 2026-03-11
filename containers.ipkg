@@ -19,6 +19,8 @@ modules    = Data.BoundedQueue.Sized
            , Data.HashPSQ.Internal
            , Data.LRUCache
            , Data.LRUCache.Internal
+           , Data.LRUCache1
+           , Data.LRUCache1.Internal
            , Data.Map
            , Data.Map.Internal
            , Data.NatPSQ
