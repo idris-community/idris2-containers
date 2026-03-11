@@ -5,6 +5,7 @@ import BoundedQueue.Unsized
 import HashPSQ
 import Hedgehog
 import LRUCache
+import LRUCache1
 import Map
 import NatPSQ
 import OrdPSQ
@@ -24,6 +25,7 @@ main = test
   , BoundedQueue.Unsized.props
   , HashPSQ.props
   , LRUCache.props
+  , LRUCache1.props
   , Map.props
   , NatPSQ.props
   , OrdPSQ.props
