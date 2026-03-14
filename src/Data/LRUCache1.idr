@@ -84,16 +84,14 @@ insert key val cache@(MkLRUCache1 c s tc q) t =
       (mboldval, queue) := HashPSQ.insertView key tc' val q'
     in case isNothing mboldval of
          True  =>
-           let ()     # t := casmod1 s (`plus` 1) t
-               ()     # t := casmod1 tc (`plus` 1) t
-               queue' # t := ref1 queue t
-               cache'     := MkLRUCache1 c s tc queue'
-             in trim cache' t
+           let () # t := casmod1 s (`plus` 1) t
+               () # t := casmod1 tc (`plus` 1) t
+               () # t := casswap1 q queue t
+             in trim cache t
          False =>
-           let ()     # t := casmod1 tc (`plus` 1) t
-               queue' # t := ref1 queue t
-               cache'     := MkLRUCache1 c s tc queue'
-             in trim cache' t
+           let () # t := casmod1 tc (`plus` 1) t
+               () # t := casswap1 q queue t
+             in trim cache t
 
 --------------------------------------------------------------------------------
 --          Views
@@ -131,22 +129,20 @@ insertView :  Hashable k
            -> v
            -> LRUCache1 s k v
            -> F1 s (Maybe (k, v), LRUCache1 s k v)
-insertView key val (MkLRUCache1 c s tc q) t =
+insertView key val cache@(MkLRUCache1 c s tc q) t =
   let tc'           # t := read1 tc t
       q'            # t := read1 q t
       (mboldval, queue) := HashPSQ.insertView key tc' val q'
     in case isNothing mboldval of
          True  =>
-           let ()     # t := casmod1 s (`plus` 1) t
-               ()     # t := casmod1 tc (`plus` 1) t
-               queue' # t := ref1 queue t
-               cache'     := MkLRUCache1 c s tc queue'
-             in trim' cache' t
+           let () # t := casmod1 s (`plus` 1) t
+               () # t := casmod1 tc (`plus` 1) t
+               () # t := casswap1 q queue t
+             in trim' cache t
          False =>
-           let ()     # t := casmod1 tc (`plus` 1) t
-               queue' # t := ref1 queue t
-               cache'     := MkLRUCache1 c s tc queue'
-             in trim' cache' t
+           let () # t := casmod1 tc (`plus` 1) t
+               () # t := casswap1 q queue t
+             in trim' cache t
 
 --------------------------------------------------------------------------------
 --          Query
@@ -160,8 +156,8 @@ lookup :  Hashable k
        -> LRUCache1 s k v
        -> F1 s (Maybe (v, LRUCache1 s k v))
 lookup k cache@(MkLRUCache1 c s tc q) t =
-  let tc'   # t := read1 tc t
-      q'    # t := read1 q t
+  let tc' # t := read1 tc t
+      q'  # t := read1 q t
     in case HashPSQ.alter (\x =>
                               case x of
                                 Nothing        =>
@@ -173,7 +169,6 @@ lookup k cache@(MkLRUCache1 c s tc q) t =
            Nothing # t
          (Just x, queue) =>
            let ()           # t := casmod1 tc (`plus` 1) t
-               queue'       # t := ref1 queue t
-               cache'           := MkLRUCache1 c s tc queue'
-               trimmedcache # t := trim cache' t
+               ()           # t := casswap1 q queue t
+               trimmedcache # t := trim cache t
              in (Just (x, trimmedcache)) # t
