@@ -131,10 +131,10 @@ peekOldest :  {n : Nat}
 peekOldest q =
   case dequeue q of
     Just (v, (n' ** MkBoundedQueue queue)
-         ) =>
+         )  =>
       Just (v, ((S n') ** MkBoundedQueue (v `cons` queue))
            )
-    Nothing                                =>
+    Nothing =>
       Nothing
 
 ||| Appends two `BoundedQueues`. O(m + n)
