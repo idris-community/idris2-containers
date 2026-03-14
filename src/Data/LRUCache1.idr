@@ -10,7 +10,6 @@ import Data.Maybe
 import Data.So
 import Data.Zippable
 import Data.Linear.Ref1
-import Data.Linear.Token
 
 %default total
 

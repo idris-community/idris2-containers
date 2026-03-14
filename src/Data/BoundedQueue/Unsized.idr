@@ -146,12 +146,12 @@ peekOldest q =
     Just (v, MkBoundedQueue queue
                             queuelimit
                             queuesize
-         ) =>
+         )  =>
       Just (v, MkBoundedQueue (v `cons` queue)
                               queuelimit
                               (queuesize `plus` 1)
            )
-    Nothing                                =>
+    Nothing =>
       Nothing
 
 ||| Appends two `BoundedQueues`. O(m + n)

@@ -13,6 +13,10 @@ modules    = Data.BoundedQueue.Sized
            , Data.BoundedQueue.Unsized
            , Data.BoundedQueue.Sized.Internal
            , Data.BoundedQueue.Unsized.Internal
+           , Data.BoundedQueue1.Sized
+           , Data.BoundedQueue1.Unsized
+           , Data.BoundedQueue1.Sized.Internal
+           , Data.BoundedQueue1.Unsized.Internal
            , Data.FVect
            , Data.FVect.Capacity
            , Data.HashPSQ

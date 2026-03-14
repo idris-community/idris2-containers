@@ -2,6 +2,8 @@ module Main
 
 import BoundedQueue.Sized
 import BoundedQueue.Unsized
+import BoundedQueue1.Sized
+import BoundedQueue1.Unsized
 import HashPSQ
 import Hedgehog
 import LRUCache
@@ -23,6 +25,8 @@ main : IO ()
 main = test
   [ BoundedQueue.Sized.props
   , BoundedQueue.Unsized.props
+  , BoundedQueue1.Sized.props
+  , BoundedQueue1.Unsized.props
   , HashPSQ.props
   , LRUCache.props
   , LRUCache1.props
