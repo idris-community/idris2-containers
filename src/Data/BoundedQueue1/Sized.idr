@@ -4,7 +4,7 @@ module Data.BoundedQueue1.Sized
 import Data.BoundedQueue1.Sized.Internal
 
 import Data.Linear.Ref1
-import Data.Seq.Sized
+import Data.Seq.Unsized
 import Derive.Prelude
 
 %hide Data.Vect.length
@@ -19,7 +19,7 @@ export
 empty :  (l : Nat)
       -> F1 s (BoundedQueue1 s l 0 a)
 empty _ t =
-  let seq # t := ref1 Data.Seq.Sized.empty t
+  let seq # t := ref1 Data.Seq.Unsized.empty t
     in (MkBoundedQueue1 seq) # t
 
 ||| Is the `BoundedQueue1` empty? O(1)
@@ -41,7 +41,7 @@ fromList :  (o : Nat)
          -> (vs : List a)
          -> F1 s (BoundedQueue1 s o (length $ take o vs) a)
 fromList o vs t =
-  let seq # t := ref1 (Data.Seq.Sized.fromList $ take o vs) t
+  let seq # t := ref1 (Data.Seq.Unsized.fromList $ take o vs) t
     in (MkBoundedQueue1 seq) # t
 
 ||| Naively keeps the first `o` values of a `SnocList`, and converts
@@ -51,7 +51,7 @@ fromSnocList :  (o : Nat)
              -> (sv : SnocList a)
              -> F1 s (BoundedQueue1 s o (Prelude.List.length $ take o $ cast {to=List a} sv) a)
 fromSnocList o sv t =
-  let seq # t := ref1 (Data.Seq.Sized.fromList $ take o $ cast sv) t
+  let seq # t := ref1 (Data.Seq.Unsized.fromList $ take o $ cast sv) t
     in (MkBoundedQueue1 seq) # t
 
 ||| Converts a `BoundedQueue1` to a `List`, keeping the order
@@ -82,21 +82,24 @@ enqueue :  {m : Nat}
 enqueue (MkBoundedQueue1 queue) v {m = 0}   {n = 0}   t =
   (0 ** MkBoundedQueue1 queue) # t
 enqueue (MkBoundedQueue1 queue) v {m = S m} {n = 0}   t =
-  let queue'  # t := read1 queue t
-      queue'' # t := ref1 (queue' `snoc` v) t
-    in (1 ** MkBoundedQueue1 queue'') # t
+  let queue' # t := read1 queue t
+      ()     # t := casswap1 queue (queue' `snoc` v) t
+    in (1 ** MkBoundedQueue1 queue) # t
 enqueue (MkBoundedQueue1 queue) v {m = 0}   {n = S n} t =
   (assert_total $ idris_crash "Data.BoundedQueue1.Sized.enqueue: impossible case") # t
 enqueue (MkBoundedQueue1 queue) v {m = S m} {n = S n} t =
   let queue' # t := read1 queue t
     in case m == n of
          True  =>
-           let (_, queue'') := viewl queue'
-               queue''' # t := ref1 (queue'' `snoc` v) t
-             in ((S n) ** MkBoundedQueue1 queue''') # t
+           case viewl queue' of
+             Nothing           =>
+               (n ** MkBoundedQueue1 queue) # t
+             Just (_, queue'') =>
+               let () # t := casswap1 queue (queue'' `snoc` v) t
+                 in ((S n) ** MkBoundedQueue1 queue) # t
          False =>
-           let queue'' # t := ref1 (queue' `snoc` v) t
-             in ((S (S n)) ** MkBoundedQueue1 queue'') # t
+           let () # t := casswap1 queue (queue' `snoc` v) t
+             in ((S (S n)) ** MkBoundedQueue1 queue) # t
 
 ||| Take a value from the front of the `BoundedQueue1`. O(1)
 export
@@ -107,11 +110,14 @@ dequeue (MkBoundedQueue1 queue) {n = 0}   t =
   Nothing # t
 dequeue (MkBoundedQueue1 queue) {n = S n} t =
   let queue'   # t := read1 queue t
-      (h, queue'') := viewl queue'
-      queue''' # t := ref1 queue'' t
-    in ( Just (h, (n ** MkBoundedQueue1 queue''')
-              )
-       ) # t
+    in case viewl queue' of
+         Nothing            =>
+           Nothing # t
+         Just  (h, queue'') =>
+           let () # t := casswap1 queue queue'' t
+             in ( Just (h, (n ** MkBoundedQueue1 queue)
+                       )
+                ) # t
 
 ||| We can prepend an element to our `BoundedQueue1`, making it the new
 ||| "oldest" element. O(1)
@@ -128,22 +134,24 @@ prepend :  {m : Nat}
 prepend x (MkBoundedQueue1 queue) {m = 0}   {n = 0}   t =
   (0 ** MkBoundedQueue1 queue) # t
 prepend x (MkBoundedQueue1 queue) {m = S m} {n = 0}   t =
-  let queue'  # t := read1 queue t
-      queue'' # t := ref1 (x `cons` queue') t
-    in (1 ** MkBoundedQueue1 queue'') # t
+  let queue' # t := read1 queue t
+      ()     # t := casswap1 queue (x `cons` queue') t
+    in (1 ** MkBoundedQueue1 queue) # t
 prepend x (MkBoundedQueue1 queue) {m = 0} {n = S n}   t =
   (assert_total $ idris_crash "Data.BoundedQueue1.Sized.prepend: impossible case") # t
 prepend x (MkBoundedQueue1 queue) {m = S m} {n = S n} t =
-  case m == n of
-    True  =>
-      let queue'   # t := read1 queue t
-          (_, queue'') := viewl queue'
-          queue''' # t := ref1 (x `cons` queue'') t
-        in ((S n) ** MkBoundedQueue1 queue''') # t
-    False =>
-      let queue'  # t := read1 queue t
-          queue'' # t := ref1 (x `cons` queue') t
-        in ((S (S n)) ** MkBoundedQueue1 queue'') # t
+  let queue' # t := read1 queue t
+    in case m == n of
+         True  =>
+           case viewl queue' of
+             Nothing           =>
+               ((S n) ** MkBoundedQueue1 queue) # t
+             Just (_, queue'') =>
+               let () # t := casswap1 queue (x `cons` queue'') t
+                 in ((S n) ** MkBoundedQueue1 queue) # t
+         False =>
+           let () # t := casswap1 queue (x `cons` queue') t
+             in ((S (S n)) ** MkBoundedQueue1 queue) # t
 
 ||| Return the last element of the `BoundedQueue1`, plus the unmodified
 ||| queue.
@@ -161,9 +169,9 @@ peekOldest q t =
     in case q' of
          Just (v, (n' ** MkBoundedQueue1 queue)
               )  =>
-           let queue'  # t := read1 queue t
-               queue'' # t := ref1 (v `cons` queue') t
-             in ( Just (v, ((S n') ** MkBoundedQueue1 queue'')
+           let queue' # t := read1 queue t
+               ()     # t := casswap1 queue (v `cons` queue') t
+             in ( Just (v, ((S n') ** MkBoundedQueue1 queue)
                        )
                 ) # t
          Nothing =>

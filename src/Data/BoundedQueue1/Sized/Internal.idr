@@ -2,7 +2,7 @@
 module Data.BoundedQueue1.Sized.Internal
 
 import Data.Linear.Ref1
-import Data.Seq.Sized
+import Data.Seq.Unsized
 
 %default total
 
@@ -12,5 +12,5 @@ import Data.Seq.Sized
 ||| and the `n` argument tracks the `BoundedQueue1`s size.
 public export
 data BoundedQueue1 : (s : Type) -> (m : Nat) -> (n : Nat) -> (a : Type) -> Type where
-  MkBoundedQueue1 : Ref s (Seq n a) -- queue
+  MkBoundedQueue1 : Ref s (Seq a) -- queue
                  -> BoundedQueue1 s m n a
