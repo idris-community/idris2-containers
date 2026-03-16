@@ -172,26 +172,6 @@ peekOldest q t =
          Nothing =>
            Nothing # t
 
-||| Appends two `BoundedQueue1`. O(m + n)
-export
-(++) :  BoundedQueue1 s a
-     -> BoundedQueue1 s a
-     -> F1 s (BoundedQueue1 s a)
-((MkBoundedQueue1 queue1 queuelimit1 queuesize1) ++ (MkBoundedQueue1 queue2 queuelimit2 queuesize2)) t =
-  let queue1'        # t := read1 queue1 t
-      queue2'        # t := read1 queue2 t
-      queuelimit1'   # t := read1 queuelimit1 t
-      queuelimit2'   # t := read1 queuelimit2 t
-      queuesize1'    # t := read1 queuesize1 t
-      queuesize2'    # t := read1 queuesize2 t
-      queue12        # t := ref1 (queue1' ++ queue2') t
-      queuelimit12   # t := ref1 (queuelimit1' `plus` queuelimit2') t
-      queuesize12    # t := ref1 (queuesize1' `plus` queuesize2') t
-    in ( MkBoundedQueue1 queue12
-                         queuelimit12
-                         queuesize12
-       ) # t
-
 ||| Returns the length of the `BoundedQueue1`. O(1).
 export
 length :  BoundedQueue1 s a
