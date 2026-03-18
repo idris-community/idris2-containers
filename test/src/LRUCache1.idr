@@ -14,10 +14,11 @@ prop_eviction = property1 $
       failure
     Yes prf =>
       ( run1 $ \t =>
-          let c                     # t := Data.LRUCache1.empty (S Z) {prfcapacity=prf} t
-              c'                    # t := Data.LRUCache1.insert Z Z c t
-              (MkLRUCache1 _ s _ _) # t := Data.LRUCache1.insert (S Z) (S Z) c' t
-            in read1 s t ) === 1
+          let cache                 # t := Data.LRUCache1.empty (S Z) {prfcapacity=prf} t
+              cache'                # t := Data.LRUCache1.insert Z Z cache t
+              (MkLRUCache1 cache'') # t := Data.LRUCache1.insert (S Z) (S Z) cache' t
+              (MkLRUCache _ s _ _)  # t := read1 cache'' t
+            in s # t ) === 1
 
 export
 props : Group

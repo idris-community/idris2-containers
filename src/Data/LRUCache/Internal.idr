@@ -23,7 +23,7 @@ Priority = Nat
 ||| Least Recently Used (LRU) Cache based on hashing.
 public export
 data LRUCache : (k : Type) -> (v : Type) -> Type where
-  MkLRUCache :  (capacity : Nat)               -- The maximum number of elements in the queue.
+  MkLRUCache :  (capacity : Nat)               -- The maximum number of elements the queue can hold.
              -> (size : Nat)                   -- The current number of elements in the queue.
              -> (tick : Priority)              -- The next logical time.
              -> (queue : HashPSQ k Priority v) -- The underlying priority queue.
