@@ -1,8 +1,9 @@
 ||| Bounded Queue Internals
 module Data.BoundedQueue1.Sized.Internal
 
-import Data.Linear.Ref1
 import Data.Seq.Unsized
+
+import Data.Linear.Ref1
 
 %default total
 

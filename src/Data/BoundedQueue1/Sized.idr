@@ -2,9 +2,9 @@
 module Data.BoundedQueue1.Sized
 
 import Data.BoundedQueue1.Sized.Internal
+import Data.Seq.Unsized
 
 import Data.Linear.Ref1
-import Data.Seq.Unsized
 import Derive.Prelude
 
 %hide Data.Vect.length

@@ -1,10 +1,11 @@
 ||| Linear Bounded Queues
 module Data.BoundedQueue1.Unsized
 
+import Data.BoundedQueue.Unsized.Internal
 import Data.BoundedQueue1.Unsized.Internal
+import Data.Seq.Unsized
 
 import Data.Linear.Ref1
-import Data.Seq.Unsized
 import Derive.Prelude
 
 %language ElabReflection
@@ -16,21 +17,19 @@ export
 empty :  Nat
       -> F1 s (BoundedQueue1 s a)
 empty l t =
-  let seq # t := ref1 Data.Seq.Unsized.empty t
-      l'  # t := ref1 l t
-      s   # t := ref1 Z t
-    in ( MkBoundedQueue1 seq
-                         l'
-                         s
-       ) # t
+  let bq # t := ref1 ( MkBoundedQueue Data.Seq.Unsized.empty
+                                      l
+                                      Z
+                     ) t
+    in (MkBoundedQueue1 bq) # t
 
 ||| Is the `BoundedQueuei1` empty? O(1)
 export
 null :  BoundedQueue1 s a
      -> F1 s Bool
-null (MkBoundedQueue1 _ _ s) t =
-  let s' # t := read1 s t
-    in case s' of
+null (MkBoundedQueue1 bq) t =
+  let (MkBoundedQueue _ _ s) # t := read1 bq t
+    in case s of
          Z =>
            True # t
          _ =>
@@ -43,14 +42,12 @@ fromList :  (n : Nat)
          -> (vs : List a)
          -> F1 s (BoundedQueue1 s a)
 fromList n vs t =
-  let vs'     := take n vs
-      seq # t := ref1 (Data.Seq.Unsized.fromList vs') t
-      l   # t := ref1 n t
-      s   # t := ref1 (length vs') t
-    in ( MkBoundedQueue1 seq
-                         l
-                         s
-       ) # t
+  let vs'    := take n vs
+      bq # t := ref1 ( MkBoundedQueue (Data.Seq.Unsized.fromList vs')
+                                      n
+                                      (Prelude.List.length vs')
+                     ) t
+    in (MkBoundedQueue1 bq) # t
 
 ||| Naively keeps the first `n` values of a `SnocList`, and converts
 ||| into a `BoundedQueue1` (keeps the order of the elements). O(1)
@@ -59,69 +56,60 @@ fromSnocList :  (n : Nat)
              -> (sv : SnocList a)
              -> F1 s (BoundedQueue1 s a)
 fromSnocList n sv t =
-  let sv'     := take n $ cast sv
-      seq # t := ref1 (Data.Seq.Unsized.fromList sv') t
-      l   # t := ref1 n t
-      s   # t := ref1 (Prelude.List.length sv') t
-    in ( MkBoundedQueue1 seq
-                         l
-                         s
-       ) # t
+  let sv'    := take n $ cast sv
+      bq # t := ref1 ( MkBoundedQueue (Data.Seq.Unsized.fromList sv')
+                                      n
+                                      (Prelude.List.length sv')
+                     ) t
+    in (MkBoundedQueue1 bq) # t
 
 ||| Converts a `BoundedQueue1` to a `List`, keeping the order
 ||| of elements. O(n)
 export
 toList :  BoundedQueue1 s a
        -> F1 s (List a)
-toList (MkBoundedQueue1 queue _ _) t =
-  let queue' # t := read1 queue t
-    in (toList queue') # t
+toList (MkBoundedQueue1 bq) t =
+  let (MkBoundedQueue q _ _) # t := read1 bq t
+    in (toList q) # t
 
 ||| Converts a `BoundedQueue1` to a `SnocList`, keeping the order
 ||| of elements. O(n)
 export
 toSnocList :  BoundedQueue1 s a
            -> F1 s (SnocList a)
-toSnocList (MkBoundedQueue1 queue _ _) t =
-  let queue' # t := read1 queue t
-    in (cast $ toList queue') # t
+toSnocList (MkBoundedQueue1 bq) t =
+  let (MkBoundedQueue q _ _) # t := read1 bq t
+    in (cast $ toList q) # t
 
 ||| Append a value at the back of the `BoundedQueue1`. O(1)
 export
 enqueue :  BoundedQueue1 s a
         -> a
         -> F1' s
-enqueue (MkBoundedQueue1 queue queuelimit queuesize) v t =
-  let queue'      # t := read1 queue t
-      queuelimit' # t := read1 queuelimit t
-      queuesize'  # t := read1 queuesize t
-    in case queuelimit' == queuesize' of
+enqueue (MkBoundedQueue1 bq) v t =
+  let (MkBoundedQueue q l s) # t := read1 bq t
+    in case l == s of
          True  =>
-           case viewl queue' of
-             Nothing           =>
+           case viewl q of
+             Nothing      =>
                () # t
-             Just (_, queue'') =>
-               casswap1 queue (queue'' `snoc` v) t
+             Just (_, q') =>
+               casswap1 bq (MkBoundedQueue (q' `snoc` v) l s) t
          False =>
-           let () # t := casswap1 queue (queue' `snoc` v) t
-             in casmod1 queuesize (`plus` 1) t
+           casswap1 bq (MkBoundedQueue (q `snoc` v) l (s `plus` 1)) t
 
 ||| Take a value from the front of the `BoundedQueue1`. O(1)
 export
 dequeue :  BoundedQueue1 s a
         -> F1 s (Maybe (a, BoundedQueue1 s a))
-dequeue (MkBoundedQueue1 queue queuelimit queuesize) t =
-  let queue' # t := read1 queue t
-    in case viewl queue' of
-         Nothing           =>
+dequeue (MkBoundedQueue1 bq) t =
+  let (MkBoundedQueue q l s) # t := read1 bq t
+    in case viewl q of
+         Nothing      =>
            Nothing # t
-         Just (h, queue'') =>
-           let () # t := casmod1 queuesize (`minus` 1) t
-               () # t := casswap1 queue queue'' t
-             in Just (h, MkBoundedQueue1 queue
-                                         queuelimit
-                                         queuesize
-                     ) # t
+         Just (h, q') =>
+           let () # t := casswap1 bq (MkBoundedQueue q' l (s `minus` 1)) t
+             in Just (h, MkBoundedQueue1 bq) # t
 
 ||| We can prepend an element to our `BoundedQueue1`, making it the new
 ||| "oldest" element. O(1)
@@ -133,20 +121,17 @@ export
 prepend :  a
         -> BoundedQueue1 s a
         -> F1' s
-prepend x bq@(MkBoundedQueue1 queue queuelimit queuesize) t =
-  let queue'      # t := read1 queue t
-      queuelimit' # t := read1 queuelimit t
-      queuesize'  # t := read1 queuesize t
-    in case queuelimit' == queuesize' of
+prepend x (MkBoundedQueue1 bq) t =
+  let (MkBoundedQueue q l s) # t := read1 bq t
+    in case l == s of
          True  =>
-           case viewl queue' of
-             Nothing           =>
+           case viewl q of
+             Nothing      =>
                () # t
-             Just (_, queue'') =>
-               casswap1 queue (x `cons` queue'') t
+             Just (_, q') =>
+               casswap1 bq (MkBoundedQueue (x `cons` q') l s) t
          False =>
-           let () # t := casswap1 queue (x `cons` queue') t
-             in casmod1 queuesize (`plus` 1) t
+           casswap1 bq (MkBoundedQueue (x `cons` q) l (s `plus` 1)) t
 
 ||| Return the last element of the `BoundedQueue1`, plus the unmodified
 ||| queue.
@@ -161,14 +146,11 @@ peekOldest :  BoundedQueue1 s a
 peekOldest q t =
   let q' # t := dequeue q t
     in case q' of
-         Just (v, MkBoundedQueue1 queue
-                                  queuelimit
-                                  queuesize
+         Just (v, MkBoundedQueue1 bq
               )  =>
-           let queue' # t := read1 queue t
-               ()     # t := casswap1 queue (v `cons` queue') t
-               ()     # t := casmod1 queuesize (`plus` 1) t
-             in (Just (v, q)) # t
+           let (MkBoundedQueue q l s) # t := read1 bq t
+               ()                     # t := casswap1 bq (MkBoundedQueue (v `cons` q) l (s `plus` 1)) t
+             in (Just (v, (MkBoundedQueue1 bq))) # t
          Nothing =>
            Nothing # t
 
@@ -176,5 +158,6 @@ peekOldest q t =
 export
 length :  BoundedQueue1 s a
        -> F1 s Nat
-length (MkBoundedQueue1 _ _ queuesize) t =
-  read1 queuesize t
+length (MkBoundedQueue1 bq) t =
+  let (MkBoundedQueue _ _ s) # t := read1 bq t
+    in s # t
