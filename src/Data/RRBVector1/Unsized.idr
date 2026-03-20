@@ -402,7 +402,7 @@ update i x v@(Root size sh tree) t =
         Just i' =>
           let newtree  # t := get arr i' t
               newtree' # t := assert_total $ updateTree i (down sh) newtree t
-              ()       # t := set arr i' newtree' t
+              ()       # t := casswap arr i' newtree' t
             in (Balanced {bsize=b} (b ** arr)) # t
     updateTree i sh (Unbalanced (u ** arr) sizes) t =
       let (idx, subidx) := relaxedRadixIndex sizes i sh
@@ -412,7 +412,7 @@ update i x v@(Root size sh tree) t =
              Just idx' =>
                let newtree  # t := get arr idx' t
                    newtree' # t := assert_total $ updateTree subidx (down sh) newtree t
-                   ()       # t := set arr idx' newtree' t
+                   ()       # t := casswap arr idx' newtree' t
                  in (Unbalanced (u ** arr) sizes) # t
     updateTree i _  (Leaf (l ** arr))             t =
       let i' = integerToNat ((natToInteger i) .&. (natToInteger blockmask))
@@ -420,7 +420,7 @@ update i x v@(Root size sh tree) t =
              Nothing =>
                (assert_total $ idris_crash "Data.RRBVector.update: can't convert Nat to Fin") # t
              Just i'' =>
-               let () # t := set arr i'' x t
+               let () # t := casswap arr i'' x t
                  in (Leaf {lsize=l} (l ** arr)) # t
 
 ||| Adjust the element at the index by applying the function to it.
@@ -471,7 +471,7 @@ adjust i f v@(Root size sh tree) t =
         Just i' =>
           let newtree  # t := get arr i' t
               newtree' # t := assert_total $ adjustTree i (down sh) newtree t
-              ()       # t := set arr i' newtree' t
+              ()       # t := casswap arr i' newtree' t
             in (Balanced {bsize=b} (b ** arr)) # t
     adjustTree i sh (Unbalanced (u ** arr) sizes) t =
       let (idx, subidx) := relaxedRadixIndex sizes i sh
@@ -481,7 +481,7 @@ adjust i f v@(Root size sh tree) t =
              Just idx' =>
                let newtree  # t := get arr idx' t
                    newtree' # t := assert_total $ adjustTree subidx (down sh) newtree t
-                   ()       # t := set arr idx' newtree' t
+                   ()       # t := casswap arr idx' newtree' t
                  in (Unbalanced (u ** arr) sizes) # t
     adjustTree i _  (Leaf (l ** arr))             t =
       let i' = integerToNat ((natToInteger i) .&. (natToInteger blockmask))
@@ -539,7 +539,7 @@ takeTree i sh (Balanced (b ** arr)) with (radixIndex i sh) | ((plus (radixIndex 
         let arr'     # t := mtake arr (plus (radixIndex i sh) 1) @{lteOpReflectsLTE _ _ eq} t
             newtree  # t := get arr' i'' t
             newtree' # t := assert_total $ takeTree i (down sh) newtree t
-            ()       # t := set arr' i'' newtree' t
+            ()       # t := casswap arr' i'' newtree' t
           in (Balanced {bsize=(plus (radixIndex i sh) 1)} ((plus (radixIndex i sh) 1) ** arr')) # t
   _ | _  | False = \t =>
     (assert_total $ idris_crash "Data.RRBVector1.takeTree: index out of bounds") # t
@@ -552,7 +552,7 @@ takeTree i sh (Unbalanced (u ** arr) sizes) with (relaxedRadixIndex sizes i sh) 
         let arr'      # t := mtake arr (plus (fst (relaxedRadixIndex sizes i sh)) 1) @{lteOpReflectsLTE _ _ eq} t
             newtree   # t := get arr' idx' t
             newtree'  # t := assert_total $ takeTree subidx (down sh) newtree t
-            ()        # t := set arr' idx' newtree' t
+            ()        # t := casswap arr' idx' newtree' t
             newtree'' # t := computeSizes sh arr' t
           in newtree'' # t
   _ | _             | False = \t =>
@@ -582,7 +582,7 @@ dropTree n sh (Balanced (b ** arr))         t =
            let arr'      # t := mdrop idx arr t
                newtree   # t := get arr' zero t
                newtree'  # t := assert_total $ dropTree n (down sh) newtree t
-               ()        # t := set arr' zero newtree' t
+               ()        # t := casswap arr' zero newtree' t
                newtree'' # t := computeSizes sh arr' t
              in newtree'' # t
 dropTree n sh (Unbalanced (u ** arr) sizes) t =
@@ -594,7 +594,7 @@ dropTree n sh (Unbalanced (u ** arr) sizes) t =
            let arr'      # t := mdrop idx arr t
                newtree   # t := get arr' zero t
                newtree'  # t := assert_total $ dropTree subidx (down sh) newtree t
-               ()        # t := set arr' zero newtree' t
+               ()        # t := casswap arr' zero newtree' t
                newtree'' # t := computeSizes sh arr' t
              in newtree'' # t
 dropTree n _  (Leaf (l ** arr))             t =
@@ -771,7 +771,7 @@ mapTree f arr t =
                  Just m' =>
                    let arr''' # t := assert_total $ mapTree f arr'' t
                        arr''''    := Balanced {bsize=b} (b ** arr''')
-                       ()     # t := set arr' m' arr'''' t
+                       ()     # t := casswap arr' m' arr'''' t
                      in go (S m) j arr' t
              (Unbalanced (u ** arr'') sizes) =>
                case tryNatToFin m of
@@ -780,7 +780,7 @@ mapTree f arr t =
                  Just m' =>
                    let arr''' # t := assert_total $ mapTree f arr'' t
                        arr''''    := Unbalanced (u ** arr''') sizes
-                       ()     # t := set arr' m' arr'''' t
+                       ()     # t := casswap arr' m' arr'''' t
                      in go (S m) j arr' t
              (Leaf (l ** arr''))             =>
                case tryNatToFin m of
@@ -789,7 +789,7 @@ mapTree f arr t =
                  Just m' =>
                    let ()     # t := mupdate f arr'' t
                        arr'''     := Leaf {lsize=l} (l ** arr'')
-                       ()     # t := set arr' m' arr''' t
+                       ()     # t := casswap arr' m' arr''' t
                      in go (S m) j arr' t
 
 ||| Apply the function to every element. O(n)
@@ -939,7 +939,7 @@ export
                  Just zero =>
                    let newtree   # t := get arr zero t
                        newtree'  # t := assert_total $ consTree (down sh) newtree t
-                       ()        # t := set arr zero newtree' t
+                       ()        # t := casswap arr zero newtree' t
                        newtree'' # t := computeSizes sh arr t
                      in newtree'' # t
              EQ =>
@@ -955,7 +955,7 @@ export
                  Just zero =>
                    let newtree   # t := get arr zero t
                        newtree'  # t := assert_total $ consTree (down sh) newtree t
-                       ()        # t := set arr zero newtree' t
+                       ()        # t := casswap arr zero newtree' t
                        newtree'' # t := computeSizes sh arr t
                      in newtree'' # t
     consTree sh (Unbalanced (_ ** arr) _) t =
@@ -968,7 +968,7 @@ export
                  Just zero =>
                    let newtree   # t := get arr zero t
                        newtree'  # t := assert_total $ consTree (down sh) newtree t
-                       ()        # t := set arr zero newtree' t
+                       ()        # t := casswap arr zero newtree' t
                        newtree'' # t := computeSizes sh arr t
                      in newtree'' # t
              EQ =>
@@ -984,7 +984,7 @@ export
                  Just zero =>
                    let newtree   # t := get arr zero t
                        newtree'  # t := assert_total $ consTree (down sh) newtree t
-                       ()        # t := set arr zero newtree' t
+                       ()        # t := casswap arr zero newtree' t
                        newtree'' # t := computeSizes sh arr t
                      in newtree'' # t
     consTree _  (Leaf (l ** arr))         t =
@@ -1081,7 +1081,7 @@ export
                  Just lastidx =>
                    let newtree   # t := get arr lastidx t
                        newtree'  # t := assert_total $ snocTree (down sh) newtree t
-                       ()        # t := set arr lastidx newtree' t
+                       ()        # t := casswap arr lastidx newtree' t
                        in (Balanced {bsize=b} (b ** arr)) # t
              EQ => -- the current subtree is fully balanced
                let newtree   # t := newBranch x (down sh) t
@@ -1095,7 +1095,7 @@ export
                  Just lastidx =>
                    let newtree   # t := get arr lastidx t
                        newtree'  # t := assert_total $ snocTree (down sh) newtree t
-                       ()        # t := set arr lastidx newtree' t
+                       ()        # t := casswap arr lastidx newtree' t
                      in (Balanced {bsize=b} (b ** arr)) # t
     snocTree sh (Unbalanced (u ** arr) sizes) t =
       let sh' # t := insertshift t
@@ -1107,14 +1107,17 @@ export
                  Just lastidxa =>
                    let newtree  # t := get arr lastidxa t
                        newtree' # t := assert_total $ snocTree (down sh) newtree t
-                       ()       # t := set arr lastidxa newtree' t
+                       ()       # t := casswap arr lastidxa newtree' t
                      in case tryNatToFin $ minus u 1 of
                           Nothing       =>
                             (assert_total $ idris_crash "Data.RRBVector1.(|>).snocTree.Unbalanced: can't convert Nat to Fin") # t
                           Just lastidxs =>
-                            let lastsize := plus (at sizes lastidxs) 1
+                            let lastsize    := plus (at sizes lastidxs) 1
+                                sizes'  # t := thaw sizes t
+                                ()      # t := casswap sizes' lastidxs lastsize t
+                                sizes'' # t := freeze sizes' t
                               in (Unbalanced (u ** arr)
-                                             (setAt lastidxs lastsize sizes)
+                                             sizes''
                                  ) # t
              EQ =>
                 case tryNatToFin $ minus u 1 of
@@ -1135,14 +1138,17 @@ export
                  Just lastidxa =>
                    let newtree  # t := get arr lastidxa t
                        newtree' # t := assert_total $ snocTree (down sh) newtree t
-                       ()       # t := set arr lastidxa newtree' t
+                       ()       # t := casswap arr lastidxa newtree' t
                      in case tryNatToFin $ minus u 1 of
                           Nothing       =>
                             (assert_total $ idris_crash "Data.RRBVector1.(|>).snocTree.Unbalanced: can't convert Nat to Fin") # t
                           Just lastidxs =>
-                            let lastsize := plus (at sizes lastidxs) 1
+                            let lastsize    := plus (at sizes lastidxs) 1
+                                sizes'  # t := thaw sizes t
+                                ()      # t := casswap sizes' lastidxs lastsize t
+                                sizes'' # t := freeze sizes' t
                               in (Unbalanced (u ** arr)
-                                             (setAt lastidxs lastsize sizes)
+                                             sizes''
                                  ) # t
     snocTree _  (Leaf (l ** arr))         t =
       let arr'  # t := marray1 1 x t

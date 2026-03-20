@@ -229,7 +229,7 @@ computeSizes sh arr t =
                  Nothing =>
                    (assert_total $ idris_crash "Data.RRBVector.Internal.computeSizes.createArrNat.go: can't convert Nat to Fin") # t
                  Just m' =>
-                   let () # t := set an m' acc' t
+                   let () # t := casswap an m' acc' t
                      in go (S m) j acc' an t
     maxsize : Integer
     maxsize = 1 `shiftL` sh -- the maximum size of a subtree
