@@ -99,6 +99,18 @@ export
 length : Queue a -> Nat
 length (Q f b) = length f + length b
 
+||| Keeps only those values in a queue for which the given predicate
+||| returns `True`.
+export
+filter : (a -> Bool) -> Queue a -> Queue a
+filter f (Q front back) = Q (filter f front) (filter f back)
+
+||| Maps the values in a queue, keeping only those for which the given
+||| function returns a `Just`.
+export
+mapMaybe : (a -> Maybe b) -> Queue a -> Queue b
+mapMaybe f (Q front back) = Q (mapMaybe f front) (mapMaybe f back)
+
 --------------------------------------------------------------------------------
 --          Interfaces
 --------------------------------------------------------------------------------
