@@ -4,7 +4,6 @@ import List
 import Map
 import RRBVector.Sized
 import RRBVector.Unsized
-import RRBVector1.Sized
 import RRBVector1.Unsized
 import Seq.Sized
 import Seq.Unsized
@@ -35,11 +34,6 @@ bench =
             , Single "100"  (basic createRRBVectorUnsized 99)
             , Single "1000" (basic createRRBVectorUnsized 999)
             ]
-        , Group "fromListRRBVector1Sized"
-            [ Single "1"    (basic createRRBVector1Sized 0)
-            , Single "100"  (basic createRRBVector1Sized 100)
-            , Single "1000" (basic createRRBVector1Sized 1000)
-            ]
         , Group "fromListRRBVector1Unsized"
             [ Single "1"    (basic createRRBVector1Unsized 0)
             , Single "100"  (basic createRRBVector1Unsized 100)
@@ -56,9 +50,6 @@ bench =
         , Group "consRRBVectorUnsized"
             [ Single "10" (basic consRRBVectorUnsized 9)
             ]
-        , Group "consRRBVector1Sized"
-            [ Single "10" (basic consRRBVector1Sized 9)
-            ]
         , Group "consRRBVector1Unsized"
             [ Single "10" (basic consRRBVector1Unsized 9)
             ]
@@ -71,9 +62,6 @@ bench =
         , Group "snocRRBVectorUnsized"
             [ Single "10" (basic snocRRBVectorUnsized 9)
             ]
-        , Group "snocRRBVector1Sized"
-            [ Single "10" (basic snocRRBVector1Sized 9)
-            ]
         , Group "snocRRBVector1Unsized"
             [ Single "10" (basic snocRRBVector1Unsized 9)
             ]
@@ -85,9 +73,6 @@ bench =
             ]
         , Group "appendRRBVectorUnsized"
             [ Single "10" (basic appendRRBVectorUnsized 9)
-            ]
-        , Group "appendRRBVector1Sized"
-            [ Single "10" (basic appendRRBVector1Sized 9)
             ]
         , Group "appendRRBVector1Unsized"
             [ Single "10" (basic appendRRBVector1Unsized 9)
@@ -119,13 +104,7 @@ bench =
             , Single "1000"  (basic mapRRBVectorUnsized 999)
             , Single "10000" (basic mapRRBVectorUnsized 9999)
             ]
-        , Group "mapRRBVector1Sized"
-            [ Single "1"     (basic mapRRBVector1Sized 0)
-            , Single "100"   (basic mapRRBVector1Sized 99)
-            , Single "1000"  (basic mapRRBVector1Sized 999)
-            , Single "10000" (basic mapRRBVector1Sized 9999)
-            ]
-        , Group "mapRRBVector1Sized"
+        , Group "mapRRBVector1Unsized"
             [ Single "1"     (basic mapRRBVector1Unsized 0)
             , Single "100"   (basic mapRRBVector1Unsized 99)
             , Single "1000"  (basic mapRRBVector1Unsized 999)
