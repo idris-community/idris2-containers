@@ -13,9 +13,7 @@ modules    = Data.BoundedQueue.Sized
            , Data.BoundedQueue.Unsized
            , Data.BoundedQueue.Sized.Internal
            , Data.BoundedQueue.Unsized.Internal
-           , Data.BoundedQueue1.Sized
            , Data.BoundedQueue1.Unsized
-           , Data.BoundedQueue1.Sized.Internal
            , Data.BoundedQueue1.Unsized.Internal
            , Data.FVect
            , Data.FVect.Capacity
@@ -36,14 +34,11 @@ modules    = Data.BoundedQueue.Sized
            , Data.RRBVector.Unsized
            , Data.RRBVector.Sized.Internal
            , Data.RRBVector.Unsized.Internal
-           , Data.RRBVector1.Sized
            , Data.RRBVector1.Unsized
-           , Data.RRBVector1.Sized.Internal
            , Data.RRBVector1.Unsized.Internal
            , Data.Seq.Internal
            , Data.Seq.Sized
            , Data.Seq.Unsized
-           , Data.Seq1.Sized
            , Data.Seq1.Unsized
            , Data.Set
            , Data.Set.Internal
