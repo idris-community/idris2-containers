@@ -17,6 +17,8 @@ import RRBVector1.Sized
 import RRBVector1.Unsized
 import Seq.Sized
 import Seq.Unsized
+import Seq1.Sized
+import Seq1.Unsized
 import Set
 
 %default total
@@ -39,5 +41,7 @@ main = test
   , RRBVector1.Unsized.props
   , Seq.Sized.props
   , Seq.Unsized.props
+  , Seq1.Sized.props
+  , Seq1.Unsized.props
   , Set.props
   ]
