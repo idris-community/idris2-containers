@@ -21,9 +21,8 @@ import Data.Linear.Ref1
 ||| Create an empty LRUCache1 of the given size.
 export
 empty :  (capacity : Nat)
-      -> {0 prfcapacity : So (capacity >= 0)}
       -> F1 s (LRUCache1 s k v)
-empty capacity {prfcapacity} t =
+empty capacity t =
   let lrucache # t := ref1 ( MkLRUCache capacity
                                         0
                                         0
@@ -50,22 +49,6 @@ compress q =
     compareByPriority (_, p, _) (_, p', _) =
       compare p p'
 
-||| Restore LRUCache1 invariants.
-||| For performance reasons this is not snd . trim'.
-private
-trim :  Hashable k
-     => Ord k
-     => LRUCache1 s k v
-     -> F1 s (LRUCache1 s k v)
-trim (MkLRUCache1 cache) t =
-  let (MkLRUCache c s tc q) # t := read1 cache t
-    in case s > c of
-         True  =>
-           let () # t := casswap1 cache (MkLRUCache c (s `minus` 1) tc (deleteMin q)) t
-             in (MkLRUCache1 cache) # t
-         False =>
-           (MkLRUCache1 cache) # t
-
 ||| Insert an element into the LRUCache1.
 export
 insert :  Hashable k
@@ -75,38 +58,27 @@ insert :  Hashable k
        -> LRUCache1 s k v
        -> F1 s (LRUCache1 s k v)
 insert key val (MkLRUCache1 cache) t =
-  let (MkLRUCache c s tc q) # t := read1 cache t
-      (mboldval, queue)         := HashPSQ.insertView key tc val q
-    in case isNothing mboldval of
-         True  =>
-           let () # t := casswap1 cache (MkLRUCache c (s `plus` 1) (tc `plus` 1) queue) t
-             in trim (MkLRUCache1 cache) t
-         False =>
-           let () # t := casswap1 cache (MkLRUCache c s (tc `plus` 1) queue) t
-             in trim (MkLRUCache1 cache) t
+  casupdate1 cache
+    (\(MkLRUCache c s tc q) =>
+      let (mboldval, queue) := HashPSQ.insertView key tc val q
+          s1                := case isNothing mboldval of
+                                 True  => s `plus` 1
+                                 False => s
+          cache1            := MkLRUCache c s1 (tc `plus` 1) queue
+        in case s1 > c of
+             True  =>
+               ( MkLRUCache c (s1 `minus` 1) (tc `plus` 1) (deleteMin queue)
+               , MkLRUCache1 cache
+               )
+             False =>
+               ( cache1
+               , MkLRUCache1 cache
+               )
+    ) t
 
 --------------------------------------------------------------------------------
 --          Views
 --------------------------------------------------------------------------------
-
-||| Restore LRUCache1 invariants returning the evicted element if any.
-private
-trim' :  Hashable k
-      => Ord k
-      => LRUCache1 s k v
-      -> F1 s (Maybe (k, v), LRUCache1 s k v)
-trim' (MkLRUCache1 cache) t =
-  let (MkLRUCache c s tc q) # t := read1 cache t
-    in case s > c of
-         True  =>
-           case HashPSQ.findMin q of
-             Nothing        =>
-               (assert_total $ idris_crash "Data.LRUCache1.trim': internal error") # t
-             Just (k, _, v) =>
-               let () # t := casswap1 cache (MkLRUCache c (s `minus` 1) tc (deleteMin q)) t
-                 in (Just (k, v), (MkLRUCache1 cache)) # t
-         False =>
-           (Nothing, (MkLRUCache1 cache)) # t
 
 ||| Insert an element into the LRUCache1 returning the evicted element if any.
 ||| When the logical clock reaches its maximum value and all values are
@@ -119,15 +91,26 @@ insertView :  Hashable k
            -> LRUCache1 s k v
            -> F1 s (Maybe (k, v), LRUCache1 s k v)
 insertView key val (MkLRUCache1 cache) t =
-  let (MkLRUCache c s tc q) # t := read1 cache t
-      (mboldval, queue)         := HashPSQ.insertView key tc val q
-    in case isNothing mboldval of
-         True  =>
-           let () # t := casswap1 cache (MkLRUCache c (s `plus` 1) (tc `plus` 1) queue) t
-             in trim' (MkLRUCache1 cache) t
-         False =>
-           let () # t := casswap1 cache (MkLRUCache c s (tc `plus` 1) queue) t
-             in trim' (MkLRUCache1 cache) t
+  casupdate1 cache
+    (\(MkLRUCache c s tc q) =>
+     let (mboldval, queue) := HashPSQ.insertView key tc val q
+         s1                := case isNothing mboldval of
+                                True  => s `plus` 1
+                                False => s
+       in case s1 > c of
+            True =>
+              case HashPSQ.findMin queue of
+                Nothing =>
+                  (assert_total $ idris_crash "Data.LRUCache1.insertView: internal error")
+                Just (k, _, v) =>
+                  ( MkLRUCache c (s1 `minus` 1) (tc `plus` 1) (deleteMin queue)
+                  , (Just (k, v), MkLRUCache1 cache)
+                  )
+            False =>
+              ( MkLRUCache c s1 (tc `plus` 1) queue
+              , (Nothing, MkLRUCache1 cache)
+              )
+    ) t
 
 --------------------------------------------------------------------------------
 --          Query
@@ -141,17 +124,43 @@ lookup :  Hashable k
        -> LRUCache1 s k v
        -> F1 s (Maybe (v, LRUCache1 s k v))
 lookup k (MkLRUCache1 cache) t =
-  let (MkLRUCache c s tc q) # t := read1 cache t
-    in case HashPSQ.alter (\x =>
-                              case x of
-                                Nothing        =>
-                                  (Nothing, Nothing)
-                                (Just (_, x')) =>
-                                  (Just x', Just (tc, x'))
-                          ) k q of
-         (Nothing, _)    =>
-           Nothing # t
-         (Just x, queue) =>
-           let ()           # t := casswap1 cache (MkLRUCache c s (tc `plus` 1) queue) t
-               trimmedcache # t := trim (MkLRUCache1 cache) t
-             in (Just (x, trimmedcache)) # t
+  casupdate1 cache
+    (\(MkLRUCache c s tc q) =>
+      case HashPSQ.alter (\x =>
+                             case x of
+                               Nothing        =>
+                                 (Nothing, Nothing)
+                               Just (_, x')   =>
+                                 (Just x', Just (tc, x'))
+                         ) k q of
+        (Nothing, _)    =>
+          ( MkLRUCache c s tc q
+          , Nothing
+          )
+        (Just x, queue) =>
+          let tc1 = tc `plus` 1
+            in case s > c of
+                 True  =>
+                   ( MkLRUCache c (s `minus` 1) tc1 (deleteMin queue)
+                   , Just (x, MkLRUCache1 cache)
+                   )
+                 False =>
+                   ( MkLRUCache c s tc1 queue
+                   , Just (x, MkLRUCache1 cache)
+                   )
+    ) t
+
+--------------------------------------------------------------------------------
+--          Creating a List from a LRUCache1
+--------------------------------------------------------------------------------
+
+||| Convert an LRUCache1 to a list of (key, value) pairs.
+export
+toList :  Hashable k
+       => Ord k
+       => LRUCache1 s k v
+       -> F1 s (List (k, v))
+toList (MkLRUCache1 cache) t =
+  let (MkLRUCache _ _ _ q) # t := read1 cache t
+      lst                      := map (\(k, _, v) => (k, v)) (HashPSQ.toList q)
+    in lst # t
