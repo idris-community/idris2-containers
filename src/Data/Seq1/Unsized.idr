@@ -8,29 +8,30 @@ import Data.Linear.Ref1
 import public Data.Zippable
 
 import Data.Seq.Internal
+import Data.Seq.Unsized
 
 %default total
 
 ||| A linear two-end finite sequence.
 export
 data Seq1 : (s : Type) -> (e : Type) -> Type where
-  MkSeq1 : Ref s (FingerTree (Elem e))
+  MkSeq1 : Ref s (Seq e)
         -> Seq1 s e
 
 ||| O(1). The empty sequence.
 export
 empty : F1 s (Seq1 s e)
 empty t =
-  let tr # t := ref1 Empty t
-    in (MkSeq1 tr) # t
+  let seq # t := ref1 (MkSeq Empty) t
+    in (MkSeq1 seq) # t
 
 ||| O(1). A singleton sequence.
 export
 singleton :  e
           -> F1 s (Seq1 s e)
 singleton a t =
-  let tr # t := ref1 (Single (MkElem a)) t
-    in (MkSeq1 tr) # t
+  let seq # t := ref1 (MkSeq (Single (MkElem a))) t
+    in (MkSeq1 seq) # t
 
 ||| O(n). A sequence of length n with a the value of every element.
 export
@@ -38,24 +39,23 @@ replicate :  (n : Nat)
           -> (a : e)
           -> F1 s (Seq1 s e)
 replicate n a t =
-  let tr # t := ref1 (replicate' n a) t
-    in (MkSeq1 tr) # t
+  let seq # t := ref1 (MkSeq (replicate' n a)) t
+    in (MkSeq1 seq) # t
 
 ||| O(1). The number of elements in the sequence.
 export
 length :  Seq1 s a
        -> F1 s Nat
-length (MkSeq1 tr) t =
-  let tr' # t := read1 tr t
-    in (length' tr') # t
+length (MkSeq1 seq) t =
+  let (MkSeq seq') # t := read1 seq t
+    in (length' seq') # t
 
 ||| O(n). Reverse the sequence.
 export
 reverse :  Seq1 s a
         -> F1' s
-reverse (MkSeq1 tr) t =
-  let tr' # t := read1 tr t
-    in casswap1 tr (reverseTree id tr') t
+reverse (MkSeq1 seq) t =
+  casupdate1 seq (\(MkSeq tr) => (MkSeq (reverseTree id tr), ())) t
 
 export infixr 5 `cons`
 ||| O(1). Add an element to the left end of a sequence.
@@ -63,9 +63,8 @@ export
 cons :  e
      -> Seq1 s e
      -> F1' s
-(a `cons` (MkSeq1 tr)) t =
-  let tr' # t := read1 tr t
-    in casswap1 tr (MkElem a `consTree` tr') t
+(a `cons` (MkSeq1 seq)) t =
+  casupdate1 seq (\(MkSeq tr) => (MkSeq (MkElem a `consTree` tr), ())) t
 
 export infixl 5 `snoc`
 ||| O(1). Add an element to the right end of a sequence.
@@ -73,102 +72,97 @@ export
 snoc :  Seq1 s e
      -> e
      -> F1' s
-((MkSeq1 tr) `snoc` a) t =
-  let tr' # t := read1 tr t
-    in casswap1 tr (tr' `snocTree` MkElem a) t
-
-||| O(log(min(m, n))). Concatenate two sequences.
-export
-(++) :  Seq1 s e
-     -> Seq1 s e
-     -> F1 s (Seq1 s e)
-((MkSeq1 t1) ++ (MkSeq1 t2)) t =
-  let t1'  # t := read1 t1 t
-      t2'  # t := read1 t2 t
-      t1t2 # t := ref1 (addTree0 t1' t2') t
-    in (MkSeq1 t1t2) # t
+((MkSeq1 seq) `snoc` a) t =
+  casupdate1 seq (\(MkSeq tr) => (MkSeq (tr `snocTree` MkElem a), ())) t
 
 ||| O(1). View from the left of the sequence.
 export
 viewl :  Seq1 s e
       -> F1 s (Maybe (e, Seq1 s e))
-viewl (MkSeq1 tr) t =
-  let tr' # t := read1 tr t
-    in case viewLTree tr' of
-         Just (MkElem a, tr') =>
-           let () # t := casswap1 tr tr' t
-             in (Just (a, MkSeq1 tr)) # t
-         Nothing              =>
-           Nothing # t
+viewl (MkSeq1 seq) t =
+  casupdate1 seq
+    (\(MkSeq tr) =>
+      case viewLTree tr of
+        Just (MkElem a, tr') =>
+          (MkSeq tr', Just (a, MkSeq1 seq))
+        Nothing               =>
+          (MkSeq tr, Nothing)
+    ) t
 
 ||| O(1). The first element of the sequence.
 export
 head :  Seq1 s e
      -> F1 s (Maybe e)
-head seq t =
-  let seq' # t := viewl seq t
-    in case seq' of
-         Nothing     =>
-           Nothing # t
-         Just (h, _) =>
-           (Just h) # t
+head (MkSeq1 seq) t =
+  let MkSeq tr # t := read1 seq t
+   in case viewLTree tr of
+        Just (MkElem a, _) =>
+          Just a # t
+        Nothing            =>
+          Nothing # t
+
 ||| O(1). The elements after the head of the sequence.
 ||| Returns an empty sequence when the sequence is empty.
 export
 tail :  Seq1 s e
      -> F1 s (Seq1 s e)
-tail seq t =
-  let seq' # t := viewl seq t
-    in case seq' of
-         Just (_, seq'') =>
-           seq'' # t
-         Nothing          =>
-           empty t
+tail (MkSeq1 seq) t =
+  casupdate1 seq
+    (\(MkSeq tr) =>
+      case viewLTree tr of
+        Just (MkElem _, tr') =>
+          (MkSeq tr', MkSeq1 seq)
+        Nothing               =>
+          (MkSeq tr, MkSeq1 seq)
+    ) t
 
 ||| O(1). View from the right of the sequence.
 export
 viewr :  Seq1 s e
       -> F1 s (Maybe (Seq1 s e, e))
-viewr (MkSeq1 tr) t =
-  let tr' # t := read1 tr t
-    in case viewRTree tr' of
-         Just (tr', MkElem a) =>
-           let () # t := casswap1 tr tr' t
-             in (Just (MkSeq1 tr, a)) # t
-         Nothing              =>
-          Nothing # t
+viewr (MkSeq1 seq) t =
+  casupdate1 seq
+    (\(MkSeq tr) =>
+      case viewRTree tr of
+        Just (tr', MkElem a) =>
+          (MkSeq tr', Just (MkSeq1 seq, a))
+        Nothing               =>
+          (MkSeq tr, Nothing)
+    ) t
 
 ||| O(1). The elements before the last element of the sequence.
 ||| Returns an empty sequence when the sequence is empty.
 export
 init :  Seq1 s e
      -> F1 s (Seq1 s e)
-init seq t =
-  let seq' # t := viewr seq t
-    in case seq' of
-         Just (seq'', _) =>
-           seq'' # t
-         Nothing         =>
-           empty t
+init (MkSeq1 seq) t =
+  casupdate1 seq
+    (\(MkSeq tr) =>
+      case viewRTree tr of
+        Just (tr', MkElem _) =>
+          (MkSeq tr', MkSeq1 seq)
+        Nothing               =>
+          (MkSeq tr, MkSeq1 seq)
+    ) t
 
 ||| O(1). The last element of the sequence.
 export
 last :  Seq1 s e
      -> F1 s (Maybe e)
-last seq t =
-  let seq' # t := viewr seq t
-    in case seq' of
-         Nothing     =>
+last (MkSeq1 seq) t =
+  let MkSeq tr # t := read1 seq t
+    in case viewRTree tr of
+         Just (_, MkElem a) =>
+           Just a # t
+         Nothing            =>
            Nothing # t
-         Just (_, l) =>
-           (Just l) # t
 
 ||| O(n). Turn a list into a sequence.
 export
 fromList :  List e
          -> F1 s (Seq1 s e)
 fromList xs t =
-  let seq # t := ref1 (foldr (\x, t => MkElem x `consTree` t) Empty xs) t
+  let seq # t := ref1 (MkSeq (foldr (\x, tr => MkElem x `consTree` tr) Empty xs)) t
     in (MkSeq1 seq) # t
 
 ||| Turn a sequence into a list. O(n)
@@ -182,24 +176,24 @@ toList seq t =
        -> (sl : SnocList e)
        -> F1 s (List e)
     go seq sl t =
-      let seq' # t := viewl seq t
-        in case seq' of
-             Nothing         =>
+      let tr # t := Data.Seq1.Unsized.viewl seq t
+        in case tr of
+             Nothing       =>
                (sl <>> []) # t
-             Just (x, seq'') =>
-               (assert_total (go seq'' (sl :< x))) t
+             Just (x, tr') =>
+               (assert_total (go tr' (sl :< x))) t
 
 ||| O(log(min(i, n-i))). The element at the specified position.
 export
 index :  Nat
       -> Seq1 s e
       -> F1 s (Maybe e)
-index i (MkSeq1 tr) t =
-  let tr' # t := read1 tr t
-    in case i < length' tr' of
+index i (MkSeq1 seq) t =
+  let MkSeq tr # t := read1 seq t
+    in case i < length' tr of
          True  =>
-           let (_, MkElem a) := lookupTree i tr'
-             in (Just a) # t
+           let (_, MkElem a) := lookupTree i tr
+            in Just a # t
          False =>
            Nothing # t
 
@@ -209,15 +203,16 @@ export
 adjust :  (e -> e)
        -> Nat
        -> Seq1 s e
-       -> F1 s (Seq1 s e)
-adjust f i (MkSeq1 tr) t =
-  let tr' # t := read1 tr t
-    in case i < length' tr' of
-         True  =>
-           let () # t := casswap1 tr (adjustTree (const (map f)) i tr') t
-             in (MkSeq1 tr) # t
-         False =>
-           (MkSeq1 tr) # t
+       -> F1' s
+adjust f i (MkSeq1 seq) t =
+  casupdate1 seq
+    (\(MkSeq tr) =>
+      case i < length' tr of
+        True  =>
+          (MkSeq (adjustTree (const (map f)) i tr), ())
+        False =>
+          (MkSeq tr, ())
+    ) t
 
 ||| O(log(min(i, n-i))). Replace the element at the specified position.
 ||| If the position is out of range, the original sequence is returned.
@@ -225,53 +220,15 @@ export
 update :  Nat
        -> e
        -> Seq1 s e
-       -> F1 s (Seq1 s e)
+       -> F1' s
 update i a seq t =
   adjust (const a) i seq t
-
-||| O(log(min(i, n-i))). Split a sequence at a given position.
-||| splitAt i s = (take i s, drop i s)
-export
-splitAt :  Nat
-        -> Seq1 s e
-        -> F1 s ((Seq1 s e, Seq1 s e))
-splitAt i (MkSeq1 tr) t =
-  let tr' # t := read1 tr t
-    in case i < length' tr' of
-         True  =>
-           let (l, r) := split i tr'
-               l' # t := ref1 l t
-               r' # t := ref1 r t
-             in (MkSeq1 l', MkSeq1 r') # t
-         False =>
-           let seq' # t := Data.Seq1.Unsized.empty t
-             in (MkSeq1 tr, seq') # t
-
-||| O(log(min(i,n-i))). The first i elements of a sequence.
-||| If the sequence contains fewer than i elements, the whole sequence is returned.
-export
-take :  Nat
-     -> Seq1 s e
-     -> F1 s (Seq1 s e)
-take i seq t =
-  let (seq1, _) # t := Data.Seq1.Unsized.splitAt i seq t
-    in seq1 # t
-
-||| O(log(min(i,n-i))). Elements of a sequence after the first i.
-||| If the sequence contains fewer than i elements, the empty sequence is returned.
-export
-drop :  Nat
-     -> Seq1 s e
-     -> F1 s (Seq1 s e)
-drop i seq t =
-  let (_, seq2) # t := Data.Seq1.Unsized.splitAt i seq t
-    in seq2 # t
 
 ||| Dump the internal structure of the finger tree.
 export
 show' :  Show e
       => Seq1 s e
       -> F1 s String
-show' (MkSeq1 tr) t =
-  let tr' # t := read1 tr t
-    in (showPrec Open tr') # t
+show' (MkSeq1 seq) t =
+  let MkSeq tr # t := read1 seq t
+    in (showPrec Open tr) # t
