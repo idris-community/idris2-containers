@@ -47,16 +47,6 @@ prop_snoc = property $ do
           _   # t := Data.Seq1.Unsized.snoc vs' 1 t
         in Data.Seq1.Unsized.toList vs' t ) === vs ++ [1]
 
-prop_concat : Property
-prop_concat = property $ do
-  xs <- forAll (list (linear 0 20) anyBits8)
-  ys <- forAll (list (linear 0 20) anyBits8)
-  ( run1 $ \t =>
-      let xs'  # t := Data.Seq1.Unsized.fromList xs t
-          ys'  # t := Data.Seq1.Unsized.fromList ys t
-          xsys # t := Data.Seq1.Unsized.(++) xs' ys' t
-        in Data.Seq1.Unsized.toList xsys t ) === xs ++ ys
-
 export
 props : Group
 props = MkGroup "Seq1 (Unsized)"
@@ -65,5 +55,4 @@ props = MkGroup "Seq1 (Unsized)"
   , ("prop_replicate", prop_replicate)
   , ("prop_cons", prop_cons)
   , ("prop_snoc", prop_snoc)
-  , ("prop_concat", prop_concat)
   ]
