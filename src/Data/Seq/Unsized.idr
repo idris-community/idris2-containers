@@ -11,7 +11,7 @@ import Data.Seq.Internal
 %default total
 
 ||| A two-end finite sequence.
-public export
+export
 data Seq : Type -> Type where
   MkSeq :  FingerTree (Elem e)
         -> Seq e
