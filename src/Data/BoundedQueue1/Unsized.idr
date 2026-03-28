@@ -81,29 +81,47 @@ toSnocList (MkBoundedQueue1 bq) t =
   let (MkBoundedQueue q _ _) # t := read1 bq t
     in (cast $ toList q) # t
 
-||| Append a value at the back of the `BoundedQueue1`. O(1)
+||| Append a value at the back of the `BoundedQueue1`.
+||| When inserting a new element, this function discards
+||| the oldest element when it is full. O(1)
 export
 enqueue :  BoundedQueue1 s a
         -> a
         -> F1' s
 enqueue (MkBoundedQueue1 bq) v t =
-  casupdate1 bq
+  casmod1 bq
     (\(MkBoundedQueue q l s) =>
       case l == s of
         True  =>
           case viewl q of
-            Nothing      =>
-              (MkBoundedQueue q l s, ())
+            Nothing     =>
+              MkBoundedQueue q l s
             Just (_, q') =>
-              (MkBoundedQueue (q' `snoc` v) l s, ())
+              MkBoundedQueue (q' `snoc` v) l s
         False =>
-          (MkBoundedQueue (q `snoc` v) l (s `plus` 1), ())
+          MkBoundedQueue (q `snoc` v) l (s `plus` 1)
+    ) t
+
+||| Append a value only if there is space in the `BoundedQueue1`.
+||| If the queue is full, nothing is done. O(1)
+export
+enqueueIfSpace :  BoundedQueue1 s a
+               -> a
+               -> F1' s
+enqueueIfSpace (MkBoundedQueue1 bq) v t =
+  casmod1 bq
+    (\(MkBoundedQueue q l s) =>
+      case l == s of
+        True  =>
+          MkBoundedQueue q l s
+        False =>
+          MkBoundedQueue (q `snoc` v) l (s `plus` 1)
     ) t
 
 ||| Take a value from the front of the `BoundedQueue1`. O(1)
 export
 dequeue :  BoundedQueue1 s a
-        -> F1 s (Maybe (a, BoundedQueue1 s a))
+        -> F1 s (Maybe a)
 dequeue (MkBoundedQueue1 bq) t =
   casupdate1 bq
     (\(MkBoundedQueue q l s) =>
@@ -112,7 +130,7 @@ dequeue (MkBoundedQueue1 bq) t =
           (MkBoundedQueue q l s, Nothing)
         Just (h, q') =>
           ( MkBoundedQueue q' l (s `minus` 1)
-          , Just (h, MkBoundedQueue1 bq)
+          , Just h
           )
     ) t
 
@@ -127,19 +145,17 @@ prepend :  a
         -> BoundedQueue1 s a
         -> F1' s
 prepend x (MkBoundedQueue1 bq) t =
-  casupdate1 bq
+  casmod1 bq
     (\(MkBoundedQueue q l s) =>
       case l == s of
-        True =>
+        True  =>
           case viewl q of
             Nothing =>
-              (MkBoundedQueue q l s, ())
+              MkBoundedQueue q l s
             Just (_, q') =>
-              (MkBoundedQueue (x `cons` q') l s, ())
+              MkBoundedQueue (x `cons` q') l s
         False =>
-          ( MkBoundedQueue (x `cons` q) l (s `plus` 1)
-          , ()
-          )
+          MkBoundedQueue (x `cons` q) l (s `plus` 1)
     ) t
 
 ||| Return the last element of the `BoundedQueue1`, plus the unmodified
@@ -153,16 +169,12 @@ export
 peekOldest :  BoundedQueue1 s a
            -> F1 s (Maybe (a, BoundedQueue1 s a))
 peekOldest (MkBoundedQueue1 bq) t =
-  casupdate1 bq
-    (\(MkBoundedQueue q l s) =>
-      case viewl q of
-        Nothing =>
-          (MkBoundedQueue q l s, Nothing)
-        Just (v, q') =>
-          ( MkBoundedQueue (v `cons` q') l s
-          , Just (v, MkBoundedQueue1 bq)
-          )
-    ) t
+  let (MkBoundedQueue q l s) # t := read1 bq t
+    in case viewl q of
+         Nothing     =>
+           Nothing # t
+         Just (v, _) =>
+           Just (v, MkBoundedQueue1 bq) # t
 
 ||| Returns the length of the `BoundedQueue1`. O(1).
 export
