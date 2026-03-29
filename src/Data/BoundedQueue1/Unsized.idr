@@ -83,7 +83,7 @@ toSnocList (MkBoundedQueue1 bq) t =
 
 ||| Append a value at the back of the `BoundedQueue1`.
 ||| This function returns True if the value was enqueued,
-||| and False if the queue was full (value isn't enqueued). O(1)
+||| and False if the queue was full. O(1)
 export
 enqueue :  BoundedQueue1 s a
         -> a
