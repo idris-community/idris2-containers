@@ -9,9 +9,7 @@ depends    = base         >= 0.6.0
            , elab-util
            , hashable
            , ref1
-modules    = Data.BoundedQueue.Sized
-           , Data.BoundedQueue.Unsized
-           , Data.BoundedQueue.Sized.Internal
+modules    = Data.BoundedQueue.Unsized
            , Data.BoundedQueue.Unsized.Internal
            , Data.BoundedQueue1.Unsized
            , Data.BoundedQueue1.Unsized.Internal
@@ -30,9 +28,7 @@ modules    = Data.BoundedQueue.Sized
            , Data.OrdPSQ
            , Data.OrdPSQ.Internal
            , Data.Queue
-           , Data.RRBVector.Sized
            , Data.RRBVector.Unsized
-           , Data.RRBVector.Sized.Internal
            , Data.RRBVector.Unsized.Internal
            , Data.RRBVector1.Unsized
            , Data.RRBVector1.Unsized.Internal
