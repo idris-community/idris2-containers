@@ -54,7 +54,7 @@ prop_prepend = property $ do
   vs <- forAll (list (linear 0 20) anyBits8)
   ( run1 $ \t =>
       let vs' # t := fromList (S (length vs)) vs t
-          ()  # t := prepend 1 vs' t
+          _   # t := prepend 1 vs' t
         in Data.BoundedQueue1.Unsized.toList vs' t ) === (1 :: vs)
 
 export

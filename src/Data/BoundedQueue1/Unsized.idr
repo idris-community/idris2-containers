@@ -82,8 +82,8 @@ toSnocList (MkBoundedQueue1 bq) t =
     in (cast $ toList q) # t
 
 ||| Append a value at the back of the `BoundedQueue1`.
-||| This function returns True if the value was enqueued,
-||| and False if the queue was full. O(1)
+||| This function returns `True` if the value was enqueued,
+||| and `False` if the queue was full. O(1)
 export
 enqueue :  BoundedQueue1 s a
         -> a
@@ -116,26 +116,20 @@ dequeue (MkBoundedQueue1 bq) t =
 
 ||| We can prepend an element to our `BoundedQueue1`, making it the new
 ||| "oldest" element. O(1)
-|||
-||| This is against the typical use case for a FIFO data
-||| structure, but it allows us to conveniently implement
-||| `peekOldest`.
+||| This function returns `True` is the value was pre-pended,
+||| and `False` if the queue was full. O(1)
 export
 prepend :  a
         -> BoundedQueue1 s a
-        -> F1' s
+        -> F1 s Bool
 prepend x (MkBoundedQueue1 bq) t =
-  casmod1 bq
+  casupdate1 bq
     (\(MkBoundedQueue q l s) =>
       case l == s of
         True  =>
-          case viewl q of
-            Nothing =>
-              MkBoundedQueue q l s
-            Just (_, q') =>
-              MkBoundedQueue (x `cons` q') l s
+          (MkBoundedQueue q l s, False)
         False =>
-          MkBoundedQueue (x `cons` q) l (s `plus` 1)
+          (MkBoundedQueue (x `cons` q) l (s `plus` 1), True)
     ) t
 
 ||| Return the last element of the `BoundedQueue1`, plus the unmodified
