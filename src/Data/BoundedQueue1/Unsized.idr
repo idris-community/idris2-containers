@@ -82,40 +82,20 @@ toSnocList (MkBoundedQueue1 bq) t =
     in (cast $ toList q) # t
 
 ||| Append a value at the back of the `BoundedQueue1`.
-||| When inserting a new element, this function discards
-||| the oldest element when it is full. O(1)
+||| This function returns True if the value was enqueued,
+||| and False if the queue was full (value isn't enqueued). O(1)
 export
 enqueue :  BoundedQueue1 s a
         -> a
-        -> F1' s
+        -> F1 s Bool
 enqueue (MkBoundedQueue1 bq) v t =
-  casmod1 bq
+  casupdate1 bq
     (\(MkBoundedQueue q l s) =>
       case l == s of
         True  =>
-          case viewl q of
-            Nothing     =>
-              MkBoundedQueue q l s
-            Just (_, q') =>
-              MkBoundedQueue (q' `snoc` v) l s
+          (MkBoundedQueue q l s, False)
         False =>
-          MkBoundedQueue (q `snoc` v) l (s `plus` 1)
-    ) t
-
-||| Append a value only if there is space in the `BoundedQueue1`.
-||| If the queue is full, nothing is done. O(1)
-export
-enqueueIfSpace :  BoundedQueue1 s a
-               -> a
-               -> F1' s
-enqueueIfSpace (MkBoundedQueue1 bq) v t =
-  casmod1 bq
-    (\(MkBoundedQueue q l s) =>
-      case l == s of
-        True  =>
-          MkBoundedQueue q l s
-        False =>
-          MkBoundedQueue (q `snoc` v) l (s `plus` 1)
+          (MkBoundedQueue (q `snoc` v) l (s `plus` 1), True)
     ) t
 
 ||| Take a value from the front of the `BoundedQueue1`. O(1)
