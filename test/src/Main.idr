@@ -1,6 +1,5 @@
 module Main
 
-import BoundedQueue.Sized
 import BoundedQueue.Unsized
 import BoundedQueue1.Unsized
 import HashPSQ
@@ -10,7 +9,6 @@ import LRUCache1
 import Map
 import NatPSQ
 import OrdPSQ
-import RRBVector.Sized
 import RRBVector.Unsized
 import RRBVector1.Unsized
 import Seq.Sized
@@ -22,8 +20,7 @@ import Set
 
 main : IO ()
 main = test
-  [ BoundedQueue.Sized.props
-  , BoundedQueue.Unsized.props
+  [ BoundedQueue.Unsized.props
   , BoundedQueue1.Unsized.props
   , HashPSQ.props
   , LRUCache.props
@@ -31,7 +28,6 @@ main = test
   , Map.props
   , NatPSQ.props
   , OrdPSQ.props
-  , RRBVector.Sized.props
   , RRBVector.Unsized.props
   , RRBVector1.Unsized.props
   , Seq.Sized.props
