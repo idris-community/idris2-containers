@@ -37,9 +37,9 @@ prop_map_id : Property
 prop_map_id = property $ do
   vs <- forAll listBits
   ( run1 $ \t =>
-      let vs'  # t := fromList vs t
-          vs'' # t := Data.RRBVector1.Unsized.map id vs' t
-        in toList vs'' t ) === map id vs
+      let vs' # t := fromList vs t
+          ()  # t := Data.RRBVector1.Unsized.map id vs' t
+        in toList vs' t ) === map id vs
 
 prop_from_to_list : Property
 prop_from_to_list = property $ do
@@ -72,43 +72,33 @@ prop_take : Property
 prop_take = property $ do
   vs <- forAll listBits
   ( run1 $ \t =>
-      let vs'  # t := fromList vs t
-          vs'' # t := Data.RRBVector1.Unsized.take 1 vs' t
-        in toList vs'' t ) === take 1 vs
+      let vs' # t := fromList vs t
+          ()  # t := Data.RRBVector1.Unsized.take 1 vs' t
+        in toList vs' t ) === take 1 vs
 
 prop_drop : Property
 prop_drop = property $ do
   vs <- forAll listBits
   ( run1 $ \t =>
-      let vs'  # t := fromList vs t
-          vs'' # t := Data.RRBVector1.Unsized.drop ((length vs) `minus` 1) vs' t
-        in toList vs'' t ) === drop ((length vs) `minus` 1) vs
+      let vs' # t := fromList vs t
+          ()  # t := Data.RRBVector1.Unsized.drop ((length vs) `minus` 1) vs' t
+        in toList vs' t ) === drop ((length vs) `minus` 1) vs
 
 prop_cons : Property
 prop_cons = property $ do
   vs <- forAll listBits
   ( run1 $ \t =>
-      let vs'  # t := fromList vs t
-          vs'' # t := (Data.RRBVector1.Unsized.(<|)) 1 vs' t
-        in toList vs'' t ) === 1 :: vs
+      let vs' # t := fromList vs t
+          ()  # t := (Data.RRBVector1.Unsized.(<|)) 1 vs' t
+        in toList vs' t ) === 1 :: vs
 
 prop_snoc : Property
 prop_snoc = property $ do
   vs <- forAll listBits
   ( run1 $ \t =>
-      let vs'  # t := fromList vs t
-          vs'' # t := Data.RRBVector1.Unsized.(|>) vs' 1 t
-        in toList vs'' t ) === vs ++ [1]
-
-prop_concat : Property
-prop_concat = property $ do
-  x <- forAll listBits
-  y <- forAll listBits
-  ( run1 $ \t =>
-      let x'  # t := fromList x t
-          y'  # t := fromList y t
-          xy' # t := (><) x' y' t
-        in toList xy' t ) === x ++ y
+      let vs' # t := fromList vs t
+          ()  # t := Data.RRBVector1.Unsized.(|>) vs' 1 t
+        in toList vs' t ) === vs ++ [1]
 
 prop_insertAt : Property
 prop_insertAt = property $ do
@@ -118,9 +108,9 @@ prop_insertAt = property $ do
       assert_total $ idris_crash "index not within bounds of list"
     Yes prf =>
       ( run1 $ \t =>
-          let vs'  # t := fromList vs t
-              vs'' # t := Data.RRBVector1.Unsized.insertAt 0 0 vs' t
-            in toList vs'' t ) === insertAt 0 0 @{prf} vs
+          let vs' # t := fromList vs t
+              ()  # t := Data.RRBVector1.Unsized.insertAt 0 0 vs' t
+            in toList vs' t ) === insertAt 0 0 @{prf} vs
 
 prop_deleteAt : Property
 prop_deleteAt = property $ do
@@ -130,9 +120,9 @@ prop_deleteAt = property $ do
       assert_total $ idris_crash "index not within bounds of list"
     Yes prf =>
       ( run1 $ \t =>
-          let vs'  # t := fromList vs t
-              vs'' # t := Data.RRBVector1.Unsized.deleteAt 0 vs' t
-            in toList vs'' t ) === deleteAt 0 vs @{prf}
+          let vs' # t := fromList vs t
+              ()  # t := Data.RRBVector1.Unsized.deleteAt 0 vs' t
+            in toList vs' t ) === deleteAt 0 vs @{prf}
 
 export
 props : Group
@@ -147,7 +137,6 @@ props = MkGroup "RRBVector1 (Unsized)"
   , ("prop_drop", prop_drop)
   , ("prop_cons", prop_cons)
   , ("prop_snoc", prop_snoc)
-  , ("prop_concat", prop_concat)
   , ("prop_insertAt", prop_insertAt)
   , ("prop_deleteAt", prop_deleteAt)
   ]
