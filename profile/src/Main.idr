@@ -2,9 +2,6 @@ module Main
 
 import List
 import Map
-import RRBVector.Sized
-import RRBVector.Unsized
-import RRBVector1.Unsized
 import Seq.Sized
 import Seq.Unsized
 import Set
@@ -12,8 +9,6 @@ import SortedMap
 import SortedSet
 
 import Data.Map
-import Data.RRBVector.Sized
-import Data.RRBVector.Unsized
 import Data.Seq.Unsized
 import Data.Set
 import Data.SortedMap
@@ -29,68 +24,19 @@ bench =
             , Single "100"  (basic createList 99)
             , Single "1000" (basic createList 999)
             ]
-        , Group "fromListRRBVectorUnsized"
-            [ Single "1"    (basic createRRBVectorUnsized 0)
-            , Single "100"  (basic createRRBVectorUnsized 99)
-            , Single "1000" (basic createRRBVectorUnsized 999)
-            ]
-        , Group "fromListRRBVector1Unsized"
-            [ Single "1"    (basic createRRBVector1Unsized 0)
-            , Single "100"  (basic createRRBVector1Unsized 100)
-            , Single "1000" (basic createRRBVector1Unsized 1000)
-            ]
         , Group "fromListSeqUnsized"
             [ Single "1"    (basic createSeqUnsized 0)
             , Single "100"  (basic createSeqUnsized 99)
             , Single "1000" (basic createSeqUnsized 999)
             ]
-        , Group "consRRBVectorSized"
-            [ Single "10" (basic consRRBVectorSized 9)
-            ]
-        , Group "consRRBVectorUnsized"
-            [ Single "10" (basic consRRBVectorUnsized 9)
-            ]
-        , Group "consRRBVector1Unsized"
-            [ Single "10" (basic consRRBVector1Unsized 9)
-            ]
         , Group "consSeqUnsized"
             [ Single "10" (basic consSeqUnsized 9)
-            ]
-        , Group "snocRRBVectorSized"
-            [ Single "10" (basic snocRRBVectorSized 9)
-            ]
-        , Group "snocRRBVectorUnsized"
-            [ Single "10" (basic snocRRBVectorUnsized 9)
-            ]
-        , Group "snocRRBVector1Unsized"
-            [ Single "10" (basic snocRRBVector1Unsized 9)
             ]
         , Group "snocSeqUnsized"
             [ Single "10" (basic snocSeqUnsized 9)
             ]
-        , Group "appendRRBVectorSized"
-            [ Single "10" (basic appendRRBVectorSized 9)
-            ]
-        , Group "appendRRBVectorUnsized"
-            [ Single "10" (basic appendRRBVectorUnsized 9)
-            ]
-        , Group "appendRRBVector1Unsized"
-            [ Single "10" (basic appendRRBVector1Unsized 9)
-            ]
         , Group "appendSeqUnsized"
             [ Single "10" (basic appendSeqUnsized 9)
-            ]
-        , Group "indexRRBVectorSized"
-            [ Single "1"     (basic indexRRBVectorSized 0)
-            , Single "100"   (basic indexRRBVectorSized 99)
-            , Single "1000"  (basic indexRRBVectorSized 999)
-            , Single "10000" (basic indexRRBVectorSized 9999)
-            ]
-        , Group "indexRRBVectorUnsized"
-            [ Single "1"     (basic indexRRBVectorUnsized 0)
-            , Single "100"   (basic indexRRBVectorUnsized 99)
-            , Single "1000"  (basic indexRRBVectorUnsized 999)
-            , Single "10000" (basic indexRRBVectorUnsized 9999)
             ]
         , Group "indexSeqUnsized"
             [ Single "1"     (basic indexSeqUnsized 0)
@@ -98,29 +44,11 @@ bench =
             , Single "1000"  (basic indexSeqUnsized 999)
             , Single "10000" (basic indexSeqUnsized 9999)
             ]
-        , Group "mapRRBVectorUnsized"
-            [ Single "1"     (basic mapRRBVectorUnsized 0)
-            , Single "100"   (basic mapRRBVectorUnsized 99)
-            , Single "1000"  (basic mapRRBVectorUnsized 999)
-            , Single "10000" (basic mapRRBVectorUnsized 9999)
-            ]
-        , Group "mapRRBVector1Unsized"
-            [ Single "1"     (basic mapRRBVector1Unsized 0)
-            , Single "100"   (basic mapRRBVector1Unsized 99)
-            , Single "1000"  (basic mapRRBVector1Unsized 999)
-            , Single "10000" (basic mapRRBVector1Unsized 9999)
-            ]
         , Group "mapSeqUnsized"
             [ Single "1"     (basic mapSeqUnsized 0)
             , Single "100"   (basic mapSeqUnsized 99)
             , Single "1000"  (basic mapSeqUnsized 999)
             , Single "10000" (basic mapSeqUnsized 9999)
-            ]
-        , Group "replicateRRBVectorUnsized"
-            [ Single "1"     (basic replicateRRBVectorUnsized 0)
-            , Single "100"   (basic replicateRRBVectorUnsized 99)
-            , Single "1000"  (basic replicateRRBVectorUnsized 999)
-            , Single "10000" (basic replicateRRBVectorUnsized 9999)
             ]
         , Group "replicateSeqUnsized"
             [ Single "1"     (basic replicateSeqUnsized 0)
@@ -128,29 +56,11 @@ bench =
             , Single "1000"  (basic replicateSeqUnsized 999)
             , Single "10000" (basic replicateSeqUnsized 9999)
             ]
-        , Group "reverseRRBVectorSized"
-            [ Single "1"     (basic reverseRRBVectorSized 0)
-            , Single "100"   (basic reverseRRBVectorSized 99)
-            , Single "1000"  (basic reverseRRBVectorSized 999)
-            , Single "10000" (basic reverseRRBVectorSized 9999)
-            ]
-        , Group "reverseRRBVectorUnsized"
-            [ Single "1"     (basic reverseRRBVectorUnsized 0)
-            , Single "100"   (basic reverseRRBVectorUnsized 99)
-            , Single "1000"  (basic reverseRRBVectorUnsized 999)
-            , Single "10000" (basic reverseRRBVectorUnsized 9999)
-            ]
         , Group "reverseSeqUnsized"
             [ Single "1"     (basic reverseSeqUnsized 0)
             , Single "100"   (basic reverseSeqUnsized 99)
             , Single "1000"  (basic reverseSeqUnsized 999)
             , Single "10000" (basic reverseSeqUnsized 9999)
-            ]
-        , Group "splitAtRRBVectorUnsized"
-            [ Single "1"     (basic splitAtRRBVectorUnsized 0)
-            , Single "100"   (basic splitAtRRBVectorUnsized 99)
-            , Single "1000"  (basic splitAtRRBVectorUnsized 999)
-            , Single "10000" (basic splitAtRRBVectorUnsized 9999)
             ]
         , Group "splitAtSeqUnsized"
             [ Single "1"     (basic splitAtSeqUnsized 0)
