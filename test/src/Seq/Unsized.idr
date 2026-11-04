@@ -77,7 +77,7 @@ prop_concat = property $ do
   (toList x) ++ (toList y) === toList ((++) x y)
 
 prop_index_fix : Property
-prop_index_fix = property $ do
+prop_index_fix = property1 $ do
   let vs  = fromList [1 .. 15]
       vs' = for [0 .. ((length vs) `minus` 1)] $ \i => index i vs
   case vs' of
@@ -102,7 +102,7 @@ prop_index_fix = property $ do
               ]
 
 prop_concat_fix : Property
-prop_concat_fix = property $ do
+prop_concat_fix = property1 $ do
   let vs  = fromList [1 .. 18] ++ fromList [19, 20]
   (length vs, toList (take 19 vs), toList (drop 19 vs)) === ( 20
                                                             , ( [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
