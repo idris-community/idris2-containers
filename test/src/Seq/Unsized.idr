@@ -76,6 +76,40 @@ prop_concat = property $ do
   y <- forAll seqBits
   (toList x) ++ (toList y) === toList ((++) x y)
 
+prop_index_fix : Property
+prop_index_fix = property $ do
+  let vs  = fromList [1 .. 15]
+      vs' = for [0 .. ((length vs) `minus` 1)] $ \i => index i vs
+  case vs' of
+    Nothing =>
+      failure
+    Just vs' =>
+      vs' === [ 1
+              , 2
+              , 3
+              , 4
+              , 5
+              , 6
+              , 7
+              , 8
+              , 9
+              , 10
+              , 11
+              , 12
+              , 13
+              , 14
+              , 15
+              ]
+
+prop_concat_fix : Property
+prop_concat_fix = property $ do
+  let vs  = fromList [1 .. 18] ++ fromList [19, 20]
+  (length vs, toList (take 19 vs), toList (drop 19 vs)) === ( 20
+                                                            , ( [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+                                                              , [20]
+                                                              )
+                                                            )
+
 export
 props : Group
 props = MkGroup "Seq (Unsized)"
@@ -90,4 +124,6 @@ props = MkGroup "Seq (Unsized)"
   , ("prop_cons", prop_cons)
   , ("prop_snoc", prop_snoc)
   , ("prop_concat", prop_concat)
+  , ("prop_index_fix", prop_index_fix)
+  , ("prop_concat_fix", prop_concat_fix)
   ]
