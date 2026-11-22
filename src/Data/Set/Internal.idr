@@ -49,8 +49,8 @@ size :  Set a
      -> Nat
 size Tip           =
   0
-size (Bin _ _ l r) =
-  1 + size l + size r
+size (Bin sz _ _ _) =
+  sz
 
 --------------------------------------------------------------------------------
 --          Set Internals
