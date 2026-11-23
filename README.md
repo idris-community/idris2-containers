@@ -93,7 +93,7 @@ interface from `idris2-ref1` to perform safe, mutable operations.
 | Bounded queue   | `Data.BoundedQueue.Unsized`          | Queue with fixed capacity            |
 | Linear queue    | `Data.BoundedQueue1.Unsized`         | Ref-backed bounded queue             |
 | Sequences       | `Data.Seq.Unsized`, `Data.Seq.Sized` | Two-ended sequences                  |
-| Maps and sets   | `Data.Map`, `Data.Set`               | Ordered key/value collections        |
+| Maps and sets   | `Data.Map`, `Data.Set`               | Ordered key-value collections        |
 | Priority queues | `Data.HashPSQ`, `Data.NatPSQ`        | Keyed priority search                |
 | Ordered PSQ     | `Data.OrdPSQ`                        | Ordered-key priority search          |
 | LRU cache       | `Data.LRUCache`                      | Immutable bounded cache              |
