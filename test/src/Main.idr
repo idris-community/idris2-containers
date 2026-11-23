@@ -2,6 +2,9 @@ module Main
 
 import BoundedQueue.Unsized
 import BoundedQueue1.Unsized
+import Concurrent.BoundedQueue1
+import Concurrent.LRUCache1
+import Concurrent.Seq1
 import HashPSQ
 import Hedgehog
 import LRUCache
@@ -17,17 +20,21 @@ import Set
 %default total
 
 main : IO ()
-main = test
-  [ BoundedQueue.Unsized.props
-  , BoundedQueue1.Unsized.props
-  , HashPSQ.props
-  , LRUCache.props
-  , LRUCache1.props
-  , Map.props
-  , NatPSQ.props
-  , OrdPSQ.props
-  , Seq.Sized.props
-  , Seq.Unsized.props
-  , Seq1.Unsized.props
-  , Set.props
-  ]
+main = do
+  Concurrent.BoundedQueue1.main
+  Concurrent.LRUCache1.main
+  Concurrent.Seq1.main
+  test
+    [ BoundedQueue.Unsized.props
+    , BoundedQueue1.Unsized.props
+    , HashPSQ.props
+    , LRUCache.props
+    , LRUCache1.props
+    , Map.props
+    , NatPSQ.props
+    , OrdPSQ.props
+    , Seq.Sized.props
+    , Seq.Unsized.props
+    , Seq1.Unsized.props
+    , Set.props
+    ]

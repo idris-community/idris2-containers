@@ -430,7 +430,7 @@ isProperSubsetOf :  Ord a
                  -> Set a
                  -> Bool
 isProperSubsetOf s1 s2 =
-  size s1 <= size s2 && isSubsetOfX s1 s2
+  size s1 < size s2 && isSubsetOfX s1 s2
 
 ||| Check whether two sets are disjoint (i.e. their intersection is empty).
 export

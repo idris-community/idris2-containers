@@ -4,11 +4,9 @@ module Data.LRUCache1.Internal
 import Data.HashPSQ
 import Data.LRUCache.Internal
 
-import Derive.Prelude
 import Data.Linear.Ref1
 
 %default total
-%language ElabReflection
 
 --------------------------------------------------------------------------------
 --          LRUCache1
