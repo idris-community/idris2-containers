@@ -10,12 +10,14 @@ import Hedgehog
 import LRUCache
 import LRUCache1
 import Map
+import Map1
 import NatPSQ
 import OrdPSQ
 import Seq.Sized
 import Seq.Unsized
 import Seq1.Unsized
 import Set
+import Set1
 
 %default total
 
@@ -31,10 +33,12 @@ main = do
     , LRUCache.props
     , LRUCache1.props
     , Map.props
+    , Map1.props
     , NatPSQ.props
     , OrdPSQ.props
     , Seq.Sized.props
     , Seq.Unsized.props
     , Seq1.Unsized.props
     , Set.props
+    , Set1.props
     ]
