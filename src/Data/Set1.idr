@@ -17,213 +17,192 @@ import Data.Linear.Ref1
 --          Internal Operations
 --------------------------------------------------------------------------------
 
-||| Apply a read-only operation to a set using one store snapshot.
-||| The set is not modified.
+||| Apply a pure query to one immutable store snapshot.
+||| Nothing indicates an invalid set handle.
 private
 querySet :  (Set a -> b)
-         -> Set1 s a
-         -> F1 s b
+           -> Set1 s a
+           -> F1 s (Maybe b)
 querySet f (MkSet1 (MkSetStore1 ref) i) t =
   let sets # t := read1 ref t
-    in f (getAt i sets) # t
+    in (f <$> Data.Set1.Internal.getAt i sets) # t
 
-||| Atomically modify a set using a CAS loop on its shared store.
-||| The operation is retried if the store changes concurrently.
+||| Atomically modify an existing set in the shared store.
+||| False indicates an invalid handle; the state is then unchanged.
 private
 modifySet :  (Set a -> Set a)
-          -> Set1 s a
-          -> F1' s
+            -> Set1 s a
+            -> F1 s Bool
 modifySet f (MkSet1 (MkSetStore1 ref) i) t =
-  casmod1 ref
+  casupdate1 ref
     (\sets =>
-      replaceAt i (f (getAt i sets)) sets
+      case Data.Set1.Internal.getAt i sets of
+        Nothing => (sets, False)
+        Just old =>
+          case Data.Set1.Internal.replaceAt i (f old) sets of
+            Nothing       => (sets, False)
+            Just sets' => (sets', True)
     ) t
 
-||| Atomically modify a set and return an additional result.
-||| The result corresponds to the successfully committed update.
+||| Atomically modify a set and return a value from the committed CAS.
+||| Nothing indicates an invalid handle, not a missing element or key.
 private
 updateSet :  (Set a -> (Set a, b))
-          -> Set1 s a
-          -> F1 s b
+            -> Set1 s a
+            -> F1 s (Maybe b)
 updateSet f (MkSet1 (MkSetStore1 ref) i) t =
   casupdate1 ref
     (\sets =>
-      let (set, result) = f (getAt i sets)
-        in (replaceAt i set sets, result)
+      case Data.Set1.Internal.getAt i sets of
+        Nothing => (sets, Nothing)
+        Just old =>
+          let (new, result) = f old
+           in case Data.Set1.Internal.replaceAt i new sets of
+                Nothing       => (sets, Nothing)
+                Just sets' => (sets', Just result)
     ) t
 
-||| Query two sets using a single atomic store snapshot.
-|||
+||| Query two sets from one atomic store snapshot.
 ||| Both handles must belong to the same store.
 private
 querySets :  (Set a -> Set a -> b)
-          -> Set1 s a
-          -> Set1 s a
-          -> F1 s b
+             -> Set1 s a
+             -> Set1 s a
+             -> F1 s (Maybe b)
 querySets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
   let sets # t := read1 ref t
-      set1     := getAt i sets
-      set2     := getAt j sets
-    in f set1 set2 # t
+    in case (Data.Set1.Internal.getAt i sets,
+             Data.Set1.Internal.getAt j sets) of
+         (Just first, Just second) => Just (f first second) # t
+         _                         => Nothing # t
 
-||| Atomically update the first of two sets using both sets.
-|||
+||| Atomically modify the first set from one two-set snapshot.
 ||| Both handles must belong to the same store.
-||| Both sets are read from the same store snapshot inside the
-||| CAS loop, preventing read-write conflicts between them.
-|||
-||| The second set is not modified.
 private
 modifySets :  (Set a -> Set a -> Set a)
-           -> Set1 s a
-           -> Set1 s a
-           -> F1' s
+              -> Set1 s a
+              -> Set1 s a
+              -> F1 s Bool
 modifySets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
-  casmod1 ref
+  casupdate1 ref
     (\sets =>
-      let set1 = getAt i sets
-          set2 = getAt j sets
-        in replaceAt i (f set1 set2) sets
+      case (Data.Set1.Internal.getAt i sets,
+            Data.Set1.Internal.getAt j sets) of
+        (Just first, Just second) =>
+          case Data.Set1.Internal.replaceAt i (f first second) sets of
+            Nothing       => (sets, False)
+            Just sets' => (sets', True)
+        _ => (sets, False)
     ) t
 
-||| Atomically modify two sets and return an additional result.
-|||
+||| Atomically update two distinct sets and return a result.
+||| Nothing indicates an invalid handle or identical identifiers.
 ||| Both handles must belong to the same store.
-||| The callback receives both sets from one consistent snapshot.
-||| The replacement values are committed through one CAS.
 private
 updateSets :  (Set a -> Set a -> (Set a, Set a, b))
-           -> Set1 s a
-           -> Set1 s a
-           -> F1 s b
+              -> Set1 s a
+              -> Set1 s a
+              -> F1 s (Maybe b)
 updateSets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
   casupdate1 ref
     (\sets =>
-      let set1 = getAt i sets
-          set2 = getAt j sets
-        in case i == j of
-             True =>
-               let (_, _, result) = f set1 set2
-                 in (sets, result)
-             False =>
-               let (set1', set2', result) = f set1 set2
-                   sets' = replaceAt i set1' sets
-                 in (replaceAt j set2' sets', result)
+      if i == j
+        then (sets, Nothing)
+        else case (Data.Set1.Internal.getAt i sets,
+                   Data.Set1.Internal.getAt j sets) of
+          (Just first, Just second) =>
+            let (first', second', result) = f first second
+             in case Data.Set1.Internal.replaceAt i first' sets of
+                  Nothing => (sets, Nothing)
+                  Just updated =>
+                    case Data.Set1.Internal.replaceAt j second' updated of
+                      Nothing       => (sets, Nothing)
+                      Just sets' => (sets', Just result)
+          _ => (sets, Nothing)
     ) t
 
 --------------------------------------------------------------------------------
 --          Construction
 --------------------------------------------------------------------------------
 
-||| Create an empty shared atomic store. O(1)
+||| Create an empty shared atomic set store. O(1)
 export
 newStore : F1 s (SetStore1 s a)
 newStore t =
   let ref # t := ref1 Data.SortedMap.empty t
     in MkSetStore1 ref # t
 
-||| Create a new Set1 containing the given immutable set.
-|||
-||| A unique identifier is allocated atomically within the store.
-||| O(log n), where n is the number of sets in the store.
+||| Allocate a new set from an immutable value, using one CAS.
+||| Returns a handle with a unique store-local identifier. O(log n)
 export
 fromSet :  SetStore1 s a
-        -> Set a
-        -> F1 s (Set1 s a)
-fromSet store@(MkSetStore1 ref) set t =
+          -> Set a
+          -> F1 s (Set1 s a)
+fromSet store@(MkSetStore1 ref) value t =
   casupdate1 ref
     (\sets =>
       let i = nextId sets
-        in ( Data.SortedMap.insert i set sets
-           , MkSet1 store i
-           )
+        in (Data.SortedMap.insert i value sets, MkSet1 store i)
     ) t
 
-||| Create an empty Set1 within the given store.
-||| O(log n), where n is the number of sets in the store.
+||| Allocate an empty set in an existing store. O(log n)
 export
 empty :  SetStore1 s a
       -> F1 s (Set1 s a)
-empty store t =
-  fromSet store Data.Set.empty t
+empty store t = fromSet store Data.Set.empty t
 
-||| Create a Set1 containing a single element.
-||| O(log n), where n is the number of sets in the store.
+||| Allocate a singleton set in an existing store. O(log n)
 export
-singleton :  a
-          -> SetStore1 s a
-          -> F1 s (Set1 s a)
+singleton :  a -> SetStore1 s a -> F1 s (Set1 s a)
 singleton x store t =
   fromSet store (Data.Set.Internal.singleton x) t
 
-||| Create a Set1 from a list of elements.
-||| Duplicate elements are removed according to the ordering.
-||| O(m log m + log n) in the general case, where m is the number
-||| of input elements and n is the number of sets in the store.
+||| Allocate a set from a list, removing duplicates. O(m log m + log n)
 export
 fromList :  Ord a
          => List a
          -> SetStore1 s a
          -> F1 s (Set1 s a)
-fromList xs store t =
-  fromSet store (Data.Set.fromList xs) t
+fromList xs store t = fromSet store (Data.Set.fromList xs) t
 
 --------------------------------------------------------------------------------
 --          Conversion
 --------------------------------------------------------------------------------
 
-||| Return an immutable snapshot of a Set1.
-||| Subsequent updates do not modify the returned snapshot.
-||| O(log n), where n is the number of sets in the store.
+||| Return an immutable snapshot; Nothing indicates an invalid handle.
 export
-freeze :  Set1 s a
-       -> F1 s (Set a)
-freeze =
-  querySet id
+freeze :  Set1 s a -> F1 s (Maybe (Set a))
+freeze = querySet id
 
 --------------------------------------------------------------------------------
 --          Insertion
 --------------------------------------------------------------------------------
 
-||| Atomically insert an element into a Set1.
-||| If an equivalent element already exists, it is replaced according
-||| to the semantics of Data.Set.insert. O(log m + log n)
+||| Atomically insert an element; False means invalid handle.
 export
-insert :  Ord a
-       => a
-       -> Set1 s a
-       -> F1' s
-insert x =
-  modifySet (Data.Set.insert x)
+insert :  Ord a => a -> Set1 s a -> F1 s Bool
+insert =
+  \x => modifySet (Data.Set.insert x)
 
 --------------------------------------------------------------------------------
 --          Deletion
 --------------------------------------------------------------------------------
 
-||| Atomically delete an element from a Set1.
-||| If the element does not exist, the set remains unchanged.
-||| O(log m + log n)
+||| Atomically delete an element; False means invalid handle.
 export
-delete :  Ord a
-       => a
-       -> Set1 s a
-       -> F1' s
-delete x =
-  modifySet (Data.Set.delete x)
+delete :  Ord a => a -> Set1 s a -> F1 s Bool
+delete =
+  \x => modifySet (Data.Set.delete x)
 
-||| Atomically delete the smallest element from a Set1.
-||| If the set is empty, it remains unchanged. O(log m + log n)
+||| Atomically remove the minimum; empty sets remain unchanged.
 export
-deleteMin :  Set1 s a
-          -> F1' s
+deleteMin :  Set1 s a -> F1 s Bool
 deleteMin =
   modifySet Data.Set.deleteMin
 
-||| Atomically delete the largest element from a Set1.
-||| If the set is empty, it remains unchanged. O(log m + log n)
+||| Atomically remove the maximum; empty sets remain unchanged.
 export
-deleteMax :  Set1 s a
-          -> F1' s
+deleteMax :  Set1 s a -> F1 s Bool
 deleteMax =
   modifySet Data.Set.deleteMax
 
@@ -231,257 +210,177 @@ deleteMax =
 --          Query
 --------------------------------------------------------------------------------
 
-||| Check whether an element exists in a Set1. O(log m + log n)
+||| Test membership; Nothing means invalid handle.
 export
-member :  Ord a
-       => a
-       -> Set1 s a
-       -> F1 s Bool
-member x =
-  querySet (Data.Set.member x)
+member :  Ord a => a -> Set1 s a -> F1 s (Maybe Bool)
+member =
+  \x => querySet (Data.Set.member x)
 
-||| Check whether an element does not exist in a Set1.
-||| O(log m + log n)
+||| Test non-membership; Nothing means invalid handle.
 export
-notMember :  Ord a
-          => a
-          -> Set1 s a
-          -> F1 s Bool
-notMember x =
-  querySet (Data.Set.notMember x)
+notMember :  Ord a => a -> Set1 s a -> F1 s (Maybe Bool)
+notMember =
+  \x => querySet (Data.Set.notMember x)
 
-||| Check whether a Set1 is empty. O(log n)
+||| Test emptiness; Nothing means invalid handle.
 export
-null :  Set1 s a
-     -> F1 s Bool
+null :  Set1 s a -> F1 s (Maybe Bool)
 null =
   querySet Data.Set.null
 
-||| Return the number of elements in a Set1. O(log n)
+||| Get the number of elements; Nothing means invalid handle.
 export
-size :  Set1 s a
-     -> F1 s Nat
+size :  Set1 s a -> F1 s (Maybe Nat)
 size =
   querySet Data.Set.Internal.size
 
-||| Find the largest element strictly smaller than the given value.
-||| Returns Nothing if no such element exists. O(log m + log n)
+||| Find the lower strict neighbor; Nothing indicates an invalid handle.
 export
-lookupLT :  Ord a
-         => a
-         -> Set1 s a
-         -> F1 s (Maybe a)
-lookupLT x =
-  querySet (Data.Set.lookupLT x)
+lookupLT :  Ord a => a -> Set1 s a -> F1 s (Maybe (Maybe a))
+lookupLT =
+  \x => querySet (Data.Set.lookupLT x)
 
-||| Find the smallest element strictly greater than the given value.
-||| Returns Nothing if no such element exists. O(log m + log n)
+||| Find the upper strict neighbor; Nothing indicates an invalid handle.
 export
-lookupGT :  Ord a
-         => a
-         -> Set1 s a
-         -> F1 s (Maybe a)
-lookupGT x =
-  querySet (Data.Set.lookupGT x)
+lookupGT :  Ord a => a -> Set1 s a -> F1 s (Maybe (Maybe a))
+lookupGT =
+  \x => querySet (Data.Set.lookupGT x)
 
-||| Find the largest element smaller than or equal to the given value.
-||| Returns Nothing if no such element exists. O(log m + log n)
+||| Find the lower inclusive neighbor; Nothing indicates invalid handle.
 export
-lookupLE :  Ord a
-         => a
-         -> Set1 s a
-         -> F1 s (Maybe a)
-lookupLE x =
-  querySet (Data.Set.lookupLE x)
+lookupLE :  Ord a => a -> Set1 s a -> F1 s (Maybe (Maybe a))
+lookupLE =
+  \x => querySet (Data.Set.lookupLE x)
 
-||| Find the smallest element greater than or equal to the given value.
-||| Returns Nothing if no such element exists. O(log m + log n)
+||| Find the upper inclusive neighbor; Nothing indicates invalid handle.
 export
-lookupGE :  Ord a
-         => a
-         -> Set1 s a
-         -> F1 s (Maybe a)
-lookupGE x =
-  querySet (Data.Set.lookupGE x)
+lookupGE :  Ord a => a -> Set1 s a -> F1 s (Maybe (Maybe a))
+lookupGE =
+  \x => querySet (Data.Set.lookupGE x)
 
 --------------------------------------------------------------------------------
 --          Indexed
 --------------------------------------------------------------------------------
 
-||| Find the zero-based index of an element in ascending order.
-||| Returns Nothing if the element does not exist. O(log m + log n)
+||| Find the index of an element; nested Maybe distinguishes invalid handles.
 export
-lookupIndex :  Ord a
-            => a
-            -> Set1 s a
-            -> F1 s (Maybe Nat)
-lookupIndex x =
-  querySet (Data.Set.lookupIndex x)
+lookupIndex :  Ord a => a -> Set1 s a -> F1 s (Maybe (Maybe Nat))
+lookupIndex =
+  \x => querySet (Data.Set.lookupIndex x)
 
-||| Find the zero-based index of an element in ascending order.
-||| Calls idris_crash if the element does not exist. O(log m + log n)
+||| Total alternative to immutable findIndex; missing elements return Nothing.
 export
-findIndex :  Ord a
-          => a
-          -> Set1 s a
-          -> F1 s Nat
-findIndex x =
-  querySet (Data.Set.findIndex x)
+findIndex :  Ord a => a -> Set1 s a -> F1 s (Maybe (Maybe Nat))
+findIndex =
+  \x => querySet (Data.Set.lookupIndex x)
 
-||| Retrieve an element at its zero-based index in ascending order.
-||| Calls idris_crash if the index is out of bounds. O(log m + log n)
-export
-elemAt :  Nat
-       -> Set1 s a
-       -> F1 s a
-elemAt i =
-  querySet (Data.Set.elemAt i)
+||| Safely index a list without partial functions.
+private
+atList : Nat -> List a -> Maybe a
+atList Z (x :: xs) = Just x
+atList (S k) (_ :: xs) = atList k xs
+atList _ [] = Nothing
 
-||| Atomically delete an element at its zero-based index.
-||| Calls idris_crash if the index is out of bounds. O(log m + log n)
+
+||| Retrieve the indexed element safely; outer Nothing means invalid handle.
 export
-deleteAt :  Nat
-         -> Set1 s a
-         -> F1' s
+elemAt :  Nat -> Set1 s a -> F1 s (Maybe (Maybe a))
+elemAt =
+  \i => querySet (atList i . Data.Set.toAscList)
+
+||| Delete the indexed element if it exists, in a single CAS.
+||| Returns Nothing for invalid handles and Just False for bad indices.
+export
+deleteAt : Nat -> Set1 s a -> F1 s (Maybe Bool)
 deleteAt i =
-  modifySet (Data.Set.deleteAt i)
+  updateSet (\set =>
+    case atList i (Data.Set.toAscList set) of
+      Nothing => (set, False)
+      Just x  => (Data.Set.deleteAt i set, True))
 
 --------------------------------------------------------------------------------
 --          Min/Max
 --------------------------------------------------------------------------------
 
-||| Retrieve the smallest element in a Set1.
-||| Returns Nothing if the set is empty. O(log m + log n)
+||| Return the smallest element; nested Maybe distinguishes empty sets.
 export
-lookupMin :  Set1 s a
-          -> F1 s (Maybe a)
+lookupMin :  Set1 s a -> F1 s (Maybe (Maybe a))
 lookupMin =
   querySet Data.Set.lookupMin
 
-||| Retrieve the largest element in a Set1.
-||| Returns Nothing if the set is empty. O(log m + log n)
+||| Return the largest element; nested Maybe distinguishes empty sets.
 export
-lookupMax :  Set1 s a
-          -> F1 s (Maybe a)
+lookupMax :  Set1 s a -> F1 s (Maybe (Maybe a))
 lookupMax =
   querySet Data.Set.lookupMax
 
-||| Retrieve the smallest element in a Set1.
-||| Calls idris_crash if the set is empty. O(log m + log n)
+||| Total findMin alternative; returns Nothing for an empty set.
 export
-findMin :  Set1 s a
-        -> F1 s a
+findMin :  Set1 s a -> F1 s (Maybe (Maybe a))
 findMin =
-  querySet Data.Set.findMin
+  querySet Data.Set.lookupMin
 
-||| Retrieve the largest element in a Set1.
-||| Calls idris_crash if the set is empty. O(log m + log n)
+||| Total findMax alternative; returns Nothing for an empty set.
 export
-findMax :  Set1 s a
-        -> F1 s a
+findMax :  Set1 s a -> F1 s (Maybe (Maybe a))
 findMax =
-  querySet Data.Set.findMax
+  querySet Data.Set.lookupMax
 
 --------------------------------------------------------------------------------
 --          Views
 --------------------------------------------------------------------------------
 
-||| Atomically retrieve and remove the smallest element from a Set1.
-||| Returns Nothing if the set is empty. O(log m + log n)
+||| Atomically remove and return the smallest element.
+||| Outer Nothing means invalid handle; inner Nothing means empty set.
 export
-minView :  Set1 s a
-        -> F1 s (Maybe a)
+minView : Set1 s a -> F1 s (Maybe (Maybe a))
 minView =
-  updateSet
-    (\set =>
-      case Data.Set.minView set of
-        Nothing        => (set, Nothing)
-        Just (x, set') => (set', Just x)
-    )
+  updateSet (\set =>
+    case Data.Set.minView set of
+      Nothing        => (set, Nothing)
+      Just (x, set') => (set', Just x))
 
-||| Atomically retrieve and remove the largest element from a Set1.
-||| Returns Nothing if the set is empty. O(log m + log n)
+||| Atomically remove and return the largest element.
+||| Outer Nothing means invalid handle; inner Nothing means empty set.
 export
-maxView :  Set1 s a
-        -> F1 s (Maybe a)
+maxView : Set1 s a -> F1 s (Maybe (Maybe a))
 maxView =
-  updateSet
-    (\set =>
-      case Data.Set.maxView set of
-        Nothing        => (set, Nothing)
-        Just (x, set') => (set', Just x)
-    )
+  updateSet (\set =>
+    case Data.Set.maxView set of
+      Nothing        => (set, Nothing)
+      Just (x, set') => (set', Just x))
 
-||| Atomically retrieve and remove the smallest element from a Set1.
-||| Calls idris_crash if the set is empty. O(log m + log n)
+||| Total deleteFindMin: remove and return an endpoint, if present.
 export
-deleteFindMin :  Set1 s a
-              -> F1 s a
+deleteFindMin :  Set1 s a -> F1 s (Maybe (Maybe a))
 deleteFindMin =
-  updateSet
-    (\set =>
-      let (x, set') = Data.Set.deleteFindMin set
-        in (set', x)
-    )
+  minView
 
-||| Atomically retrieve and remove the largest element from a Set1.
-||| Calls idris_crash if the set is empty. O(log m + log n)
+||| Total deleteFindMax: remove and return an endpoint, if present.
 export
-deleteFindMax :  Set1 s a
-              -> F1 s a
+deleteFindMax :  Set1 s a -> F1 s (Maybe (Maybe a))
 deleteFindMax =
-  updateSet
-    (\set =>
-      let (x, set') = Data.Set.deleteFindMax set
-        in (set', x)
-    )
+  maxView
 
 --------------------------------------------------------------------------------
 --          Combine
 --------------------------------------------------------------------------------
 
-||| Atomically insert all elements of the second Set1 into the first.
-||| The union is left-biased, preserving elements from the first set
-||| when equivalent elements exist in both sets.
-|||
-||| Both handles must belong to the same store.
-||| Both sets are read from the same atomic snapshot.
-||| The second set is not modified.
+||| Atomically compute union within one store; False means invalid handle.
 export
-union :  Eq (Set a)
-      => Eq a
-      => Ord a
-      => Set1 s a
-      -> Set1 s a
-      -> F1' s
+union :  Eq (Set a) => Eq a => Ord a => Set1 s a -> Set1 s a -> F1 s Bool
 union =
   modifySets Data.Set.union
 
-||| Atomically remove all elements of the second Set1 from the first.
-|||
-||| Both handles must belong to the same store.
-||| Both sets are read from the same atomic snapshot.
-||| The second set is not modified.
+||| Atomically compute difference within one store; False means invalid handle.
 export
-difference :  Ord a
-           => Set1 s a
-           -> Set1 s a
-           -> F1' s
+difference :  Ord a => Set1 s a -> Set1 s a -> F1 s Bool
 difference =
   modifySets Data.Set.difference
 
-||| Atomically retain elements of the first Set1 that also exist
-||| in the second Set1.
-|||
-||| Both handles must belong to the same store.
-||| Both sets are read from the same atomic snapshot.
-||| The second set is not modified.
+||| Atomically intersect two sets in one store.
 export
-intersection :  Eq (Set a)
-             => Ord a
-             => Set1 s a
-             -> Set1 s a
-             -> F1' s
+intersection :  Eq (Set a) => Ord a => Set1 s a -> Set1 s a -> F1 s Bool
 intersection =
   modifySets Data.Set.intersection
 
@@ -489,148 +388,99 @@ intersection =
 --          Set Relations
 --------------------------------------------------------------------------------
 
-||| Check whether every element of the first Set1 exists in the second.
-|||
-||| Both handles must belong to the same store.
-||| Both sets are observed through one atomic snapshot.
+||| Compare two sets in one snapshot; Nothing means invalid handle.
 export
-isSubsetOf :  Ord a
-           => Set1 s a
-           -> Set1 s a
-           -> F1 s Bool
+isSubsetOf :  Ord a => Set1 s a -> Set1 s a -> F1 s (Maybe Bool)
 isSubsetOf =
   querySets Data.Set.isSubsetOf
 
-||| Check whether the first Set1 is a proper subset of the second.
-||| A proper subset contains strictly fewer elements.
-|||
-||| Both handles must belong to the same store.
-||| Both sets are observed through one atomic snapshot.
+||| Compare two sets in one snapshot; Nothing means invalid handle.
 export
-isProperSubsetOf :  Ord a
-                 => Set1 s a
-                 -> Set1 s a
-                 -> F1 s Bool
-isProperSubsetOf =
-  querySets
-    (\set1, set2 =>
-      Data.Set.Internal.size set1 < Data.Set.Internal.size set2
-        && Data.Set.isSubsetOf set1 set2
-    )
-
-||| Check whether two Set1 values contain no common elements.
-|||
-||| Both handles must belong to the same store.
-||| Both sets are observed through one atomic snapshot.
-export
-disjoint :  Ord a
-         => Set1 s a
-         -> Set1 s a
-         -> F1 s Bool
+disjoint :  Ord a => Set1 s a -> Set1 s a -> F1 s (Maybe Bool)
 disjoint =
   querySets Data.Set.disjoint
+
+||| Test strict subsethood using a consistent two-set snapshot.
+||| Nothing means an invalid handle.
+export
+isProperSubsetOf : Ord a
+                 => Set1 s a
+                 -> Set1 s a
+                 -> F1 s (Maybe Bool)
+isProperSubsetOf =
+  querySets (\xs, ys =>
+    Data.Set.Internal.size xs < Data.Set.Internal.size ys &&
+      Data.Set.isSubsetOf xs ys)
 
 --------------------------------------------------------------------------------
 --          Filter
 --------------------------------------------------------------------------------
 
-||| Atomically retain only elements satisfying the given predicate.
-||| The existing Set1 is updated. O(m + log n)
+||| Atomically apply filter; False means invalid handle.
 export
-filter :  Eq (Set a)
-       => (a -> Bool)
-       -> Set1 s a
-       -> F1' s
-filter p =
-  modifySet (Data.Set.filter p)
+filter :  Eq (Set a) => (a -> Bool) -> Set1 s a -> F1 s Bool
+filter =
+  \p => modifySet (Data.Set.filter p)
 
-||| Atomically retain only the first n elements in ascending order.
-||| O(log m + log n)
+||| Atomically apply take; False means invalid handle.
 export
-take :  Nat
-     -> Set1 s a
-     -> F1' s
-take n =
-  modifySet (Data.Set.take n)
+take :  Nat -> Set1 s a -> F1 s Bool
+take =
+  \n => modifySet (Data.Set.take n)
 
-||| Atomically remove the first n elements in ascending order.
-||| O(log m + log n)
+||| Atomically apply drop; False means invalid handle.
 export
-drop :  Nat
-     -> Set1 s a
-     -> F1' s
-drop n =
-  modifySet (Data.Set.drop n)
+drop :  Nat -> Set1 s a -> F1 s Bool
+drop =
+  \n => modifySet (Data.Set.drop n)
 
-||| Atomically retain the initial elements satisfying an antitone
-||| predicate. The predicate must hold for an initial segment
-||| of the elements in ascending order. O(log m + log n)
+||| Atomically apply takeWhileAntitone; False means invalid handle.
 export
-takeWhileAntitone :  (a -> Bool)
-                  -> Set1 s a
-                  -> F1' s
-takeWhileAntitone p =
-  modifySet (Data.Set.takeWhileAntitone p)
+takeWhileAntitone :  (a -> Bool) -> Set1 s a -> F1 s Bool
+takeWhileAntitone =
+  \p => modifySet (Data.Set.takeWhileAntitone p)
 
-||| Atomically remove the initial elements satisfying an antitone
-||| predicate. The predicate must hold for an initial segment
-||| of the elements in ascending order. O(log m + log n)
+||| Atomically apply dropWhileAntitone; False means invalid handle.
 export
-dropWhileAntitone :  (a -> Bool)
-                  -> Set1 s a
-                  -> F1' s
-dropWhileAntitone p =
-  modifySet (Data.Set.dropWhileAntitone p)
+dropWhileAntitone :  (a -> Bool) -> Set1 s a -> F1 s Bool
+dropWhileAntitone =
+  \p => modifySet (Data.Set.dropWhileAntitone p)
 
 --------------------------------------------------------------------------------
 --          Folds
 --------------------------------------------------------------------------------
 
-||| Fold the elements of a Set1 using a left-associative
-||| binary operator in ascending order. O(m + log n)
+||| Fold elements via foldl; Nothing means invalid handle.
 export
-foldl :  (b -> a -> b)
-      -> b
-      -> Set1 s a
-      -> F1 s b
-foldl f z =
-  querySet (Data.Set.foldl f z)
+foldl :  (b -> a -> b) -> b -> Set1 s a -> F1 s (Maybe b)
+foldl =
+  \f => \z => querySet (Data.Set.foldl f z)
 
-||| Fold the elements of a Set1 using a right-associative
-||| binary operator in ascending order. O(m + log n)
+||| Fold elements via foldr; Nothing means invalid handle.
 export
-foldr :  (a -> b -> b)
-      -> b
-      -> Set1 s a
-      -> F1 s b
-foldr f z =
-  querySet (Data.Set.foldr f z)
+foldr :  (a -> b -> b) -> b -> Set1 s a -> F1 s (Maybe b)
+foldr =
+  \f => \z => querySet (Data.Set.foldr f z)
 
 --------------------------------------------------------------------------------
---          Creating a List from a Set1
+--          Lists
 --------------------------------------------------------------------------------
 
-||| Convert a Set1 to a list of elements in ascending order.
-||| O(m + log n)
+||| Convert to toAscList; Nothing means invalid handle.
 export
-toAscList :  Set1 s a
-          -> F1 s (List a)
+toAscList :  Set1 s a -> F1 s (Maybe (List a))
 toAscList =
   querySet Data.Set.toAscList
 
-||| Convert a Set1 to a list of elements in descending order.
-||| O(m + log n)
+||| Convert to toDescList; Nothing means invalid handle.
 export
-toDescList :  Set1 s a
-           -> F1 s (List a)
+toDescList :  Set1 s a -> F1 s (Maybe (List a))
 toDescList =
   querySet Data.Set.toDescList
 
-||| Convert a Set1 to a list of elements in ascending order.
-||| O(m + log n)
+||| Convert to toList; Nothing means invalid handle.
 export
-toList :  Set1 s a
-       -> F1 s (List a)
+toList :  Set1 s a -> F1 s (Maybe (List a))
 toList =
   querySet Data.Set.toList
 
@@ -638,53 +488,43 @@ toList =
 --          Map
 --------------------------------------------------------------------------------
 
-||| Map a function over the elements of a Set1, creating a new Set1.
-|||
-||| The resulting set is rebuilt to preserve its ordering invariant.
-||| Duplicate results are removed.
-||| The new set is allocated atomically in the destination store.
-||| The original Set1 is not modified.
+||| Rebuild mapped elements in a destination store.
+||| Returns Nothing for invalid source handles; source is not mutated.
+||| Reading the source and allocating the result are separate steps.
 export
 map :  Ord b
     => SetStore1 s b
     -> (a -> b)
     -> Set1 s a
-    -> F1 s (Set1 s b)
-map store f set t =
-  let values # t := querySet Data.Set.toList set t
-      mapped     := Data.Set.fromList (Prelude.map f values)
-    in fromSet store mapped t
+    -> F1 s (Maybe (Set1 s b))
+map store f source t =
+  let original # t := querySet id source t
+    in case original of
+         Nothing => Nothing # t
+         Just xs =>
+           let mapped = Data.Set.fromList
+                          (Prelude.map f (Data.Set.toList xs))
+               result # t := fromSet store mapped t
+             in Just result # t
 
 --------------------------------------------------------------------------------
 --          Transfer
 --------------------------------------------------------------------------------
 
-||| Atomically transfer an element from the first Set1 to the second.
-|||
-||| Both handles must belong to the same store.
-||| Returns True if the element was transferred.
-||| Returns False if the element does not exist in the source,
-||| or if both handles identify the same set.
-|||
-||| Both modifications are committed through a single CAS.
+||| Atomically transfer an element between distinct sets in one store.
+||| Nothing means invalid handles or identical source/destination IDs.
+||| Just False means the element was absent; Just True means transferred.
 export
-transfer :  Ord a
-         => a
-         -> Set1 s a
-         -> Set1 s a
-         -> F1 s Bool
+transfer : Ord a
+        => a
+        -> Set1 s a
+        -> Set1 s a
+        -> F1 s (Maybe Bool)
 transfer x =
-  updateSets
-    (\source, destination =>
-      case Data.Set.member x source of
-        True  =>
-          ( Data.Set.delete x source
-          , Data.Set.insert x destination
-          , True
-          )
-        False =>
-          ( source
-          , destination
-          , False
-          )
-    )
+  updateSets (\source, destination =>
+    if Data.Set.member x source
+      then ( Data.Set.delete x source
+           , Data.Set.insert x destination
+           , True
+           )
+      else (source, destination, False))

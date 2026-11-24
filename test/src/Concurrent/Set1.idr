@@ -4,8 +4,8 @@ module Concurrent.Set1
 import Data.Set
 import Data.Set1
 import Data.Linear.Ref1
-import Data.Vect as V
 import Data.SortedMap
+import Data.Vect as V
 import System
 import System.Concurrency
 
@@ -52,8 +52,10 @@ checkInserts = do
   threadWait t3
   threadWait t4
   xs <- runIO (Data.Set1.toList set)
-  when (length xs /= THREADS * ITER) $
-    assert_total $ idris_crash "Concurrent.Set1.checkInserts: lost inserted values"
+  when (case xs of
+          Nothing => True
+          Just ys => length ys /= THREADS * ITER) $
+    assert_total $ idris_crash "Concurrent.Set1: lost inserted values"
 
 --------------------------------------------------------------------------------
 --          Atomic Transfer
@@ -72,7 +74,7 @@ transferWorker : Set1 World Nat -> Set1 World Nat -> IO ()
 transferWorker source destination =
   runIO (forN ITER $ move source destination)
 
-||| Check whether an element belongs to exactly one of two sets.
+||| Inspect both sets through one atomic snapshot of their store.
 private
 transferInvariant : Set1 World Nat -> Set1 World Nat -> IO Bool
 transferInvariant (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) = do
@@ -82,8 +84,7 @@ transferInvariant (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) = do
   pure $ case (a, b) of
     (Just xs, Just ys) =>
       Data.Set.member 1 xs /= Data.Set.member 1 ys
-    _ =>
-      False
+    _ => False
 
 ||| Watch for an intermediate state that loses or duplicates an item.
 private
@@ -121,7 +122,7 @@ checkTransfers = do
   good <- runIO (read1 valid)
   final <- transferInvariant a b
   when (not (good && final)) $
-    assert_total $ idris_crash "Concurrent.Set1.checkTransfers: non-atomic transfer"
+    assert_total $ idris_crash "Concurrent.Set1: non-atomic transfer"
 
 --------------------------------------------------------------------------------
 --          Main

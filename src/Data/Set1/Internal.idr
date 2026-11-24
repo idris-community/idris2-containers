@@ -12,9 +12,7 @@ import Data.Linear.Ref1
 --------------------------------------------------------------------------------
 
 ||| A shared atomic store containing multiple sets.
-|||
-||| All sets belonging to the store are held in a single mutable
-||| reference, allowing multiple sets to be updated atomically.
+||| All sets in the store share a single CAS-updated reference.
 public export
 data SetStore1 : (s : Type) -> (a : Type) -> Type where
   MkSetStore1 :  Ref s (SortedMap Nat (Set a))
@@ -25,9 +23,7 @@ data SetStore1 : (s : Type) -> (a : Type) -> Type where
 --------------------------------------------------------------------------------
 
 ||| A handle identifying one set within a shared store.
-|||
-||| The identifier is unique within its store and is never reused.
-||| A Set1 remains associated with its original store.
+||| The numeric identifier is unique within that store only.
 public export
 data Set1 : (s : Type) -> (a : Type) -> Type where
   MkSet1 :  SetStore1 s a
@@ -38,48 +34,37 @@ data Set1 : (s : Type) -> (a : Type) -> Type where
 --          Query
 --------------------------------------------------------------------------------
 
-||| Retrieve a set from a store snapshot by its identifier.
-||| Calls idris_crash if the identifier does not exist.
-||| O(log n), where n is the number of sets in the store.
+||| Retrieve a set by its store-local identifier.
+||| Returns Nothing for a missing identifier. O(log n)
 export
 getAt :  Nat
       -> SortedMap Nat (Set a)
-      -> Set a
+      -> Maybe (Set a)
 getAt i sets =
-  case Data.SortedMap.lookup i sets of
-    Just set =>
-      set
-    Nothing  =>
-      assert_total $
-        idris_crash "Data.Set1.Internal.getAt: invalid set identifier"
+  Data.SortedMap.lookup i sets
 
 --------------------------------------------------------------------------------
 --          Modification
 --------------------------------------------------------------------------------
 
-||| Replace an existing set in a store snapshot.
-||| Calls idris_crash if the identifier does not exist.
-||| O(log n), where n is the number of sets in the store.
+||| Replace an existing set without creating a new identifier.
+||| Returns Nothing for a missing identifier. O(log n)
 export
 replaceAt :  Nat
           -> Set a
           -> SortedMap Nat (Set a)
-          -> SortedMap Nat (Set a)
+          -> Maybe (SortedMap Nat (Set a))
 replaceAt i set sets =
   case Data.SortedMap.lookup i sets of
-    Just _  =>
-      Data.SortedMap.insert i set sets
-    Nothing =>
-      assert_total $
-        idris_crash "Data.Set1.Internal.replaceAt: invalid set identifier"
+    Nothing => Nothing
+    Just _  => Just (Data.SortedMap.insert i set sets)
 
 --------------------------------------------------------------------------------
 --          Allocation
 --------------------------------------------------------------------------------
 
-||| Find the next available identifier in a store snapshot.
-||| Identifiers are allocated monotonically and never reused.
-||| O(log n), where n is the number of sets in the store.
+||| Find the next store-local identifier. O(log n)
+||| Assumes entries are never removed and identifiers are not forged.
 export
 nextId :  SortedMap Nat (Set a)
        -> Nat

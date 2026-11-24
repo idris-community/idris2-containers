@@ -319,8 +319,9 @@ flowchart TD
     J["casmod1 / casupdate1"] --> B
 ```
 
-Single-container mutations such as `insert` and `delete` return `F1' s`, as
-there is no need to return an unchanged handle. Queries such as `member`,
+Single-container mutations such as `insert` and `delete` return `F1 s Bool`,
+where `True` indicates that the operation successfully completed,
+and `False` indicates an invalid container handle. Queries such as `member`,
 `lookup`, and `freeze` return their results in `F1 s`. A frozen snapshot is an
 immutable `Map` or `Set` that is unaffected by later changes to its source.
 
@@ -373,13 +374,13 @@ were allocated from the same store.
 | `newStore` | `F1 s (MapStore1 s k v)` or similar | Shared store        |
 | `empty`    | `F1 s (Map1 s k v)` or similar      | Allocate in store   |
 | `fromList` | `F1 s (Map1 s k v)` or similar      | Allocate entries    |
-| `insert`   | `F1' s`                             | Atomic modification |
-| `delete`   | `F1' s`                             | Atomic modification |
-| `lookup`   | `F1 s (Maybe v)` (`Map1`)           | Read snapshot       |
-| `member`   | `F1 s Bool` (`Set1`)                | Read snapshot       |
+| `insert`   | `F1 s Bool`                         | Atomic modification |
+| `delete`   | `F1 s Bool`                         | Atomic modification |
+| `lookup`   | `F1 s (Maybe (Maybe v))` (`Map1`)   | Read snapshot       |
+| `member`   | `F1 s (Maybe Bool)` (`Set1`)        | Read snapshot       |
 | `freeze`   | `F1 s (Map k v)` or `F1 s (Set a)`  | Immutable snapshot  |
-| `union`    | `F1' s`                             | Same-store CAS      |
-| `swap`     | `F1' s` (`Map1`)                    | Atomic swap         |
+| `union`    | `F1 s Bool`                         | Same-store CAS      |
+| `swap`     | `F1 s Bool` (`Map1`)                | Atomic swap         |
 | `transfer` | `F1 s Bool` (`Set1`)                | Atomic transfer     |
 
 Key-based operations retain the underlying balanced-tree behavior, but also

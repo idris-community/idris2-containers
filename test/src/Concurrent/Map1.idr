@@ -26,7 +26,9 @@ THREADS = 4
 ||| Increment the same key using one atomic insertWith operation.
 private
 inc : Map1 s Nat Nat -> F1' s
-inc m = Data.Map1.insertWith (+) 0 1 m
+inc m t =
+  let _ # t := Data.Map1.insertWith (+) 0 1 m t
+    in () # t
 
 ||| Perform repeated increments on a shared map.
 private
@@ -41,10 +43,10 @@ checkIncrements = do
              runIO Data.Map1.newStore
   m <- runIO (Data.Map1.singleton 0 0 store)
   ts <- sequence $ V.replicate THREADS (fork $ incrementWorker m)
-  traverse_ (\t => threadWait t) ts
+  traverse_ (\tid => threadWait tid) ts
   result <- runIO (Data.Map1.lookup 0 m)
-  when (result /= Just (THREADS * ITER)) $
-    assert_total $ idris_crash "Concurrent.Map1.checkIncrements: lost atomic increments"
+  when (result /= Just (Just (THREADS * ITER))) $
+    assert_total $ idris_crash "Concurrent.Map1: lost atomic increments"
 
 --------------------------------------------------------------------------------
 --          Atomic Swap
@@ -53,7 +55,9 @@ checkIncrements = do
 ||| Swap two maps in the same shared store.
 private
 swapOnce : Map1 s Nat Nat -> Map1 s Nat Nat -> F1' s
-swapOnce = Data.Map1.swap
+swapOnce a b t =
+  let _ # t := Data.Map1.swap a b t
+    in () # t
 
 ||| Perform repeated atomic swaps on one worker thread.
 private
@@ -95,12 +99,12 @@ checkSwaps = do
   valid <- runIO (ref1 True)
   observer <- fork $ watchSwaps a b valid (ITER * THREADS)
   ts <- sequence $ V.replicate THREADS (fork $ swapWorker a b)
-  traverse_ (\t => threadWait t) ts
+  traverse_ (\tid => threadWait tid) ts
   threadWait observer
   good <- runIO (read1 valid)
   final <- swapInvariant a b
   when (not (good && final)) $
-    assert_total $ idris_crash "Concurrent.Map1.checkSwaps: non-atomic swap"
+    assert_total $ idris_crash "Concurrent.Map1: non-atomic swap"
 
 --------------------------------------------------------------------------------
 --          Main

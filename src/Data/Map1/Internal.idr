@@ -12,22 +12,18 @@ import Data.Linear.Ref1
 --------------------------------------------------------------------------------
 
 ||| A shared atomic store containing multiple maps.
-|||
-||| All maps belonging to the store are held in a single mutable
-||| reference, allowing multiple maps to be updated atomically.
+||| All maps in the store share a single CAS-updated reference.
 public export
 data MapStore1 : (s : Type) -> (k : Type) -> (v : Type) -> Type where
   MkMapStore1 :  Ref s (SortedMap Nat (Map k v))
-               -> MapStore1 s k v
+              -> MapStore1 s k v
 
 --------------------------------------------------------------------------------
 --          Map1
 --------------------------------------------------------------------------------
 
 ||| A handle identifying one map within a shared store.
-|||
-||| The identifier is unique within its store and is never reused.
-||| A Map1 remains associated with its original store.
+||| The numeric identifier is unique within that store only.
 public export
 data Map1 : (s : Type) -> (k : Type) -> (v : Type) -> Type where
   MkMap1 :  MapStore1 s k v
@@ -38,48 +34,37 @@ data Map1 : (s : Type) -> (k : Type) -> (v : Type) -> Type where
 --          Query
 --------------------------------------------------------------------------------
 
-||| Retrieve a map from a store snapshot by its identifier.
-||| Calls idris_crash if the identifier does not exist.
-||| O(log n), where n is the number of maps in the store.
+||| Retrieve a map by its store-local identifier.
+||| Returns Nothing for a missing identifier. O(log n)
 export
 getAt :  Nat
       -> SortedMap Nat (Map k v)
-      -> Map k v
+      -> Maybe (Map k v)
 getAt i maps =
-  case Data.SortedMap.lookup i maps of
-    Just map =>
-      map
-    Nothing  =>
-      assert_total $
-        idris_crash "Data.Map1.Internal.getAt: invalid map identifier"
+  Data.SortedMap.lookup i maps
 
 --------------------------------------------------------------------------------
 --          Modification
 --------------------------------------------------------------------------------
 
-||| Replace an existing map in a store snapshot.
-||| Calls idris_crash if the identifier does not exist.
-||| O(log n), where n is the number of maps in the store.
+||| Replace an existing map without creating a new identifier.
+||| Returns Nothing for a missing identifier. O(log n)
 export
 replaceAt :  Nat
           -> Map k v
           -> SortedMap Nat (Map k v)
-          -> SortedMap Nat (Map k v)
+          -> Maybe (SortedMap Nat (Map k v))
 replaceAt i map maps =
   case Data.SortedMap.lookup i maps of
-    Just _  =>
-      Data.SortedMap.insert i map maps
-    Nothing =>
-      assert_total $
-        idris_crash "Data.Map1.Internal.replaceAt: invalid map identifier"
+    Nothing => Nothing
+    Just _  => Just (Data.SortedMap.insert i map maps)
 
 --------------------------------------------------------------------------------
 --          Allocation
 --------------------------------------------------------------------------------
 
-||| Find the next available identifier in a store snapshot.
-||| Identifiers are allocated monotonically and never reused.
-||| O(log n), where n is the number of maps in the store.
+||| Find the next store-local identifier. O(log n)
+||| Assumes entries are never removed and identifiers are not forged.
 export
 nextId :  SortedMap Nat (Map k v)
        -> Nat
