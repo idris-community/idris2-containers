@@ -4,7 +4,9 @@ import BoundedQueue.Unsized
 import BoundedQueue1.Unsized
 import Concurrent.BoundedQueue1
 import Concurrent.LRUCache1
+import Concurrent.Map1
 import Concurrent.Seq1
+import Concurrent.Set1
 import HashPSQ
 import Hedgehog
 import LRUCache
@@ -25,7 +27,9 @@ main : IO ()
 main = do
   Concurrent.BoundedQueue1.main
   Concurrent.LRUCache1.main
+  Concurrent.Map1.main
   Concurrent.Seq1.main
+  Concurrent.Set1.main
   test
     [ BoundedQueue.Unsized.props
     , BoundedQueue1.Unsized.props
