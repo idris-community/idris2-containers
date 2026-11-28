@@ -15,7 +15,7 @@ import Data.Linear.Ref1
 private
 record SetStoreState a where
   constructor MkSetStoreState
-  nextId : Nat
+  nextid : Nat
   sets : SortedMap Nat (Set a)
 
 --------------------------------------------------------------------------------
