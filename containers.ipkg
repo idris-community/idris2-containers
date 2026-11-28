@@ -23,6 +23,8 @@ modules    = Data.BoundedQueue.Unsized
            , Data.LRUCache1.Internal
            , Data.Map
            , Data.Map.Internal
+           , Data.Map1
+           , Data.Map1.Internal
            , Data.NatPSQ
            , Data.NatPSQ.Internal
            , Data.OrdPSQ
@@ -34,6 +36,8 @@ modules    = Data.BoundedQueue.Unsized
            , Data.Seq1.Unsized
            , Data.Set
            , Data.Set.Internal
+           , Data.Set1
+           , Data.Set1.Internal
            , Data.SnocVect
            , Data.SnocVect.Elem
            , Data.Tree

@@ -5,24 +5,30 @@ import Data.BoundedQueue1.Unsized.Internal
 import Data.BoundedQueue1.Unsized
 import Data.Linear.Ref1
 import Data.Vect as V
+import Syntax.T1
 import System
 import System.Concurrency
 
 %default total
 
+private
 ITER : Nat
 ITER = 10_000
 
+private
 DELAY : Nat
 DELAY = 100_000
 
+private
 inc : BoundedQueue1 s Nat -> Nat -> F1' s
-inc q 0     = enqueue q 0
+inc q 0     = ignore1 (enqueue q 0)
 inc q (S k) = inc q k
 
+private
 prog : BoundedQueue1 World Nat -> IO ()
 prog q = runIO (forN ITER $ inc q DELAY)
 
+private
 runProg : Nat -> IO (List Nat)
 runProg n = do
   q  <- runIO (Unsized.empty 1_000_000_000_000)
@@ -30,7 +36,9 @@ runProg n = do
   traverse_ (\t => threadWait t) ts
   runIO (toList q)
 
+export
 main : IO ()
 main = do
   us <- runProg 4
-  printLn (length us)
+  when (length us /= 40000) $
+    assert_total $ idris_crash "Concurrent.BoundedQueue1.main: leaky BoundedQueue1"

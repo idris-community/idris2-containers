@@ -10,19 +10,24 @@ import System.Concurrency
 
 %default total
 
+private
 ITER : Nat
 ITER = 10_000
 
+private
 DELAY : Nat
 DELAY = 100_000
 
+private
 inc : Seq1 s Nat -> Nat -> F1' s
 inc seq 0     t = snoc seq Z t
 inc seq (S k) t = snoc seq k t
 
+private
 prog : Seq1 World Nat -> IO ()
 prog q = runIO (forN ITER $ inc q DELAY)
 
+private
 runProg : Nat -> IO (List Nat)
 runProg n = do
   q  <- runIO empty
@@ -30,7 +35,9 @@ runProg n = do
   traverse_ (\t => threadWait t) ts
   runIO (toList q)
 
+export
 main : IO ()
 main = do
   us <- runProg 4
-  printLn (length us)
+  when (length us /= 40000) $
+    assert_total $ idris_crash "Concurrent.Seq1.main: leaky Seq1"
