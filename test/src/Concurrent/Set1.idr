@@ -25,7 +25,7 @@ THREADS = 4
 
 ||| Insert a disjoint range of values into a shared set.
 private
-fill : Set1 s Nat -> Nat -> Nat -> F1' s
+fill : Set1 s region Nat -> Nat -> Nat -> F1' s
 fill set offset 0 t = () # t
 fill set offset (S k) t =
   let _ # t := Data.Set1.insert (offset + k) set t
@@ -33,29 +33,28 @@ fill set offset (S k) t =
 
 ||| Insert a range on one worker thread.
 private
-insertWorker : Set1 World Nat -> Nat -> IO ()
+insertWorker : Set1 World region Nat -> Nat -> IO ()
 insertWorker set i = runIO (fill set (i * ITER) ITER)
 
 ||| Verify that concurrent, disjoint insertions do not lose elements.
 private
 checkInserts : IO ()
-checkInserts = do
-  store <- the (IO (SetStore1 World Nat)) $
-             runIO Data.Set1.newStore
-  set <- runIO (Data.Set1.empty store)
-  t1 <- fork $ insertWorker set 0
-  t2 <- fork $ insertWorker set 1
-  t3 <- fork $ insertWorker set 2
-  t4 <- fork $ insertWorker set 3
-  threadWait t1
-  threadWait t2
-  threadWait t3
-  threadWait t4
-  xs <- runIO (Data.Set1.toList set)
-  when (case xs of
-          Nothing => True
-          Just ys => length ys /= THREADS * ITER) $
-    assert_total $ idris_crash "Concurrent.Set1: lost inserted values"
+checkInserts =
+  Data.Set1.withStoreIO $ \store => do
+    set <- runIO (Data.Set1.empty store)
+    t1 <- fork $ insertWorker set 0
+    t2 <- fork $ insertWorker set 1
+    t3 <- fork $ insertWorker set 2
+    t4 <- fork $ insertWorker set 3
+    threadWait t1
+    threadWait t2
+    threadWait t3
+    threadWait t4
+    xs <- runIO (Data.Set1.toList set)
+    when (case xs of
+            Nothing => True
+            Just ys => length ys /= THREADS * ITER) $
+      assert_total $ idris_crash "Concurrent.Set1: lost inserted values"
 
 --------------------------------------------------------------------------------
 --          Atomic Transfer
@@ -63,20 +62,20 @@ checkInserts = do
 
 ||| Attempt to move one element between two sets.
 private
-move : Set1 s Nat -> Set1 s Nat -> F1' s
+move : Set1 s region Nat -> Set1 s region Nat -> F1' s
 move source destination t =
   let _ # t := Data.Set1.transfer 1 source destination t
     in () # t
 
 ||| Repeatedly transfer one element in a chosen direction.
 private
-transferWorker : Set1 World Nat -> Set1 World Nat -> IO ()
+transferWorker : Set1 World region Nat -> Set1 World region Nat -> IO ()
 transferWorker source destination =
   runIO (forN ITER $ move source destination)
 
 ||| Inspect both sets through one atomic snapshot of their store.
 private
-transferInvariant : Set1 World Nat -> Set1 World Nat -> IO Bool
+transferInvariant : Set1 World region Nat -> Set1 World region Nat -> IO Bool
 transferInvariant a b = do
   result <- runIO $ Data.Set1.Internal.querySets
     (\first, second =>
@@ -85,8 +84,8 @@ transferInvariant a b = do
 
 ||| Watch for an intermediate state that loses or duplicates an item.
 private
-watchTransfer :  Set1 World Nat
-              -> Set1 World Nat
+watchTransfer :  Set1 World region Nat
+              -> Set1 World region Nat
               -> Ref World Bool
               -> Nat
               -> IO ()
@@ -100,26 +99,25 @@ watchTransfer a b flag (S k) = do
 ||| Verify that competing transfers preserve exclusive membership.
 private
 checkTransfers : IO ()
-checkTransfers = do
-  store <- the (IO (SetStore1 World Nat)) $
-             runIO Data.Set1.newStore
-  a <- runIO (Data.Set1.singleton 1 store)
-  b <- runIO (Data.Set1.empty store)
-  valid <- runIO (ref1 True)
-  observer <- fork $ watchTransfer a b valid (ITER * THREADS)
-  t1 <- fork $ transferWorker a b
-  t2 <- fork $ transferWorker b a
-  t3 <- fork $ transferWorker a b
-  t4 <- fork $ transferWorker b a
-  threadWait t1
-  threadWait t2
-  threadWait t3
-  threadWait t4
-  threadWait observer
-  good <- runIO (read1 valid)
-  final <- transferInvariant a b
-  when (not (good && final)) $
-    assert_total $ idris_crash "Concurrent.Set1: non-atomic transfer"
+checkTransfers =
+  Data.Set1.withStoreIO $ \store => do
+    a <- runIO (Data.Set1.singleton 1 store)
+    b <- runIO (Data.Set1.empty store)
+    valid <- runIO (ref1 True)
+    observer <- fork $ watchTransfer a b valid (ITER * THREADS)
+    t1 <- fork $ transferWorker a b
+    t2 <- fork $ transferWorker b a
+    t3 <- fork $ transferWorker a b
+    t4 <- fork $ transferWorker b a
+    threadWait t1
+    threadWait t2
+    threadWait t3
+    threadWait t4
+    threadWait observer
+    good <- runIO (read1 valid)
+    final <- transferInvariant a b
+    when (not (good && final)) $
+      assert_total $ idris_crash "Concurrent.Set1: non-atomic transfer"
 
 --------------------------------------------------------------------------------
 --          Main

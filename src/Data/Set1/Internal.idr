@@ -15,8 +15,8 @@ import Data.Linear.Ref1
 private
 record SetStoreState a where
   constructor MkSetStoreState
-  nextid : Nat
-  sets   : SortedMap Nat (Set a)
+  nextId : Nat
+  sets : SortedMap Nat (Set a)
 
 --------------------------------------------------------------------------------
 --          SetStore1
@@ -25,8 +25,8 @@ record SetStoreState a where
 ||| An opaque atomic store holding multiple sets.
 ||| The counter and contents are committed together through one CAS.
 export
-data SetStore1 : (s : Type) -> (a : Type) -> Type where
-  MkSetStore1 : Ref s (SetStoreState a) -> SetStore1 s a
+data SetStore1 : (s : Type) -> (region : Type) -> (a : Type) -> Type where
+  MkSetStore1 : Ref s (SetStoreState a) -> SetStore1 s region a
 
 --------------------------------------------------------------------------------
 --          Set1
@@ -35,8 +35,8 @@ data SetStore1 : (s : Type) -> (a : Type) -> Type where
 ||| An opaque handle containing a store and its allocated identifier.
 ||| Identifiers cannot be supplied by external callers.
 export
-data Set1 : (s : Type) -> (a : Type) -> Type where
-  MkSet1 : SetStore1 s a -> Nat -> Set1 s a
+data Set1 : (s : Type) -> (region : Type) -> (a : Type) -> Type where
+  MkSet1 : SetStore1 s region a -> Nat -> Set1 s region a
 
 --------------------------------------------------------------------------------
 --          Query and Modification
@@ -61,16 +61,37 @@ replaceAt i value sets =
 --------------------------------------------------------------------------------
 
 ||| Create a new store with an empty map and identifier counter zero.
-export
-newStore : F1 s (SetStore1 s a)
+private
+newStore : F1 s (SetStore1 s region a)
 newStore t =
   let ref # t := ref1 (MkSetStoreState 0 Data.SortedMap.empty) t
     in MkSetStore1 ref # t
 
+||| Run a state-token computation with one generatively scoped store.
+||| The callback is polymorphic in `region`, preventing handles from
+||| different store scopes from being mixed or returned directly.
+export
+withStore :
+     (forall region . SetStore1 s region a -> F1 s b)
+  -> F1 s b
+withStore f t =
+  let store # t := newStore {region = ()} t
+    in f store t
+
+||| Run an IO computation with one generatively scoped store.
+||| This supports concurrent users of handles created within the scope.
+export
+withStoreIO :
+     (forall region . SetStore1 World region a -> IO b)
+  -> IO b
+withStoreIO f = do
+  store <- runIO (newStore {region = ()})
+  f store
+
 ||| Allocate a fresh identifier and a container in one CAS operation.
 ||| The counter does not depend on whether older entries remain present.
 export
-allocateSet : SetStore1 s a -> Set a -> F1 s (Set1 s a)
+allocateSet : SetStore1 s region a -> Set a -> F1 s (Set1 s region a)
 allocateSet store@(MkSetStore1 ref) value t =
   casupdate1 ref
     (\(MkSetStoreState i sets) =>
@@ -85,7 +106,7 @@ allocateSet store@(MkSetStore1 ref) value t =
 
 ||| Apply a query to a single snapshot, Nothing means invalid handle.
 export
-querySet : (Set a -> b) -> Set1 s a -> F1 s (Maybe b)
+querySet : (Set a -> b) -> Set1 s region a -> F1 s (Maybe b)
 querySet f (MkSet1 (MkSetStore1 ref) i) t =
   let state # t := read1 ref t
       MkSetStoreState _ sets = state
@@ -93,15 +114,12 @@ querySet f (MkSet1 (MkSetStore1 ref) i) t =
 
 ||| Atomically modify an existing container, False means invalid handle.
 export
-modifySet :
-     (Set a -> Set a)
-  -> Set1 s a
-  -> F1 s Bool
+modifySet : (Set a -> Set a) -> Set1 s region a -> F1 s Bool
 modifySet f (MkSet1 (MkSetStore1 ref) i) t =
   casupdate1 ref
     (\state@(MkSetStoreState next sets) =>
       case getAt i sets of
-        Nothing => (state, False)
+        Nothing  => (state, False)
         Just old =>
           case replaceAt i (f old) sets of
             Nothing      => (state, False)
@@ -110,9 +128,8 @@ modifySet f (MkSet1 (MkSetStore1 ref) i) t =
 
 ||| Atomically update a container and return the committed result.
 export
-updateSet :
-     (Set a -> (Set a, b))
-  -> Set1 s a -> F1 s (Maybe b)
+updateSet : (Set a -> (Set a, b))
+          -> Set1 s region a -> F1 s (Maybe b)
 updateSet f (MkSet1 (MkSetStore1 ref) i) t =
   casupdate1 ref
     (\state@(MkSetStoreState next sets) =>
@@ -129,12 +146,11 @@ updateSet f (MkSet1 (MkSetStore1 ref) i) t =
 ||| Query two containers from one shared-store snapshot.
 ||| Both handles must belong to the same store.
 export
-querySets :
-     (Set a -> Set a -> b)
-  -> Set1 s a -> Set1 s a -> F1 s (Maybe b)
+querySets : (Set a -> Set a -> b)
+           -> Set1 s region a -> Set1 s region a -> F1 s (Maybe b)
 querySets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
-  let state              # t := read1 ref t
-      MkSetStoreState _ sets := state
+  let state # t := read1 ref t
+      MkSetStoreState _ sets = state
     in case (getAt i sets, getAt j sets) of
          (Just first, Just second) => Just (f first second) # t
          _                         => Nothing # t
@@ -142,9 +158,8 @@ querySets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
 ||| Atomically modify the first of two containers in one CAS.
 ||| Both handles must belong to the same store.
 export
-modifySets :
-     (Set a -> Set a -> Set a)
-  -> Set1 s a -> Set1 s a -> F1 s Bool
+modifySets : (Set a -> Set a -> Set a)
+            -> Set1 s region a -> Set1 s region a -> F1 s Bool
 modifySets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
   casupdate1 ref
     (\state@(MkSetStoreState next sets) =>
@@ -162,7 +177,7 @@ modifySets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
 export
 updateSets :
      (Set a -> Set a -> (Set a, Set a, b))
-  -> Set1 s a -> Set1 s a -> F1 s (Maybe b)
+  -> Set1 s region a -> Set1 s region a -> F1 s (Maybe b)
 updateSets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
   casupdate1 ref
     (\state@(MkSetStoreState next sets) =>
@@ -176,6 +191,7 @@ updateSets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
                   Just updated =>
                     case replaceAt j second' updated of
                       Nothing         => (state, Nothing)
-                      Just resultMaps => (MkSetStoreState next resultMaps, Just result)
+                      Just resultMaps =>
+                        (MkSetStoreState next resultMaps, Just result)
           _ => (state, Nothing)
     ) t

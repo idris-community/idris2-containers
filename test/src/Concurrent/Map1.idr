@@ -25,28 +25,27 @@ THREADS = 4
 
 ||| Increment the same key using one atomic insertWith operation.
 private
-inc : Map1 s Nat Nat -> F1' s
+inc : Map1 s region Nat Nat -> F1' s
 inc m t =
   let _ # t := Data.Map1.insertWith (+) 0 1 m t
     in () # t
 
 ||| Perform repeated increments on a shared map.
 private
-incrementWorker : Map1 World Nat Nat -> IO ()
+incrementWorker : Map1 World region Nat Nat -> IO ()
 incrementWorker m = runIO (forN ITER $ inc m)
 
 ||| Verify that competing atomic increments do not lose updates.
 private
 checkIncrements : IO ()
-checkIncrements = do
-  store <- the (IO (MapStore1 World Nat Nat)) $
-             runIO Data.Map1.newStore
-  m <- runIO (Data.Map1.singleton 0 0 store)
-  ts <- sequence $ V.replicate THREADS (fork $ incrementWorker m)
-  traverse_ (\tid => threadWait tid) ts
-  result <- runIO (Data.Map1.lookup 0 m)
-  when (result /= Just (Just (THREADS * ITER))) $
-    assert_total $ idris_crash "Concurrent.Map1: lost atomic increments"
+checkIncrements =
+  Data.Map1.withStoreIO $ \store => do
+    m <- runIO (Data.Map1.singleton 0 0 store)
+    ts <- sequence $ V.replicate THREADS (fork $ incrementWorker m)
+    traverse_ (\tid => threadWait tid) ts
+    result <- runIO (Data.Map1.lookup 0 m)
+    when (result /= Just (Just (THREADS * ITER))) $
+      assert_total $ idris_crash "Concurrent.Map1: lost atomic increments"
 
 --------------------------------------------------------------------------------
 --          Atomic Swap
@@ -54,19 +53,19 @@ checkIncrements = do
 
 ||| Swap two maps in the same shared store.
 private
-swapOnce : Map1 s Nat Nat -> Map1 s Nat Nat -> F1' s
+swapOnce : Map1 s region Nat Nat -> Map1 s region Nat Nat -> F1' s
 swapOnce a b t =
   let _ # t := Data.Map1.swap a b t
     in () # t
 
 ||| Perform repeated atomic swaps on one worker thread.
 private
-swapWorker : Map1 World Nat Nat -> Map1 World Nat Nat -> IO ()
+swapWorker : Map1 World region Nat Nat -> Map1 World region Nat Nat -> IO ()
 swapWorker a b = runIO (forN ITER $ swapOnce a b)
 
 ||| Read two values from a single atomic store snapshot.
 private
-swapInvariant : Map1 World Nat Nat -> Map1 World Nat Nat -> IO Bool
+swapInvariant : Map1 World region Nat Nat -> Map1 World region Nat Nat -> IO Bool
 swapInvariant a b = do
   result <- runIO $ Data.Map1.Internal.queryMaps
     (\first, second =>
@@ -78,8 +77,8 @@ swapInvariant a b = do
 
 ||| Observe snapshots while workers repeatedly swap two maps.
 private
-watchSwaps :  Map1 World Nat Nat
-           -> Map1 World Nat Nat
+watchSwaps :  Map1 World region Nat Nat
+           -> Map1 World region Nat Nat
            -> Ref World Bool
            -> Nat
            -> IO ()
@@ -93,20 +92,19 @@ watchSwaps a b flag (S k) = do
 ||| Verify that swaps cannot expose half-committed states.
 private
 checkSwaps : IO ()
-checkSwaps = do
-  store <- the (IO (MapStore1 World Nat Nat)) $
-             runIO Data.Map1.newStore
-  a <- runIO (Data.Map1.singleton 0 1 store)
-  b <- runIO (Data.Map1.singleton 0 2 store)
-  valid <- runIO (ref1 True)
-  observer <- fork $ watchSwaps a b valid (ITER * THREADS)
-  ts <- sequence $ V.replicate THREADS (fork $ swapWorker a b)
-  traverse_ (\tid => threadWait tid) ts
-  threadWait observer
-  good <- runIO (read1 valid)
-  final <- swapInvariant a b
-  when (not (good && final)) $
-    assert_total $ idris_crash "Concurrent.Map1: non-atomic swap"
+checkSwaps =
+  Data.Map1.withStoreIO $ \store => do
+    a <- runIO (Data.Map1.singleton 0 1 store)
+    b <- runIO (Data.Map1.singleton 0 2 store)
+    valid <- runIO (ref1 True)
+    observer <- fork $ watchSwaps a b valid (ITER * THREADS)
+    ts <- sequence $ V.replicate THREADS (fork $ swapWorker a b)
+    traverse_ (\tid => threadWait tid) ts
+    threadWait observer
+    good <- runIO (read1 valid)
+    final <- swapInvariant a b
+    when (not (good && final)) $
+      assert_total $ idris_crash "Concurrent.Map1: non-atomic swap"
 
 --------------------------------------------------------------------------------
 --          Main

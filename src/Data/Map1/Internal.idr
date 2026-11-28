@@ -25,8 +25,8 @@ record MapStoreState k v where
 ||| An opaque atomic store holding multiple maps.
 ||| The counter and contents are committed together through one CAS.
 export
-data MapStore1 : (s : Type) ->  (k : Type) -> (v : Type) -> Type where
-  MkMapStore1 : Ref s (MapStoreState k v) -> MapStore1 s k v
+data MapStore1 : (s : Type) -> (region : Type) -> (k : Type) -> (v : Type) -> Type where
+  MkMapStore1 : Ref s (MapStoreState k v) -> MapStore1 s region k v
 
 --------------------------------------------------------------------------------
 --          Map1
@@ -35,8 +35,8 @@ data MapStore1 : (s : Type) ->  (k : Type) -> (v : Type) -> Type where
 ||| An opaque handle containing a store and its allocated identifier.
 ||| Identifiers cannot be supplied by external callers.
 export
-data Map1 : (s : Type) ->  (k : Type) -> (v : Type) -> Type where
-  MkMap1 : MapStore1 s k v -> Nat -> Map1 s k v
+data Map1 : (s : Type) -> (region : Type) -> (k : Type) -> (v : Type) -> Type where
+  MkMap1 : MapStore1 s region k v -> Nat -> Map1 s region k v
 
 --------------------------------------------------------------------------------
 --          Query and Modification
@@ -61,16 +61,37 @@ replaceAt i value maps =
 --------------------------------------------------------------------------------
 
 ||| Create a new store with an empty map and identifier counter zero.
-export
-newStore : F1 s (MapStore1 s k v)
+private
+newStore : F1 s (MapStore1 s region k v)
 newStore t =
   let ref # t := ref1 (MkMapStoreState 0 Data.SortedMap.empty) t
     in MkMapStore1 ref # t
 
+||| Run a state-token computation with one generatively scoped store.
+||| The callback is polymorphic in `region`, preventing handles from
+||| different store scopes from being mixed or returned directly.
+export
+withStore :
+     (forall region . MapStore1 s region k v -> F1 s b)
+  -> F1 s b
+withStore f t =
+  let store # t := newStore {region = ()} t
+    in f store t
+
+||| Run an IO computation with one generatively scoped store.
+||| This supports concurrent users of handles created within the scope.
+export
+withStoreIO :
+     (forall region . MapStore1 World region k v -> IO b)
+  -> IO b
+withStoreIO f = do
+  store <- runIO (newStore {region = ()})
+  f store
+
 ||| Allocate a fresh identifier and a container in one CAS operation.
 ||| The counter does not depend on whether older entries remain present.
 export
-allocateMap : MapStore1 s k v -> Map k v -> F1 s (Map1 s k v)
+allocateMap : MapStore1 s region k v -> Map k v -> F1 s (Map1 s region k v)
 allocateMap store@(MkMapStore1 ref) value t =
   casupdate1 ref
     (\(MkMapStoreState i maps) =>
@@ -83,17 +104,17 @@ allocateMap store@(MkMapStore1 ref) value t =
 --          Internal Operations
 --------------------------------------------------------------------------------
 
-||| Apply a query to a single snapshot; Nothing means invalid handle.
+||| Apply a query to a single snapshot, Nothing means invalid handle.
 export
-queryMap : (Map k v -> b) -> Map1 s k v -> F1 s (Maybe b)
+queryMap : (Map k v -> b) -> Map1 s region k v -> F1 s (Maybe b)
 queryMap f (MkMap1 (MkMapStore1 ref) i) t =
   let state # t := read1 ref t
       MkMapStoreState _ maps = state
     in (f <$> getAt i maps) # t
 
-||| Atomically modify an existing container; False means invalid handle.
+||| Atomically modify an existing container, False means invalid handle.
 export
-modifyMap : (Map k v -> Map k v) -> Map1 s k v -> F1 s Bool
+modifyMap : (Map k v -> Map k v) -> Map1 s region k v -> F1 s Bool
 modifyMap f (MkMap1 (MkMapStore1 ref) i) t =
   casupdate1 ref
     (\state@(MkMapStoreState next maps) =>
@@ -108,7 +129,7 @@ modifyMap f (MkMap1 (MkMapStore1 ref) i) t =
 ||| Atomically update a container and return the committed result.
 export
 updateMap : (Map k v -> (Map k v, b))
-          -> Map1 s k v -> F1 s (Maybe b)
+          -> Map1 s region k v -> F1 s (Maybe b)
 updateMap f (MkMap1 (MkMapStore1 ref) i) t =
   casupdate1 ref
     (\state@(MkMapStoreState next maps) =>
@@ -118,26 +139,27 @@ updateMap f (MkMap1 (MkMapStore1 ref) i) t =
           let (new, result) = f old
            in case replaceAt i new maps of
                 Nothing      => (state, Nothing)
-                Just updated => (MkMapStoreState next updated, Just result)
+                Just updated =>
+                  (MkMapStoreState next updated, Just result)
     ) t
 
 ||| Query two containers from one shared-store snapshot.
 ||| Both handles must belong to the same store.
 export
 queryMaps : (Map k v -> Map k v -> b)
-           -> Map1 s k v -> Map1 s k v -> F1 s (Maybe b)
+           -> Map1 s region k v -> Map1 s region k v -> F1 s (Maybe b)
 queryMaps f (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) t =
   let state # t := read1 ref t
       MkMapStoreState _ maps = state
     in case (getAt i maps, getAt j maps) of
          (Just first, Just second) => Just (f first second) # t
-         _                         => Nothing # t
+         _ => Nothing # t
 
 ||| Atomically modify the first of two containers in one CAS.
 ||| Both handles must belong to the same store.
 export
 modifyMaps : (Map k v -> Map k v -> Map k v)
-            -> Map1 s k v -> Map1 s k v -> F1 s Bool
+            -> Map1 s region k v -> Map1 s region k v -> F1 s Bool
 modifyMaps f (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) t =
   casupdate1 ref
     (\state@(MkMapStoreState next maps) =>
@@ -155,7 +177,7 @@ modifyMaps f (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) t =
 export
 updateMaps :
      (Map k v -> Map k v -> (Map k v, Map k v, b))
-  -> Map1 s k v -> Map1 s k v -> F1 s (Maybe b)
+  -> Map1 s region k v -> Map1 s region k v -> F1 s (Maybe b)
 updateMaps f (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) t =
   casupdate1 ref
     (\state@(MkMapStoreState next maps) =>
@@ -169,7 +191,8 @@ updateMaps f (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) t =
                   Just updated =>
                     case replaceAt j second' updated of
                       Nothing         => (state, Nothing)
-                      Just resultMaps => (MkMapStoreState next resultMaps, Just result)
+                      Just resultMaps =>
+                        (MkMapStoreState next resultMaps, Just result)
           _ => (state, Nothing)
     ) t
 
@@ -177,10 +200,10 @@ updateMaps f (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) t =
 --          Swap
 --------------------------------------------------------------------------------
 
-||| Atomically swap two maps in one store; self-swap is a valid no-op.
+||| Atomically swap two maps in one store, self-swap is a valid no-op.
 ||| Both handles must belong to the same store.
 export
-swapMaps : Map1 s k v -> Map1 s k v -> F1 s Bool
+swapMaps : Map1 s region k v -> Map1 s region k v -> F1 s Bool
 swapMaps (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) t =
   casupdate1 ref
     (\state@(MkMapStoreState next maps) =>
@@ -193,6 +216,7 @@ swapMaps (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) t =
                    Just updated =>
                      case replaceAt j first updated of
                        Nothing         => (state, False)
-                       Just resultMaps => (MkMapStoreState next resultMaps, True)
+                       Just resultMaps =>
+                         (MkMapStoreState next resultMaps, True)
         _ => (state, False)
     ) t

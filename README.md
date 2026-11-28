@@ -99,8 +99,8 @@ interface from `idris2-ref1` to perform safe, mutable operations.
 | Linear queue    | `Data.BoundedQueue1.Unsized`         | Ref-backed bounded queue             |
 | Sequences       | `Data.Seq.Unsized`, `Data.Seq.Sized` | Two-ended sequences                  |
 | Maps and sets   | `Data.Map`, `Data.Set`               | Ordered key-value collections        |
-| Linear map      | `Data.Map1`                          | Atomic shared-store maps             |
-| Linear set      | `Data.Set1`                          | Atomic shared-store sets             |
+| Linear map      | `Data.Map1`                         | Atomic shared-store maps             |
+| Linear set      | `Data.Set1`                         | Atomic shared-store sets             |
 | Priority queues | `Data.HashPSQ`, `Data.NatPSQ`        | Keyed priority search                |
 | Ordered PSQ     | `Data.OrdPSQ`                        | Ordered-key priority search          |
 | LRU cache       | `Data.LRUCache`                      | Immutable bounded cache              |
@@ -301,9 +301,10 @@ should be checked carefully when combining the libraries.
 ordered collections. Each exposes a shared store holding multiple maps or sets,
 with an individual handle identifying one collection within that store.
 
-`MapStore1 s k v` holds maps with the same key and value types, while
-`SetStore1 s a` holds sets with the same element type. Each opaque store holds
-one `Ref1`-managed state containing a `SortedMap` from `Nat` identifiers to
+`MapStore1 s region k v` holds maps with the same key and value types,
+while `SetStore1 s region a` holds sets with the same element type. The
+`region` parameter associates handles with a store scope. Each opaque
+store holds one `Ref1`-managed state containing a `SortedMap` from `Nat` identifiers to
 persistent values and a monotonic `nextId` counter. Store and handle
 constructors are hidden, so callers cannot forge identifiers or directly
 modify the underlying state. Allocation atomically inserts a collection and
@@ -336,22 +337,24 @@ Operations involving two handles, such as `union`, `difference`, and
 between two sets in the same store. Queries across two collections likewise
 read one store snapshot, so they do not observe partially committed changes.
 
-**Both handles must belong to the same store.** The public handle types do not
-encode store identity, so this remains a caller-enforced precondition. Handles
-from different stores cannot safely be combined by these operations. A CAS
-callback may run more than once under contention and must remain pure.
+**Both handles must belong to the same store.** Binary operations require
+matching `region` parameters, and `withStore` or `withStoreIO` scopes store
+creation. This restricts accidental cross-scope use, but the current rank-2
+callback implementation has not been established as genuinely generative:
+matching region types alone do not prove runtime store identity. A CAS callback
+may run more than once under contention and must remain pure.
 
 ### Linear map example
 
 ```idris
 import Data.Map1
 
-mapExample : F1 s (Maybe String)
+mapExample : F1 s (Maybe (Maybe String))
 mapExample t =
-  let store # t := Data.Map1.newStore t
-      m     # t := Data.Map1.singleton 1 "one" store t
-      _     # t := Data.Map1.insert 2 "two" m t
-    in Data.Map1.lookup 2 m t
+  Data.Map1.withStore (\store => \t =>
+    let m # t := Data.Map1.singleton 1 "one" store t
+        _ # t := Data.Map1.insert 2 "two" m t
+     in Data.Map1.lookup 2 m t) t
 ```
 
 ### Linear set example
@@ -359,34 +362,35 @@ mapExample t =
 ```idris
 import Data.Set1
 
-setExample : F1 s (List Nat)
+setExample : F1 s (Maybe (List Nat))
 setExample t =
-  let store # t := Data.Set1.newStore t
-      a     # t := Data.Set1.fromList [1, 2, 3] store t
-      b     # t := Data.Set1.fromList [3, 4] store t
-      _     # t := Data.Set1.union a b t
-    in Data.Set1.toList a t
+  Data.Set1.withStore (\store => \t =>
+    let a # t := Data.Set1.fromList [1, 2, 3] store t
+        b # t := Data.Set1.fromList [3, 4] store t
+        _ # t := Data.Set1.union a b t
+     in Data.Set1.toList a t) t
 ```
 
-The map example returns `Just "two"`, and the set example returns
-`[1, 2, 3, 4]`. The set union is a single atomic update because both handles
-were allocated from the same store.
+The map example returns `Just (Just "two")`, and the set example returns
+`Just [1, 2, 3, 4]`. The set union is a single atomic update because both
+handles were allocated from the same store.
 
 ### Linear API overview
 
-| Operation  | Result                              | Notes               |
-| ---------- | ----------------------------------- | ------------------- |
-| `newStore` | `F1 s (MapStore1 s k v)` or similar | Shared store        |
-| `empty`    | `F1 s (Map1 s k v)` or similar      | Allocate in store   |
-| `fromList` | `F1 s (Map1 s k v)` or similar      | Allocate entries    |
-| `insert`   | `F1 s Bool`                         | Atomic modification |
-| `delete`   | `F1 s Bool`                         | Atomic modification |
-| `lookup`   | `F1 s (Maybe (Maybe v))` (`Map1`)   | Read snapshot       |
-| `member`   | `F1 s (Maybe Bool)` (`Set1`)        | Read snapshot       |
-| `freeze`   | `F1 s (Map k v)` or `F1 s (Set a)`  | Immutable snapshot  |
-| `union`    | `F1 s Bool`                         | Same-store CAS      |
-| `swap`     | `F1 s Bool` (`Map1`)                | Atomic swap         |
-| `transfer` | `F1 s Bool` (`Set1`)                | Atomic transfer     |
+| Operation     | Result                                         | Notes               |
+| ------------- | ---------------------------------------------- | ------------------- |
+| `withStore`   | `(forall region . Store -> F1 s b) -> F1 s b`  | Scoped store        |
+| `withStoreIO` | `(forall region . Store -> IO b) -> IO b`      | Concurrent scope    |
+| `empty`       | `F1 s (Map1 s region k v)` or similar          | Allocate in store   |
+| `fromList`    | `F1 s (Map1 s region k v)` or similar          | Allocate entries    |
+| `insert`      | `F1 s Bool`                                    | Atomic modification |
+| `delete`      | `F1 s Bool`                                    | Atomic modification |
+| `lookup`      | `F1 s (Maybe (Maybe v))` (`Map1`)              | Read snapshot       |
+| `member`      | `F1 s (Maybe Bool)` (`Set1`)                   | Read snapshot       |
+| `freeze`      | `F1 s (Maybe (Map k v))` or similar            | Immutable snapshot  |
+| `union`       | `F1 s Bool`                                    | Same-store CAS      |
+| `swap`        | `F1 s Bool` (`Map1`)                           | Atomic swap         |
+| `transfer`    | `F1 s (Maybe Bool)` (`Set1`)                   | Atomic transfer     |
 
 Key-based operations retain the underlying balanced-tree behavior, but also
 incur a lookup and possible replacement in the store's `SortedMap`. Concurrent
@@ -477,8 +481,8 @@ Unlike the immutable API, these calls thread linear state through `F1 s`.
 | Build a vector from the right      | `SnocVect n a`      |
 | Ordered association lookup         | `Map k v`           |
 | Ordered membership                 | `Set a`             |
-| Shared mutable ordered lookup      | `Map1 s k v`        |
-| Shared mutable ordered membership  | `Set1 s a`          |
+| Shared mutable ordered lookup      | `Map1 s region k v` |
+| Shared mutable ordered membership  | `Set1 s region a`   |
 | Keyed minimum-priority work        | A PSQ variant       |
 | Immutable LRU eviction             | `LRUCache k v`      |
 | CAS-backed mutable LRU             | `LRUCache1 s k v`   |
