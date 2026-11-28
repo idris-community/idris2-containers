@@ -8,67 +8,174 @@ import Data.Linear.Ref1
 %default total
 
 --------------------------------------------------------------------------------
+--          Store State
+--------------------------------------------------------------------------------
+
+||| The store's monotonic allocation counter and immutable containers.
+private
+record SetStoreState a where
+  constructor MkSetStoreState
+  nextid : Nat
+  sets   : SortedMap Nat (Set a)
+
+--------------------------------------------------------------------------------
 --          SetStore1
 --------------------------------------------------------------------------------
 
-||| A shared atomic store containing multiple sets.
-||| All sets in the store share a single CAS-updated reference.
-public export
+||| An opaque atomic store holding multiple sets.
+||| The counter and contents are committed together through one CAS.
+export
 data SetStore1 : (s : Type) -> (a : Type) -> Type where
-  MkSetStore1 :  Ref s (SortedMap Nat (Set a))
-              -> SetStore1 s a
+  MkSetStore1 : Ref s (SetStoreState a) -> SetStore1 s a
 
 --------------------------------------------------------------------------------
 --          Set1
 --------------------------------------------------------------------------------
 
-||| A handle identifying one set within a shared store.
-||| The numeric identifier is unique within that store only.
-public export
+||| An opaque handle containing a store and its allocated identifier.
+||| Identifiers cannot be supplied by external callers.
+export
 data Set1 : (s : Type) -> (a : Type) -> Type where
-  MkSet1 :  SetStore1 s a
-         -> Nat
-         -> Set1 s a
+  MkSet1 : SetStore1 s a -> Nat -> Set1 s a
 
 --------------------------------------------------------------------------------
---          Query
+--          Query and Modification
 --------------------------------------------------------------------------------
 
-||| Retrieve a set by its store-local identifier.
-||| Returns Nothing for a missing identifier. O(log n)
-export
-getAt :  Nat
-      -> SortedMap Nat (Set a)
-      -> Maybe (Set a)
-getAt i sets =
-  Data.SortedMap.lookup i sets
+||| Find an existing container in an immutable snapshot.
+private
+getAt : Nat -> SortedMap Nat (Set a) -> Maybe (Set a)
+getAt i sets = Data.SortedMap.lookup i sets
 
---------------------------------------------------------------------------------
---          Modification
---------------------------------------------------------------------------------
-
-||| Replace an existing set without creating a new identifier.
-||| Returns Nothing for a missing identifier. O(log n)
-export
-replaceAt :  Nat
-          -> Set a
-          -> SortedMap Nat (Set a)
-          -> Maybe (SortedMap Nat (Set a))
-replaceAt i set sets =
+||| Replace an existing container, without introducing new identifiers.
+private
+replaceAt : Nat -> Set a -> SortedMap Nat (Set a)
+         -> Maybe (SortedMap Nat (Set a))
+replaceAt i value sets =
   case Data.SortedMap.lookup i sets of
     Nothing => Nothing
-    Just _  => Just (Data.SortedMap.insert i set sets)
+    Just _  => Just (Data.SortedMap.insert i value sets)
 
 --------------------------------------------------------------------------------
 --          Allocation
 --------------------------------------------------------------------------------
 
-||| Find the next store-local identifier. O(log n)
-||| Assumes entries are never removed and identifiers are not forged.
+||| Create a new store with an empty map and identifier counter zero.
 export
-nextId :  SortedMap Nat (Set a)
-       -> Nat
-nextId sets =
-  case Data.SortedMap.rightMost sets of
-    Nothing     => 0
-    Just (i, _) => S i
+newStore : F1 s (SetStore1 s a)
+newStore t =
+  let ref # t := ref1 (MkSetStoreState 0 Data.SortedMap.empty) t
+    in MkSetStore1 ref # t
+
+||| Allocate a fresh identifier and a container in one CAS operation.
+||| The counter does not depend on whether older entries remain present.
+export
+allocateSet : SetStore1 s a -> Set a -> F1 s (Set1 s a)
+allocateSet store@(MkSetStore1 ref) value t =
+  casupdate1 ref
+    (\(MkSetStoreState i sets) =>
+      ( MkSetStoreState (S i) (Data.SortedMap.insert i value sets)
+      , MkSet1 store i
+      )
+    ) t
+
+--------------------------------------------------------------------------------
+--          Internal Operations
+--------------------------------------------------------------------------------
+
+||| Apply a query to a single snapshot, Nothing means invalid handle.
+export
+querySet : (Set a -> b) -> Set1 s a -> F1 s (Maybe b)
+querySet f (MkSet1 (MkSetStore1 ref) i) t =
+  let state # t := read1 ref t
+      MkSetStoreState _ sets = state
+    in (f <$> getAt i sets) # t
+
+||| Atomically modify an existing container, False means invalid handle.
+export
+modifySet :
+     (Set a -> Set a)
+  -> Set1 s a
+  -> F1 s Bool
+modifySet f (MkSet1 (MkSetStore1 ref) i) t =
+  casupdate1 ref
+    (\state@(MkSetStoreState next sets) =>
+      case getAt i sets of
+        Nothing => (state, False)
+        Just old =>
+          case replaceAt i (f old) sets of
+            Nothing      => (state, False)
+            Just updated => (MkSetStoreState next updated, True)
+    ) t
+
+||| Atomically update a container and return the committed result.
+export
+updateSet :
+     (Set a -> (Set a, b))
+  -> Set1 s a -> F1 s (Maybe b)
+updateSet f (MkSet1 (MkSetStore1 ref) i) t =
+  casupdate1 ref
+    (\state@(MkSetStoreState next sets) =>
+      case getAt i sets of
+        Nothing  => (state, Nothing)
+        Just old =>
+          let (new, result) = f old
+           in case replaceAt i new sets of
+                Nothing      => (state, Nothing)
+                Just updated =>
+                  (MkSetStoreState next updated, Just result)
+    ) t
+
+||| Query two containers from one shared-store snapshot.
+||| Both handles must belong to the same store.
+export
+querySets :
+     (Set a -> Set a -> b)
+  -> Set1 s a -> Set1 s a -> F1 s (Maybe b)
+querySets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
+  let state              # t := read1 ref t
+      MkSetStoreState _ sets := state
+    in case (getAt i sets, getAt j sets) of
+         (Just first, Just second) => Just (f first second) # t
+         _                         => Nothing # t
+
+||| Atomically modify the first of two containers in one CAS.
+||| Both handles must belong to the same store.
+export
+modifySets :
+     (Set a -> Set a -> Set a)
+  -> Set1 s a -> Set1 s a -> F1 s Bool
+modifySets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
+  casupdate1 ref
+    (\state@(MkSetStoreState next sets) =>
+      case (getAt i sets, getAt j sets) of
+        (Just first, Just second) =>
+          case replaceAt i (f first second) sets of
+            Nothing      => (state, False)
+            Just updated => (MkSetStoreState next updated, True)
+        _ => (state, False)
+    ) t
+
+||| Atomically update two distinct containers and return a result.
+||| Identical handles and invalid identifiers return Nothing.
+||| Both handles must belong to the same store.
+export
+updateSets :
+     (Set a -> Set a -> (Set a, Set a, b))
+  -> Set1 s a -> Set1 s a -> F1 s (Maybe b)
+updateSets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
+  casupdate1 ref
+    (\state@(MkSetStoreState next sets) =>
+      if i == j
+        then (state, Nothing)
+        else case (getAt i sets, getAt j sets) of
+          (Just first, Just second) =>
+            let (first', second', result) = f first second
+             in case replaceAt i first' sets of
+                  Nothing      => (state, Nothing)
+                  Just updated =>
+                    case replaceAt j second' updated of
+                      Nothing         => (state, Nothing)
+                      Just resultMaps => (MkSetStoreState next resultMaps, Just result)
+          _ => (state, Nothing)
+    ) t

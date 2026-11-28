@@ -19,14 +19,15 @@ prop_from_to_list = property $ do
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList xs store t
-        in Data.Set1.toList x t) === Just (Data.Set.toList (Data.Set.fromList xs))
+        in Data.Set1.toList x t)
+    === Just (Data.Set.toList (Data.Set.fromList xs))
 
 ||| Check eq refl.
 prop_eq_refl : Property
 prop_eq_refl = property1 $
   (run1 $ \t =>
-      let store # t := Data.Set1.newStore t
-          x     # t := Data.Set1.fromList [5, 3] store t
+      let store    # t := Data.Set1.newStore t
+          x        # t := Data.Set1.fromList [5, 3] store t
           snapshot # t := Data.Set1.freeze x t
         in (Data.Set.toList <$> snapshot) # t) === Just ([3, 5])
 
@@ -92,7 +93,7 @@ prop_singleton = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          y # t := Data.Set1.singleton 5 store t
+          y     # t := Data.Set1.singleton 5 store t
         in Data.Set1.toList y t) === Just ([5])
 
 ||| Check empty.
@@ -101,7 +102,7 @@ prop_empty = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList (the (List Nat) [5, 3]) store t
-          y # t := Data.Set1.empty store t
+          y     # t := Data.Set1.empty store t
         in Data.Set1.toList y t) === Just (the (List Nat) [])
 
 ||| Check insert.
@@ -110,7 +111,7 @@ prop_insert = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          _ # t := Data.Set1.insert 6 x t
+          _     # t := Data.Set1.insert 6 x t
         in Data.Set1.toList x t) === Just ([3, 5, 6])
 
 ||| Check delete.
@@ -119,7 +120,7 @@ prop_delete = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          _ # t := Data.Set1.delete 5 x t
+          _     # t := Data.Set1.delete 5 x t
         in Data.Set1.toList x t) === Just ([3])
 
 ||| Check union.
@@ -128,8 +129,8 @@ prop_union = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          y # t := Data.Set1.fromList [5, 7] store t
-          _ # t := Data.Set1.union x y t
+          y     # t := Data.Set1.fromList [5, 7] store t
+          _     # t := Data.Set1.union x y t
         in Data.Set1.toList x t) === Just ([3, 5, 7])
 
 ||| Check difference.
@@ -138,8 +139,8 @@ prop_difference = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          y # t := Data.Set1.fromList [5, 7] store t
-          _ # t := Data.Set1.difference x y t
+          y     # t := Data.Set1.fromList [5, 7] store t
+          _     # t := Data.Set1.difference x y t
         in Data.Set1.toList x t) === Just ([3])
 
 ||| Check intersection.
@@ -148,8 +149,8 @@ prop_intersection = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          y # t := Data.Set1.fromList [5, 7] store t
-          _ # t := Data.Set1.intersection x y t
+          y     # t := Data.Set1.fromList [5, 7] store t
+          _     # t := Data.Set1.intersection x y t
         in Data.Set1.toList x t) === Just ([5])
 
 ||| Check map.
@@ -158,8 +159,8 @@ prop_map = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          dest # t := Data.Set1.newStore t
-          y    # t := Data.Set1.map dest (\v => v * 4) x t
+          dest  # t := Data.Set1.newStore t
+          y     # t := Data.Set1.map dest (\v => v * 4) x t
         in case y of
              Nothing => Nothing # t
              Just result => Data.Set1.toList result t) === Just ([12, 20])
@@ -170,8 +171,8 @@ prop_map_id = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          dest # t := Data.Set1.newStore t
-          y    # t := Data.Set1.map dest id x t
+          dest  # t := Data.Set1.newStore t
+          y     # t := Data.Set1.map dest id x t
         in case y of
              Nothing => Nothing # t
              Just result => Data.Set1.toList result t) === Just ([3, 5])
@@ -182,7 +183,7 @@ prop_isSubsetOf = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          y # t := Data.Set1.fromList [3] store t
+          y     # t := Data.Set1.fromList [3] store t
         in Data.Set1.isSubsetOf y x t) === Just (True)
 
 ||| Check isProperSubsetOf.
@@ -191,7 +192,7 @@ prop_isProperSubsetOf = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          y # t := Data.Set1.fromList [3] store t
+          y     # t := Data.Set1.fromList [3] store t
         in Data.Set1.isProperSubsetOf y x t) === Just (True)
 
 ||| Check proper subset equal.
@@ -208,7 +209,7 @@ prop_disjoint = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          y # t := Data.Set1.fromList [7] store t
+          y     # t := Data.Set1.fromList [7] store t
         in Data.Set1.disjoint x y t) === Just (True)
 
 ||| Check lookupIndex.
@@ -241,7 +242,7 @@ prop_deleteAt = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          _ # t := Data.Set1.deleteAt 0 x t
+          _     # t := Data.Set1.deleteAt 0 x t
         in Data.Set1.toList x t) === Just ([5])
 
 ||| Check findMin.
@@ -282,7 +283,7 @@ prop_deleteMin = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          _ # t := Data.Set1.deleteMin x t
+          _     # t := Data.Set1.deleteMin x t
         in Data.Set1.toList x t) === Just ([5])
 
 ||| Check deleteMax.
@@ -291,7 +292,7 @@ prop_deleteMax = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          _ # t := Data.Set1.deleteMax x t
+          _     # t := Data.Set1.deleteMax x t
         in Data.Set1.toList x t) === Just ([3])
 
 ||| Check deleteFindMin.
@@ -300,8 +301,8 @@ prop_deleteFindMin = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          item # t := Data.Set1.deleteFindMin x t
-          ys   # t := Data.Set1.toList x t
+          item  # t := Data.Set1.deleteFindMin x t
+          ys    # t := Data.Set1.toList x t
         in (item, ys) # t) === (Just (Just 3), Just [5])
 
 ||| Check deleteFindMax.
@@ -310,8 +311,8 @@ prop_deleteFindMax = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          item # t := Data.Set1.deleteFindMax x t
-          ys   # t := Data.Set1.toList x t
+          item  # t := Data.Set1.deleteFindMax x t
+          ys    # t := Data.Set1.toList x t
         in (item, ys) # t) === (Just (Just 5), Just [3])
 
 ||| Check minView.
@@ -320,8 +321,8 @@ prop_minView = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          item # t := Data.Set1.minView x t
-          ys   # t := Data.Set1.toList x t
+          item  # t := Data.Set1.minView x t
+          ys    # t := Data.Set1.toList x t
         in (item, ys) # t) === (Just (Just 3), Just ([5]))
 
 ||| Check maxView.
@@ -330,8 +331,8 @@ prop_maxView = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          item # t := Data.Set1.maxView x t
-          ys   # t := Data.Set1.toList x t
+          item  # t := Data.Set1.maxView x t
+          ys    # t := Data.Set1.toList x t
         in (item, ys) # t) === (Just (Just 5), Just ([3]))
 
 ||| Check lookupLT.
@@ -372,7 +373,7 @@ prop_filter = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          _ # t := Data.Set1.filter (> 3) x t
+          _     # t := Data.Set1.filter (> 3) x t
         in Data.Set1.toList x t) === Just ([5])
 
 ||| Check take.
@@ -381,7 +382,7 @@ prop_take = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          _ # t := Data.Set1.take 1 x t
+          _     # t := Data.Set1.take 1 x t
         in Data.Set1.toList x t) === Just ([3])
 
 ||| Check drop.
@@ -390,7 +391,7 @@ prop_drop = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          _ # t := Data.Set1.drop 1 x t
+          _     # t := Data.Set1.drop 1 x t
         in Data.Set1.toList x t) === Just ([5])
 
 ||| Check takeWhileAntitone.
@@ -399,7 +400,7 @@ prop_takeWhileAntitone = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          _ # t := Data.Set1.takeWhileAntitone (< 5) x t
+          _     # t := Data.Set1.takeWhileAntitone (< 5) x t
         in Data.Set1.toList x t) === Just ([3])
 
 ||| Check dropWhileAntitone.
@@ -408,7 +409,7 @@ prop_dropWhileAntitone = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          _ # t := Data.Set1.dropWhileAntitone (< 5) x t
+          _     # t := Data.Set1.dropWhileAntitone (< 5) x t
         in Data.Set1.toList x t) === Just ([5])
 
 ||| Check foldl.
@@ -465,9 +466,9 @@ prop_store_isolation = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          y  # t := Data.Set1.fromList [7] store t
-          _  # t := Data.Set1.insert 9 x t
-          ys # t := Data.Set1.toList y t
+          y     # t := Data.Set1.fromList [7] store t
+          _     # t := Data.Set1.insert 9 x t
+          ys    # t := Data.Set1.toList y t
         in ys # t) === Just ([7])
 
 ||| Check freeze snapshot.
@@ -476,22 +477,29 @@ prop_freeze_snapshot = property1 $
   (run1 $ \t =>
       let store # t := Data.Set1.newStore t
           x     # t := Data.Set1.fromList [5, 3] store t
-          old # t := Data.Set1.freeze x t
-          _   # t := Data.Set1.insert 9 x t
+          old   # t := Data.Set1.freeze x t
+          _     # t := Data.Set1.insert 9 x t
         in (Data.Set.toList <$> old) # t) === Just ([3, 5])
 
-||| Check that a forged invalid handle is rejected without mutation.
-prop_invalid_handle : Property
-prop_invalid_handle = property1 $
+||| Check that allocated handles have distinct, stable store entries.
+||| An update to one set must not affect independently allocated sets.
+prop_allocation_isolation : Property
+prop_allocation_isolation = property1 $
   (run1 $ \t =>
-      let store   # t := Data.Set1.newStore t
-          valid   # t := Data.Set1.fromList [1] store t
-          invalid     := MkSet1 store 999
-          found   # t := Data.Set1.member 1 invalid t
-          updated # t := Data.Set1.insert 3 invalid t
-          xs      # t := Data.Set1.toList valid t
-        in (found, updated, xs) # t)
-    === (Nothing, False, Just [1])
+      let store  # t := Data.Set1.newStore t
+          first  # t := Data.Set1.fromList [1] store t
+          second # t := Data.Set1.fromList [2] store t
+          third  # t := Data.Set1.fromList [3] store t
+          ok     # t := Data.Set1.insert 4 second t
+          xs     # t := Data.Set1.toList first t
+          ys     # t := Data.Set1.toList second t
+          zs     # t := Data.Set1.toList third t
+        in (ok, xs, ys, zs) # t)
+    === ( True
+        , Just [1]
+        , Just [2, 4]
+        , Just [3]
+        )
 
 export
 props : Group
@@ -548,5 +556,5 @@ props = MkGroup "Set1"
   , ("prop_transfer_missing", prop_transfer_missing)
   , ("prop_store_isolation", prop_store_isolation)
   , ("prop_freeze_snapshot", prop_freeze_snapshot)
-  , ("prop_invalid_handle", prop_invalid_handle)
+  , ("prop_allocation_isolation", prop_allocation_isolation)
   ]

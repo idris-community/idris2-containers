@@ -14,123 +14,13 @@ import Data.Linear.Ref1
 %default total
 
 --------------------------------------------------------------------------------
---          Internal Operations
---------------------------------------------------------------------------------
-
-||| Apply a pure query to one immutable store snapshot.
-||| Nothing indicates an invalid map handle.
-private
-queryMap :  (Map k v -> b)
-           -> Map1 s k v
-           -> F1 s (Maybe b)
-queryMap f (MkMap1 (MkMapStore1 ref) i) t =
-  let maps # t := read1 ref t
-    in (f <$> Data.Map1.Internal.getAt i maps) # t
-
-||| Atomically modify an existing map in the shared store.
-||| False indicates an invalid handle; the state is then unchanged.
-private
-modifyMap :  (Map k v -> Map k v)
-            -> Map1 s k v
-            -> F1 s Bool
-modifyMap f (MkMap1 (MkMapStore1 ref) i) t =
-  casupdate1 ref
-    (\maps =>
-      case Data.Map1.Internal.getAt i maps of
-        Nothing => (maps, False)
-        Just old =>
-          case Data.Map1.Internal.replaceAt i (f old) maps of
-            Nothing       => (maps, False)
-            Just maps' => (maps', True)
-    ) t
-
-||| Atomically modify a map and return a value from the committed CAS.
-||| Nothing indicates an invalid handle, not a missing element or key.
-private
-updateMap :  (Map k v -> (Map k v, b))
-            -> Map1 s k v
-            -> F1 s (Maybe b)
-updateMap f (MkMap1 (MkMapStore1 ref) i) t =
-  casupdate1 ref
-    (\maps =>
-      case Data.Map1.Internal.getAt i maps of
-        Nothing => (maps, Nothing)
-        Just old =>
-          let (new, result) = f old
-           in case Data.Map1.Internal.replaceAt i new maps of
-                Nothing       => (maps, Nothing)
-                Just maps' => (maps', Just result)
-    ) t
-
-||| Query two maps from one atomic store snapshot.
-||| Both handles must belong to the same store.
-private
-queryMaps :  (Map k v -> Map k v -> b)
-             -> Map1 s k v
-             -> Map1 s k v
-             -> F1 s (Maybe b)
-queryMaps f (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) t =
-  let maps # t := read1 ref t
-    in case (Data.Map1.Internal.getAt i maps,
-             Data.Map1.Internal.getAt j maps) of
-         (Just first, Just second) => Just (f first second) # t
-         _                         => Nothing # t
-
-||| Atomically modify the first map from one two-map snapshot.
-||| Both handles must belong to the same store.
-private
-modifyMaps :  (Map k v -> Map k v -> Map k v)
-              -> Map1 s k v
-              -> Map1 s k v
-              -> F1 s Bool
-modifyMaps f (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) t =
-  casupdate1 ref
-    (\maps =>
-      case (Data.Map1.Internal.getAt i maps,
-            Data.Map1.Internal.getAt j maps) of
-        (Just first, Just second) =>
-          case Data.Map1.Internal.replaceAt i (f first second) maps of
-            Nothing       => (maps, False)
-            Just maps' => (maps', True)
-        _ => (maps, False)
-    ) t
-
-||| Atomically update two distinct maps and return a result.
-||| Nothing indicates an invalid handle or identical identifiers.
-||| Both handles must belong to the same store.
-private
-updateMaps :  (Map k v -> Map k v -> (Map k v, Map k v, b))
-              -> Map1 s k v
-              -> Map1 s k v
-              -> F1 s (Maybe b)
-updateMaps f (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) t =
-  casupdate1 ref
-    (\maps =>
-      if i == j
-        then (maps, Nothing)
-        else case (Data.Map1.Internal.getAt i maps,
-                   Data.Map1.Internal.getAt j maps) of
-          (Just first, Just second) =>
-            let (first', second', result) = f first second
-             in case Data.Map1.Internal.replaceAt i first' maps of
-                  Nothing => (maps, Nothing)
-                  Just updated =>
-                    case Data.Map1.Internal.replaceAt j second' updated of
-                      Nothing       => (maps, Nothing)
-                      Just maps' => (maps', Just result)
-          _ => (maps, Nothing)
-    ) t
-
---------------------------------------------------------------------------------
 --          Construction
 --------------------------------------------------------------------------------
 
 ||| Create an empty shared atomic map store. O(1)
 export
 newStore : F1 s (MapStore1 s k v)
-newStore t =
-  let ref # t := ref1 Data.SortedMap.empty t
-    in MkMapStore1 ref # t
+newStore = Data.Map1.Internal.newStore
 
 ||| Allocate a new map from an immutable value, using one CAS.
 ||| Returns a handle with a unique store-local identifier. O(log n)
@@ -138,12 +28,7 @@ export
 fromMap :  MapStore1 s k v
           -> Map k v
           -> F1 s (Map1 s k v)
-fromMap store@(MkMapStore1 ref) value t =
-  casupdate1 ref
-    (\maps =>
-      let i = nextId maps
-        in (Data.SortedMap.insert i value maps, MkMap1 store i)
-    ) t
+fromMap = Data.Map1.Internal.allocateMap
 
 ||| Allocate an empty map in an existing store. O(log n)
 export
@@ -539,20 +424,7 @@ intersection =
 ||| Returns False for invalid handles, True for a valid no-op self-swap.
 export
 swap : Map1 s k v -> Map1 s k v -> F1 s Bool
-swap (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) t =
-  casupdate1 ref (\maps =>
-    case (Data.Map1.Internal.getAt i maps,
-          Data.Map1.Internal.getAt j maps) of
-      (Just first, Just second) =>
-        if i == j
-          then (maps, True)
-          else case Data.Map1.Internal.replaceAt i second maps of
-                 Nothing => (maps, False)
-                 Just updated =>
-                   case Data.Map1.Internal.replaceAt j first updated of
-                     Nothing    => (maps, False)
-                     Just maps' => (maps', True)
-      _ => (maps, False)) t
+swap = Data.Map1.Internal.swapMaps
 
 --------------------------------------------------------------------------------
 --          Submap

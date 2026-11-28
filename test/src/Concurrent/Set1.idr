@@ -3,8 +3,8 @@ module Concurrent.Set1
 
 import Data.Set
 import Data.Set1
+import Data.Set1.Internal
 import Data.Linear.Ref1
-import Data.SortedMap
 import Data.Vect as V
 import System
 import System.Concurrency
@@ -77,14 +77,11 @@ transferWorker source destination =
 ||| Inspect both sets through one atomic snapshot of their store.
 private
 transferInvariant : Set1 World Nat -> Set1 World Nat -> IO Bool
-transferInvariant (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) = do
-  sets <- runIO (read1 ref)
-  let a = Data.SortedMap.lookup i sets
-      b = Data.SortedMap.lookup j sets
-  pure $ case (a, b) of
-    (Just xs, Just ys) =>
-      Data.Set.member 1 xs /= Data.Set.member 1 ys
-    _ => False
+transferInvariant a b = do
+  result <- runIO $ Data.Set1.Internal.querySets
+    (\first, second =>
+      Data.Set.member 1 first /= Data.Set.member 1 second) a b
+  pure (result == Just True)
 
 ||| Watch for an intermediate state that loses or duplicates an item.
 private

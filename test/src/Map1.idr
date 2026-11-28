@@ -21,14 +21,15 @@ prop_from_to_list = property $ do
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList xs store t
-        in Data.Map1.toList x t) === Just (Data.Map.toList (Data.Map.fromList xs))
+        in Data.Map1.toList x t)
+    === Just (Data.Map.toList (Data.Map.fromList xs))
 
 ||| Check eq refl.
 prop_eq_refl : Property
 prop_eq_refl = property1 $
   (run1 $ \t =>
-      let store # t := Data.Map1.newStore t
-          x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
+      let store    # t := Data.Map1.newStore t
+          x        # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
           snapshot # t := Data.Map1.freeze x t
         in (Data.Map.toList <$> snapshot) # t) === Just ([(3, 1), (5, 0)])
 
@@ -103,7 +104,7 @@ prop_empty = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList (the (List (Nat, Nat)) [(5, 0), (3, 1)]) store t
-          y # t := Data.Map1.empty store t
+          y     # t := Data.Map1.empty store t
         in Data.Map1.toList y t) === Just (the (List (Nat, Nat)) [])
 
 ||| Check insert.
@@ -112,7 +113,7 @@ prop_insert = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.insert 5 1 x t
+          _     # t := Data.Map1.insert 5 1 x t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 1)])
 
 ||| Check delete.
@@ -121,7 +122,7 @@ prop_delete = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.delete 5 x t
+          _     # t := Data.Map1.delete 5 x t
         in Data.Map1.toList x t) === Just ([(3, 1)])
 
 ||| Check adjust.
@@ -130,7 +131,7 @@ prop_adjust = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.adjust (\v => v + 3) 5 x t
+          _     # t := Data.Map1.adjust (\v => v + 3) 5 x t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 3)])
 
 ||| Check update.
@@ -139,7 +140,7 @@ prop_update = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.update (\v => Just (v + 4)) 5 x t
+          _     # t := Data.Map1.update (\v => Just (v + 4)) 5 x t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 4)])
 
 ||| Check alterF.
@@ -148,7 +149,7 @@ prop_alterF = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.alter (\_ => Nothing) 5 x t
+          _     # t := Data.Map1.alter (\_ => Nothing) 5 x t
         in Data.Map1.toList x t) === Just ([(3, 1)])
 
 ||| Check alterG.
@@ -157,7 +158,7 @@ prop_alterG = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.alter (\_ => Just 4) 5 x t
+          _     # t := Data.Map1.alter (\_ => Just 4) 5 x t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 4)])
 
 ||| Check insertWith.
@@ -166,7 +167,7 @@ prop_insertWith = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.insertWith (+) 5 2 x t
+          _     # t := Data.Map1.insertWith (+) 5 2 x t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 2)])
 
 ||| Check insertWithKey.
@@ -175,7 +176,7 @@ prop_insertWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.insertWithKey (\k, n, old => k + n + old) 5 2 x t
+          _     # t := Data.Map1.insertWithKey (\k, n, old => k + n + old) 5 2 x t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 7)])
 
 ||| Check insertLookupWithKey.
@@ -184,9 +185,9 @@ prop_insertLookupWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          old # t := Data.Map1.insertLookupWithKey
+          old   # t := Data.Map1.insertLookupWithKey
                          (\_, n, old => n + old) 5 2 x t
-          ys # t := Data.Map1.toList x t
+          ys    # t := Data.Map1.toList x t
         in (old, ys) # t) === (Just (Just 0), Just ([(3, 1), (5, 2)]))
 
 ||| Check updateWithKey.
@@ -195,7 +196,7 @@ prop_updateWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.updateWithKey (\k, v => Just (k + v)) 5 x t
+          _     # t := Data.Map1.updateWithKey (\k, v => Just (k + v)) 5 x t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 5)])
 
 ||| Check updateLookupWithKey.
@@ -204,8 +205,8 @@ prop_updateLookupWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          old # t := Data.Map1.updateLookupWithKey (\_, v => Just (v + 3)) 3 x t
-          ys  # t := Data.Map1.toList x t
+          old   # t := Data.Map1.updateLookupWithKey (\_, v => Just (v + 3)) 3 x t
+          ys    # t := Data.Map1.toList x t
         in (old, ys) # t) === (Just (Just 4), Just ([(3, 4), (5, 0)]))
 
 ||| Check union.
@@ -214,8 +215,8 @@ prop_union = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          y # t := Data.Map1.fromList [(5, 2), (7, 1)] store t
-          _ # t := Data.Map1.union x y t
+          y     # t := Data.Map1.fromList [(5, 2), (7, 1)] store t
+          _     # t := Data.Map1.union x y t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 0), (7, 1)])
 
 ||| Check difference.
@@ -224,8 +225,8 @@ prop_difference = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          y # t := Data.Map1.fromList [(5, 2), (7, 1)] store t
-          _ # t := Data.Map1.difference x y t
+          y     # t := Data.Map1.fromList [(5, 2), (7, 1)] store t
+          _     # t := Data.Map1.difference x y t
         in Data.Map1.toList x t) === Just ([(3, 1)])
 
 ||| Check intersection.
@@ -234,8 +235,8 @@ prop_intersection = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          y # t := Data.Map1.fromList [(5, 2), (7, 1)] store t
-          _ # t := Data.Map1.intersection x y t
+          y     # t := Data.Map1.fromList [(5, 2), (7, 1)] store t
+          _     # t := Data.Map1.intersection x y t
         in Data.Map1.toList x t) === Just ([(5, 0)])
 
 ||| Check unionWith.
@@ -244,8 +245,8 @@ prop_unionWith = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          y # t := Data.Map1.fromList [(5, 2)] store t
-          _ # t := Data.Map1.unionWith (+) x y t
+          y     # t := Data.Map1.fromList [(5, 2)] store t
+          _     # t := Data.Map1.unionWith (+) x y t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 2)])
 
 ||| Check unionWithKey.
@@ -254,8 +255,8 @@ prop_unionWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          y # t := Data.Map1.fromList [(5, 2)] store t
-          _ # t := Data.Map1.unionWithKey (\k, a, b => k + a + b) x y t
+          y     # t := Data.Map1.fromList [(5, 2)] store t
+          _     # t := Data.Map1.unionWithKey (\k, a, b => k + a + b) x y t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 7)])
 
 ||| Check isSubmapOf.
@@ -264,7 +265,7 @@ prop_isSubmapOf = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          y # t := Data.Map1.fromList [(3, 1)] store t
+          y     # t := Data.Map1.fromList [(3, 1)] store t
         in Data.Map1.isSubmapOf y x t) === Just (True)
 
 ||| Check isProperSubmapOf.
@@ -273,7 +274,7 @@ prop_isProperSubmapOf = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          y # t := Data.Map1.fromList [(3, 1)] store t
+          y     # t := Data.Map1.fromList [(3, 1)] store t
         in Data.Map1.isProperSubmapOf y x t) === Just (True)
 
 ||| Check lookupIndex.
@@ -379,7 +380,7 @@ prop_deleteMin = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.deleteMin x t
+          _     # t := Data.Map1.deleteMin x t
         in Data.Map1.toList x t) === Just ([(5, 0)])
 
 ||| Check deleteMax.
@@ -388,7 +389,7 @@ prop_deleteMax = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.deleteMax x t
+          _     # t := Data.Map1.deleteMax x t
         in Data.Map1.toList x t) === Just ([(3, 1)])
 
 ||| Check deleteFindMin.
@@ -397,8 +398,8 @@ prop_deleteFindMin = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          item # t := Data.Map1.deleteFindMin x t
-          ys   # t := Data.Map1.toList x t
+          item  # t := Data.Map1.deleteFindMin x t
+          ys    # t := Data.Map1.toList x t
         in (item, ys) # t) === (Just (Just (3, 1)), Just [(5, 0)])
 
 ||| Check deleteFindMax.
@@ -407,8 +408,8 @@ prop_deleteFindMax = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          item # t := Data.Map1.deleteFindMax x t
-          ys   # t := Data.Map1.toList x t
+          item  # t := Data.Map1.deleteFindMax x t
+          ys    # t := Data.Map1.toList x t
         in (item, ys) # t) === (Just (Just (5, 0)), Just [(3, 1)])
 
 ||| Check minView.
@@ -417,8 +418,8 @@ prop_minView = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          item # t := Data.Map1.minView x t
-          ys   # t := Data.Map1.toList x t
+          item  # t := Data.Map1.minView x t
+          ys    # t := Data.Map1.toList x t
         in (item, ys) # t) === (Just (Just 1), Just ([(5, 0)]))
 
 ||| Check maxView.
@@ -427,8 +428,8 @@ prop_maxView = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          item # t := Data.Map1.maxView x t
-          ys   # t := Data.Map1.toList x t
+          item  # t := Data.Map1.maxView x t
+          ys    # t := Data.Map1.toList x t
         in (item, ys) # t) === (Just (Just 0), Just ([(3, 1)]))
 
 ||| Check minViewWithKey.
@@ -437,8 +438,8 @@ prop_minViewWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          item # t := Data.Map1.minViewWithKey x t
-          ys   # t := Data.Map1.toList x t
+          item  # t := Data.Map1.minViewWithKey x t
+          ys    # t := Data.Map1.toList x t
         in (item, ys) # t) === (Just (Just (3, 1)), Just ([(5, 0)]))
 
 ||| Check maxViewWithKey.
@@ -447,8 +448,8 @@ prop_maxViewWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          item # t := Data.Map1.maxViewWithKey x t
-          ys   # t := Data.Map1.toList x t
+          item  # t := Data.Map1.maxViewWithKey x t
+          ys    # t := Data.Map1.toList x t
         in (item, ys) # t) === (Just (Just (5, 0)), Just ([(3, 1)]))
 
 ||| Check updateMin.
@@ -457,7 +458,7 @@ prop_updateMin = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.updateMin (\_ => Just 4) x t
+          _     # t := Data.Map1.updateMin (\_ => Just 4) x t
         in Data.Map1.toList x t) === Just ([(3, 4), (5, 0)])
 
 ||| Check updateMax.
@@ -466,7 +467,7 @@ prop_updateMax = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.updateMax (\_ => Just 4) x t
+          _     # t := Data.Map1.updateMax (\_ => Just 4) x t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 4)])
 
 ||| Check updateMinWithKey.
@@ -475,7 +476,7 @@ prop_updateMinWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.updateMinWithKey (\_, _ => Just 4) x t
+          _     # t := Data.Map1.updateMinWithKey (\_, _ => Just 4) x t
         in Data.Map1.toList x t) === Just ([(3, 4), (5, 0)])
 
 ||| Check updateMaxWithKey.
@@ -484,7 +485,7 @@ prop_updateMaxWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.updateMaxWithKey (\_, _ => Just 4) x t
+          _     # t := Data.Map1.updateMaxWithKey (\_, _ => Just 4) x t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 4)])
 
 ||| Check map.
@@ -493,11 +494,12 @@ prop_map = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          dest # t := Data.Map1.newStore t
-          y    # t := Data.Map1.map dest (\v => v + 4) x t
+          dest  # t := Data.Map1.newStore t
+          y     # t := Data.Map1.map dest (\v => v + 4) x t
         in case y of
              Nothing => Nothing # t
-             Just result => Data.Map1.toList result t) === Just ([(3, 5), (5, 4)])
+             Just result => Data.Map1.toList result t)
+    === Just ([(3, 5), (5, 4)])
 
 ||| Check map id.
 prop_map_id : Property
@@ -505,11 +507,12 @@ prop_map_id = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          dest # t := Data.Map1.newStore t
-          y    # t := Data.Map1.map dest id x t
+          dest  # t := Data.Map1.newStore t
+          y     # t := Data.Map1.map dest id x t
         in case y of
              Nothing => Nothing # t
-             Just result => Data.Map1.toList result t) === Just ([(3, 1), (5, 0)])
+             Just result => Data.Map1.toList result t)
+    === Just ([(3, 1), (5, 0)])
 
 ||| Check mapWithKey.
 prop_mapWithKey : Property
@@ -517,11 +520,12 @@ prop_mapWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          dest # t := Data.Map1.newStore t
-          y    # t := Data.Map1.mapWithKey dest (\k, v => k + v) x t
+          dest  # t := Data.Map1.newStore t
+          y     # t := Data.Map1.mapWithKey dest (\k, v => k + v) x t
         in case y of
              Nothing => Nothing # t
-             Just result => Data.Map1.toList result t) === Just ([(3, 4), (5, 5)])
+             Just result => Data.Map1.toList result t)
+    === Just ([(3, 4), (5, 5)])
 
 ||| Check mapMaybe.
 prop_mapMaybe : Property
@@ -529,8 +533,8 @@ prop_mapMaybe = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          dest # t := Data.Map1.newStore t
-          y    # t := Data.Map1.mapMaybe dest
+          dest  # t := Data.Map1.newStore t
+          y     # t := Data.Map1.mapMaybe dest
                         (\v => if v == 0 then Nothing else Just v) x t
         in case y of
              Nothing => Nothing # t
@@ -542,8 +546,8 @@ prop_mapMaybeWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          dest # t := Data.Map1.newStore t
-          y    # t := Data.Map1.mapMaybeWithKey dest
+          dest  # t := Data.Map1.newStore t
+          y     # t := Data.Map1.mapMaybeWithKey dest
                         (\k, v => if k == 3 then Just v else Nothing) x t
         in case y of
              Nothing => Nothing # t
@@ -555,7 +559,7 @@ prop_filter = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.filter (== 1) x t
+          _     # t := Data.Map1.filter (== 1) x t
         in Data.Map1.toList x t) === Just ([(3, 1)])
 
 ||| Check filterWithKey.
@@ -564,7 +568,7 @@ prop_filterWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.filterWithKey (\k, _ => k == 5) x t
+          _     # t := Data.Map1.filterWithKey (\k, _ => k == 5) x t
         in Data.Map1.toList x t) === Just ([(5, 0)])
 
 ||| Check keys.
@@ -605,7 +609,8 @@ prop_foldlWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-        in Data.Map1.foldlWithKey (\acc, k, v => acc + k + v) 0 x t) === Just (9)
+        in Data.Map1.foldlWithKey (\acc, k, v => acc + k + v) 0 x t)
+    === Just (9)
 
 ||| Check foldrWithKey.
 prop_foldrWithKey : Property
@@ -613,7 +618,8 @@ prop_foldrWithKey = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-        in Data.Map1.foldrWithKey (\k, v, acc => acc + k + v) 0 x t) === Just (9)
+        in Data.Map1.foldrWithKey (\k, v, acc => acc + k + v) 0 x t)
+    === Just (9)
 
 ||| Check swap.
 prop_swap : Property
@@ -621,10 +627,10 @@ prop_swap = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          y  # t := Data.Map1.fromList [(8, 2)] store t
-          _  # t := Data.Map1.swap x y t
-          xs # t := Data.Map1.toList x t
-          ys # t := Data.Map1.toList y t
+          y     # t := Data.Map1.fromList [(8, 2)] store t
+          _     # t := Data.Map1.swap x y t
+          xs    # t := Data.Map1.toList x t
+          ys    # t := Data.Map1.toList y t
         in (xs, ys) # t) === (Just ([(8, 2)]), Just ([(3, 1), (5, 0)]))
 
 ||| Check swap self.
@@ -633,7 +639,7 @@ prop_swap_self = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          _ # t := Data.Map1.swap x x t
+          _     # t := Data.Map1.swap x x t
         in Data.Map1.toList x t) === Just ([(3, 1), (5, 0)])
 
 ||| Check store isolation.
@@ -642,9 +648,9 @@ prop_store_isolation = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          y  # t := Data.Map1.fromList [(8, 2)] store t
-          _  # t := Data.Map1.insert 9 4 x t
-          ys # t := Data.Map1.toList y t
+          y     # t := Data.Map1.fromList [(8, 2)] store t
+          _     # t := Data.Map1.insert 9 4 x t
+          ys    # t := Data.Map1.toList y t
         in ys # t) === Just ([(8, 2)])
 
 ||| Check freeze snapshot.
@@ -653,22 +659,29 @@ prop_freeze_snapshot = property1 $
   (run1 $ \t =>
       let store # t := Data.Map1.newStore t
           x     # t := Data.Map1.fromList [(5, 0), (3, 1)] store t
-          old # t := Data.Map1.freeze x t
-          _   # t := Data.Map1.insert 8 2 x t
+          old   # t := Data.Map1.freeze x t
+          _     # t := Data.Map1.insert 8 2 x t
         in (Data.Map.toList <$> old) # t) === Just ([(3, 1), (5, 0)])
 
-||| Check that a forged invalid handle is rejected without mutation.
-prop_invalid_handle : Property
-prop_invalid_handle = property1 $
+||| Check that allocated handles have distinct, stable store entries.
+||| An update to one map must not affect independently allocated maps.
+prop_allocation_isolation : Property
+prop_allocation_isolation = property1 $
   (run1 $ \t =>
-      let store   # t := Data.Map1.newStore t
-          valid   # t := Data.Map1.fromList [(1, 2)] store t
-          invalid     := MkMap1 store 999
-          found   # t := Data.Map1.member 1 invalid t
-          updated # t := Data.Map1.insert 3 4 invalid t
-          xs      # t := Data.Map1.toList valid t
-        in (found, updated, xs) # t)
-    === (Nothing, False, Just [(1, 2)])
+      let store  # t := Data.Map1.newStore t
+          first  # t := Data.Map1.fromList [(1, 2)] store t
+          second # t := Data.Map1.fromList [(1, 3)] store t
+          third  # t := Data.Map1.fromList [(1, 4)] store t
+          ok     # t := Data.Map1.insert 2 5 second t
+          xs     # t := Data.Map1.toList first t
+          ys     # t := Data.Map1.toList second t
+          zs     # t := Data.Map1.toList third t
+        in (ok, xs, ys, zs) # t)
+    === ( True
+        , Just [(1, 2)]
+        , Just [(1, 3), (2, 5)]
+        , Just [(1, 4)]
+        )
 
 export
 props : Group
@@ -743,5 +756,5 @@ props = MkGroup "Map1"
   , ("prop_swap_self", prop_swap_self)
   , ("prop_store_isolation", prop_store_isolation)
   , ("prop_freeze_snapshot", prop_freeze_snapshot)
-  , ("prop_invalid_handle", prop_invalid_handle)
+  , ("prop_allocation_isolation", prop_allocation_isolation)
   ]

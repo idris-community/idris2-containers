@@ -302,14 +302,19 @@ ordered collections. Each exposes a shared store holding multiple maps or sets,
 with an individual handle identifying one collection within that store.
 
 `MapStore1 s k v` holds maps with the same key and value types, while
-`SetStore1 s a` holds sets with the same element type. Each store contains a
-single `Ref1`-managed `SortedMap` from `Nat` identifiers to persistent values.
-Creation allocates a new handle in the store through an atomic CAS update.
+`SetStore1 s a` holds sets with the same element type. Each opaque store holds
+one `Ref1`-managed state containing a `SortedMap` from `Nat` identifiers to
+persistent values and a monotonic `nextId` counter. Store and handle
+constructors are hidden, so callers cannot forge identifiers or directly
+modify the underlying state. Allocation atomically inserts a collection and
+increments `nextId`, without reusing identifiers if entries are removed.
 
 ```mermaid
 flowchart TD
     A["MapStore1 / SetStore1"] --> B["Shared Ref1"]
-    B --> C["SortedMap Nat collection"]
+    B --> K["Store state"]
+    K --> L["nextid : Nat"]
+    K --> C["SortedMap Nat collection"]
     C --> D["Handle 0"]
     C --> E["Handle 1"]
     C --> F["Handle 2"]
@@ -327,7 +332,7 @@ immutable `Map` or `Set` that is unaffected by later changes to its source.
 
 Operations involving two handles, such as `union`, `difference`, and
 `intersection`, read both collections inside one shared-store CAS callback.
-`Map1.swap` exchanges two maps atomically, and `Set1.transfer` moves an element
+`Map1.swap` exchanges two maps atomically, `Set1.transfer` moves an element
 between two sets in the same store. Queries across two collections likewise
 read one store snapshot, so they do not observe partially committed changes.
 

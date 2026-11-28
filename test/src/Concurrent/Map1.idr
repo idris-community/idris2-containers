@@ -3,8 +3,8 @@ module Concurrent.Map1
 
 import Data.Map
 import Data.Map1
+import Data.Map1.Internal
 import Data.Linear.Ref1
-import Data.SortedMap
 import Data.Vect as V
 import System
 import System.Concurrency
@@ -67,12 +67,14 @@ swapWorker a b = runIO (forN ITER $ swapOnce a b)
 ||| Read two values from a single atomic store snapshot.
 private
 swapInvariant : Map1 World Nat Nat -> Map1 World Nat Nat -> IO Bool
-swapInvariant (MkMap1 (MkMapStore1 ref) i) (MkMap1 _ j) = do
-  maps <- runIO (read1 ref)
-  let a = Data.SortedMap.lookup i maps >>= Data.Map.lookup 0
-      b = Data.SortedMap.lookup j maps >>= Data.Map.lookup 0
-  pure ((a == Just 1 && b == Just 2) ||
-        (a == Just 2 && b == Just 1))
+swapInvariant a b = do
+  result <- runIO $ Data.Map1.Internal.queryMaps
+    (\first, second =>
+      let x = Data.Map.lookup 0 first
+          y = Data.Map.lookup 0 second
+       in (x == Just 1 && y == Just 2) ||
+          (x == Just 2 && y == Just 1)) a b
+  pure (result == Just True)
 
 ||| Observe snapshots while workers repeatedly swap two maps.
 private

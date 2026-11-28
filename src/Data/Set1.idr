@@ -14,123 +14,13 @@ import Data.Linear.Ref1
 %default total
 
 --------------------------------------------------------------------------------
---          Internal Operations
---------------------------------------------------------------------------------
-
-||| Apply a pure query to one immutable store snapshot.
-||| Nothing indicates an invalid set handle.
-private
-querySet :  (Set a -> b)
-           -> Set1 s a
-           -> F1 s (Maybe b)
-querySet f (MkSet1 (MkSetStore1 ref) i) t =
-  let sets # t := read1 ref t
-    in (f <$> Data.Set1.Internal.getAt i sets) # t
-
-||| Atomically modify an existing set in the shared store.
-||| False indicates an invalid handle; the state is then unchanged.
-private
-modifySet :  (Set a -> Set a)
-            -> Set1 s a
-            -> F1 s Bool
-modifySet f (MkSet1 (MkSetStore1 ref) i) t =
-  casupdate1 ref
-    (\sets =>
-      case Data.Set1.Internal.getAt i sets of
-        Nothing => (sets, False)
-        Just old =>
-          case Data.Set1.Internal.replaceAt i (f old) sets of
-            Nothing       => (sets, False)
-            Just sets' => (sets', True)
-    ) t
-
-||| Atomically modify a set and return a value from the committed CAS.
-||| Nothing indicates an invalid handle, not a missing element or key.
-private
-updateSet :  (Set a -> (Set a, b))
-            -> Set1 s a
-            -> F1 s (Maybe b)
-updateSet f (MkSet1 (MkSetStore1 ref) i) t =
-  casupdate1 ref
-    (\sets =>
-      case Data.Set1.Internal.getAt i sets of
-        Nothing => (sets, Nothing)
-        Just old =>
-          let (new, result) = f old
-           in case Data.Set1.Internal.replaceAt i new sets of
-                Nothing       => (sets, Nothing)
-                Just sets' => (sets', Just result)
-    ) t
-
-||| Query two sets from one atomic store snapshot.
-||| Both handles must belong to the same store.
-private
-querySets :  (Set a -> Set a -> b)
-             -> Set1 s a
-             -> Set1 s a
-             -> F1 s (Maybe b)
-querySets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
-  let sets # t := read1 ref t
-    in case (Data.Set1.Internal.getAt i sets,
-             Data.Set1.Internal.getAt j sets) of
-         (Just first, Just second) => Just (f first second) # t
-         _                         => Nothing # t
-
-||| Atomically modify the first set from one two-set snapshot.
-||| Both handles must belong to the same store.
-private
-modifySets :  (Set a -> Set a -> Set a)
-              -> Set1 s a
-              -> Set1 s a
-              -> F1 s Bool
-modifySets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
-  casupdate1 ref
-    (\sets =>
-      case (Data.Set1.Internal.getAt i sets,
-            Data.Set1.Internal.getAt j sets) of
-        (Just first, Just second) =>
-          case Data.Set1.Internal.replaceAt i (f first second) sets of
-            Nothing       => (sets, False)
-            Just sets' => (sets', True)
-        _ => (sets, False)
-    ) t
-
-||| Atomically update two distinct sets and return a result.
-||| Nothing indicates an invalid handle or identical identifiers.
-||| Both handles must belong to the same store.
-private
-updateSets :  (Set a -> Set a -> (Set a, Set a, b))
-              -> Set1 s a
-              -> Set1 s a
-              -> F1 s (Maybe b)
-updateSets f (MkSet1 (MkSetStore1 ref) i) (MkSet1 _ j) t =
-  casupdate1 ref
-    (\sets =>
-      if i == j
-        then (sets, Nothing)
-        else case (Data.Set1.Internal.getAt i sets,
-                   Data.Set1.Internal.getAt j sets) of
-          (Just first, Just second) =>
-            let (first', second', result) = f first second
-             in case Data.Set1.Internal.replaceAt i first' sets of
-                  Nothing => (sets, Nothing)
-                  Just updated =>
-                    case Data.Set1.Internal.replaceAt j second' updated of
-                      Nothing       => (sets, Nothing)
-                      Just sets' => (sets', Just result)
-          _ => (sets, Nothing)
-    ) t
-
---------------------------------------------------------------------------------
 --          Construction
 --------------------------------------------------------------------------------
 
 ||| Create an empty shared atomic set store. O(1)
 export
 newStore : F1 s (SetStore1 s a)
-newStore t =
-  let ref # t := ref1 Data.SortedMap.empty t
-    in MkSetStore1 ref # t
+newStore = Data.Set1.Internal.newStore
 
 ||| Allocate a new set from an immutable value, using one CAS.
 ||| Returns a handle with a unique store-local identifier. O(log n)
@@ -138,12 +28,7 @@ export
 fromSet :  SetStore1 s a
           -> Set a
           -> F1 s (Set1 s a)
-fromSet store@(MkSetStore1 ref) value t =
-  casupdate1 ref
-    (\sets =>
-      let i = nextId sets
-        in (Data.SortedMap.insert i value sets, MkSet1 store i)
-    ) t
+fromSet = Data.Set1.Internal.allocateSet
 
 ||| Allocate an empty set in an existing store. O(log n)
 export
